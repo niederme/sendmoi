@@ -1,0 +1,551 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+			A10000010000000000000001 /* MailMoiApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000001 /* MailMoiApp.swift */; };
+			A10000010000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000002 /* ContentView.swift */; };
+		A10000010000000000000003 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000003 /* AppModel.swift */; };
+		A10000010000000000000004 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000004 /* Models.swift */; };
+		A10000010000000000000005 /* GmailAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000005 /* GmailAPIClient.swift */; };
+		A10000010000000000000006 /* GoogleOAuthConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000006 /* GoogleOAuthConfig.swift */; };
+		A10000010000000000000007 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000007 /* KeychainStore.swift */; };
+			A10000010000000000000008 /* QueueStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000008 /* QueueStore.swift */; };
+			A10000010000000000000009 /* RecipientStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000009 /* RecipientStore.swift */; };
+			A1000001000000000000000A /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000A /* NetworkMonitor.swift */; };
+			A1000001000000000000000B /* SharedContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000C /* SharedContainer.swift */; };
+			A1000001000000000000000C /* MailMoiShare.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000D /* MailMoiShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+			A1000001000000000000000D /* GmailShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000F /* GmailShared.swift */; };
+			A1000001000000000000000E /* SharedSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000010 /* SharedSessionStore.swift */; };
+			A1000001000000000000000F /* GmailDeliveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000011 /* GmailDeliveryService.swift */; };
+			B10000010000000000000001 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000004 /* Models.swift */; };
+			B10000010000000000000002 /* QueueStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000008 /* QueueStore.swift */; };
+			B10000010000000000000003 /* RecipientStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000009 /* RecipientStore.swift */; };
+			B10000010000000000000004 /* SharedContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000C /* SharedContainer.swift */; };
+			B10000010000000000000005 /* ShareExtensionModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000010000000000000001 /* ShareExtensionModel.swift */; };
+			B10000010000000000000006 /* ShareView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000010000000000000002 /* ShareView.swift */; };
+			B10000010000000000000007 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000010000000000000003 /* ShareViewController.swift */; };
+			B10000010000000000000008 /* GoogleOAuthConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000006 /* GoogleOAuthConfig.swift */; };
+			B10000010000000000000009 /* GmailShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000F /* GmailShared.swift */; };
+			B1000001000000000000000A /* SharedSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000010 /* SharedSessionStore.swift */; };
+			B1000001000000000000000B /* GmailDeliveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000011 /* GmailDeliveryService.swift */; };
+			B1000001000000000000000C /* SafariPreprocessor.js in Resources */ = {isa = PBXBuildFile; fileRef = B20000010000000000000006 /* SafariPreprocessor.js */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+			B30000010000000000000001 /* PBXContainerItemProxy */ = {
+				isa = PBXContainerItemProxy;
+				containerPortal = A60000010000000000000001 /* Project object */;
+				proxyType = 1;
+				remoteGlobalIDString = B50000010000000000000001;
+				remoteInfo = MailMoiShare;
+			};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+			A20000010000000000000000 /* MailMoi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MailMoi.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000010000000000000001 /* MailMoiApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailMoiApp.swift; sourceTree = "<group>"; };
+		A20000010000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A20000010000000000000003 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		A20000010000000000000004 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		A20000010000000000000005 /* GmailAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GmailAPIClient.swift; sourceTree = "<group>"; };
+		A20000010000000000000006 /* GoogleOAuthConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleOAuthConfig.swift; sourceTree = "<group>"; };
+		A20000010000000000000007 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
+		A20000010000000000000008 /* QueueStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueueStore.swift; sourceTree = "<group>"; };
+			A20000010000000000000009 /* RecipientStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipientStore.swift; sourceTree = "<group>"; };
+			A2000001000000000000000A /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
+			A2000001000000000000000B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+			A2000001000000000000000C /* SharedContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedContainer.swift; sourceTree = "<group>"; };
+			A2000001000000000000000D /* MailMoiShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MailMoiShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+			A2000001000000000000000E /* MailMoi.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MailMoi.entitlements; sourceTree = "<group>"; };
+			A2000001000000000000000F /* GmailShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GmailShared.swift; sourceTree = "<group>"; };
+			A20000010000000000000010 /* SharedSessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedSessionStore.swift; sourceTree = "<group>"; };
+			A20000010000000000000011 /* GmailDeliveryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GmailDeliveryService.swift; sourceTree = "<group>"; };
+			B20000010000000000000001 /* ShareExtensionModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareExtensionModel.swift; sourceTree = "<group>"; };
+			B20000010000000000000002 /* ShareView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareView.swift; sourceTree = "<group>"; };
+			B20000010000000000000003 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+			B20000010000000000000004 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+			B20000010000000000000005 /* MailMoiShare.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MailMoiShare.entitlements; sourceTree = "<group>"; };
+			B20000010000000000000006 /* SafariPreprocessor.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = SafariPreprocessor.js; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+			B40000010000000000000001 /* Embed App Extensions */ = {
+				isa = PBXCopyFilesBuildPhase;
+				buildActionMask = 2147483647;
+				dstPath = "";
+				dstSubfolderSpec = 13;
+				files = (
+					A1000001000000000000000C /* MailMoiShare.appex in Embed App Extensions */,
+				);
+				name = "Embed App Extensions";
+				runOnlyForDeploymentPostprocessing = 0;
+			};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFrameworksBuildPhase section */
+			A30000010000000000000001 /* Frameworks */ = {
+				isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				);
+				runOnlyForDeploymentPostprocessing = 0;
+			};
+			B60000010000000000000001 /* Frameworks */ = {
+				isa = PBXFrameworksBuildPhase;
+				buildActionMask = 2147483647;
+				files = (
+				);
+				runOnlyForDeploymentPostprocessing = 0;
+			};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+			A40000010000000000000001 = {
+				isa = PBXGroup;
+				children = (
+					A40000010000000000000002 /* MailMoi */,
+					B40000010000000000000002 /* MailMoiShare */,
+					A40000010000000000000003 /* Products */,
+				);
+				sourceTree = "<group>";
+			};
+			A40000010000000000000002 /* MailMoi */ = {
+				isa = PBXGroup;
+				children = (
+					A2000001000000000000000B /* Info.plist */,
+					A2000001000000000000000E /* MailMoi.entitlements */,
+					A20000010000000000000001 /* MailMoiApp.swift */,
+					A20000010000000000000002 /* ContentView.swift */,
+					A20000010000000000000003 /* AppModel.swift */,
+					A20000010000000000000004 /* Models.swift */,
+					A40000010000000000000004 /* Services */,
+			);
+			path = MailMoi;
+			sourceTree = "<group>";
+		};
+			A40000010000000000000003 /* Products */ = {
+				isa = PBXGroup;
+				children = (
+					A20000010000000000000000 /* MailMoi.app */,
+					A2000001000000000000000D /* MailMoiShare.appex */,
+				);
+				name = Products;
+				sourceTree = "<group>";
+			};
+			A40000010000000000000004 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				A20000010000000000000005 /* GmailAPIClient.swift */,
+				A20000010000000000000006 /* GoogleOAuthConfig.swift */,
+					A20000010000000000000007 /* KeychainStore.swift */,
+					A20000010000000000000008 /* QueueStore.swift */,
+					A20000010000000000000009 /* RecipientStore.swift */,
+					A2000001000000000000000A /* NetworkMonitor.swift */,
+					A2000001000000000000000C /* SharedContainer.swift */,
+					A2000001000000000000000F /* GmailShared.swift */,
+					A20000010000000000000010 /* SharedSessionStore.swift */,
+					A20000010000000000000011 /* GmailDeliveryService.swift */,
+				);
+				path = Services;
+				sourceTree = "<group>";
+			};
+			B40000010000000000000002 /* MailMoiShare */ = {
+				isa = PBXGroup;
+				children = (
+					B20000010000000000000004 /* Info.plist */,
+					B20000010000000000000005 /* MailMoiShare.entitlements */,
+					B20000010000000000000006 /* SafariPreprocessor.js */,
+					B20000010000000000000001 /* ShareExtensionModel.swift */,
+					B20000010000000000000002 /* ShareView.swift */,
+					B20000010000000000000003 /* ShareViewController.swift */,
+				);
+				path = MailMoiShare;
+				sourceTree = "<group>";
+			};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+			A50000010000000000000001 /* MailMoi */ = {
+				isa = PBXNativeTarget;
+				buildConfigurationList = A80000010000000000000003 /* Build configuration list for PBXNativeTarget "MailMoi" */;
+				buildPhases = (
+					A30000010000000000000002 /* Sources */,
+					A30000010000000000000001 /* Frameworks */,
+					A30000010000000000000003 /* Resources */,
+					B40000010000000000000001 /* Embed App Extensions */,
+				);
+				buildRules = (
+				);
+				dependencies = (
+					B70000010000000000000001 /* PBXTargetDependency */,
+				);
+				name = MailMoi;
+				productName = MailMoi;
+				productReference = A20000010000000000000000 /* MailMoi.app */;
+				productType = "com.apple.product-type.application";
+			};
+			B50000010000000000000001 /* MailMoiShare */ = {
+				isa = PBXNativeTarget;
+				buildConfigurationList = B90000010000000000000001 /* Build configuration list for PBXNativeTarget "MailMoiShare" */;
+				buildPhases = (
+					B80000010000000000000001 /* Sources */,
+					B60000010000000000000001 /* Frameworks */,
+					B80000010000000000000002 /* Resources */,
+				);
+				buildRules = (
+				);
+				dependencies = (
+				);
+				name = MailMoiShare;
+				productName = MailMoiShare;
+				productReference = A2000001000000000000000D /* MailMoiShare.appex */;
+				productType = "com.apple.product-type.app-extension";
+			};
+/* End PBXNativeTarget section */
+
+/* Begin PBXTargetDependency section */
+			B70000010000000000000001 /* PBXTargetDependency */ = {
+				isa = PBXTargetDependency;
+				target = B50000010000000000000001 /* MailMoiShare */;
+				targetProxy = B30000010000000000000001 /* PBXContainerItemProxy */;
+			};
+/* End PBXTargetDependency section */
+
+/* Begin PBXProject section */
+		A60000010000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2630;
+				TargetAttributes = {
+					A50000010000000000000001 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+				};
+			};
+			buildConfigurationList = A80000010000000000000001 /* Build configuration list for PBXProject "MailMoi" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+				mainGroup = A40000010000000000000001;
+				productRefGroup = A40000010000000000000003 /* Products */;
+				projectDirPath = "";
+				projectRoot = "";
+				targets = (
+					A50000010000000000000001 /* MailMoi */,
+					B50000010000000000000001 /* MailMoiShare */,
+				);
+			};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+			A30000010000000000000003 /* Resources */ = {
+				isa = PBXResourcesBuildPhase;
+				buildActionMask = 2147483647;
+				files = (
+				);
+				runOnlyForDeploymentPostprocessing = 0;
+			};
+			B80000010000000000000002 /* Resources */ = {
+				isa = PBXResourcesBuildPhase;
+				buildActionMask = 2147483647;
+				files = (
+					B1000001000000000000000C /* SafariPreprocessor.js in Resources */,
+				);
+				runOnlyForDeploymentPostprocessing = 0;
+			};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+			A30000010000000000000002 /* Sources */ = {
+				isa = PBXSourcesBuildPhase;
+				buildActionMask = 2147483647;
+				files = (
+					A10000010000000000000001 /* MailMoiApp.swift in Sources */,
+				A10000010000000000000002 /* ContentView.swift in Sources */,
+				A10000010000000000000003 /* AppModel.swift in Sources */,
+				A10000010000000000000004 /* Models.swift in Sources */,
+				A10000010000000000000005 /* GmailAPIClient.swift in Sources */,
+				A10000010000000000000006 /* GoogleOAuthConfig.swift in Sources */,
+					A10000010000000000000007 /* KeychainStore.swift in Sources */,
+					A10000010000000000000008 /* QueueStore.swift in Sources */,
+					A10000010000000000000009 /* RecipientStore.swift in Sources */,
+					A1000001000000000000000A /* NetworkMonitor.swift in Sources */,
+					A1000001000000000000000B /* SharedContainer.swift in Sources */,
+					A1000001000000000000000D /* GmailShared.swift in Sources */,
+					A1000001000000000000000E /* SharedSessionStore.swift in Sources */,
+					A1000001000000000000000F /* GmailDeliveryService.swift in Sources */,
+				);
+				runOnlyForDeploymentPostprocessing = 0;
+			};
+			B80000010000000000000001 /* Sources */ = {
+				isa = PBXSourcesBuildPhase;
+				buildActionMask = 2147483647;
+				files = (
+					B10000010000000000000001 /* Models.swift in Sources */,
+					B10000010000000000000002 /* QueueStore.swift in Sources */,
+					B10000010000000000000003 /* RecipientStore.swift in Sources */,
+					B10000010000000000000004 /* SharedContainer.swift in Sources */,
+					B10000010000000000000005 /* ShareExtensionModel.swift in Sources */,
+					B10000010000000000000006 /* ShareView.swift in Sources */,
+					B10000010000000000000007 /* ShareViewController.swift in Sources */,
+					B10000010000000000000008 /* GoogleOAuthConfig.swift in Sources */,
+					B10000010000000000000009 /* GmailShared.swift in Sources */,
+					B1000001000000000000000A /* SharedSessionStore.swift in Sources */,
+					B1000001000000000000000B /* GmailDeliveryService.swift in Sources */,
+				);
+				runOnlyForDeploymentPostprocessing = 0;
+			};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A70000010000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 289GY9L343;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A70000010000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 289GY9L343;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+			A70000010000000000000003 /* Debug */ = {
+				isa = XCBuildConfiguration;
+				buildSettings = {
+					CLANG_ENABLE_OBJC_WEAK = YES;
+					CODE_SIGN_ENTITLEMENTS = MailMoi/MailMoi.entitlements;
+					CODE_SIGN_STYLE = Automatic;
+					CURRENT_PROJECT_VERSION = 1;
+					DEVELOPMENT_TEAM = 289GY9L343;
+				DEAD_CODE_STRIPPING = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MailMoi/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.niederme.MailMoi;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+			A70000010000000000000004 /* Release */ = {
+				isa = XCBuildConfiguration;
+				buildSettings = {
+					CLANG_ENABLE_OBJC_WEAK = YES;
+					CODE_SIGN_ENTITLEMENTS = MailMoi/MailMoi.entitlements;
+					CODE_SIGN_STYLE = Automatic;
+					CURRENT_PROJECT_VERSION = 1;
+					DEVELOPMENT_TEAM = 289GY9L343;
+				DEAD_CODE_STRIPPING = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MailMoi/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.niederme.MailMoi;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				};
+				name = Release;
+			};
+			A70000010000000000000005 /* Debug */ = {
+				isa = XCBuildConfiguration;
+				buildSettings = {
+					APPLICATION_EXTENSION_API_ONLY = YES;
+					CLANG_ENABLE_OBJC_WEAK = YES;
+					CODE_SIGN_ENTITLEMENTS = MailMoiShare/MailMoiShare.entitlements;
+					CODE_SIGN_STYLE = Automatic;
+					CURRENT_PROJECT_VERSION = 1;
+					DEVELOPMENT_TEAM = 289GY9L343;
+					GENERATE_INFOPLIST_FILE = NO;
+					INFOPLIST_FILE = MailMoiShare/Info.plist;
+					IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+					LD_RUNPATH_SEARCH_PATHS = (
+						"$(inherited)",
+						"@executable_path/Frameworks",
+						"@executable_path/../../Frameworks",
+					);
+					MACOSX_DEPLOYMENT_TARGET = 26.0;
+					MARKETING_VERSION = 0.1;
+					PRODUCT_BUNDLE_IDENTIFIER = com.niederme.MailMoi.ShareExtension;
+					PRODUCT_NAME = "$(TARGET_NAME)";
+					SKIP_INSTALL = YES;
+					SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+					SWIFT_EMIT_LOC_STRINGS = YES;
+					SWIFT_VERSION = 5.0;
+					TARGETED_DEVICE_FAMILY = "1,2";
+				};
+				name = Debug;
+			};
+			A70000010000000000000006 /* Release */ = {
+				isa = XCBuildConfiguration;
+				buildSettings = {
+					APPLICATION_EXTENSION_API_ONLY = YES;
+					CLANG_ENABLE_OBJC_WEAK = YES;
+					CODE_SIGN_ENTITLEMENTS = MailMoiShare/MailMoiShare.entitlements;
+					CODE_SIGN_STYLE = Automatic;
+					CURRENT_PROJECT_VERSION = 1;
+					DEVELOPMENT_TEAM = 289GY9L343;
+					GENERATE_INFOPLIST_FILE = NO;
+					INFOPLIST_FILE = MailMoiShare/Info.plist;
+					IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+					LD_RUNPATH_SEARCH_PATHS = (
+						"$(inherited)",
+						"@executable_path/Frameworks",
+						"@executable_path/../../Frameworks",
+					);
+					MACOSX_DEPLOYMENT_TARGET = 26.0;
+					MARKETING_VERSION = 0.1;
+					PRODUCT_BUNDLE_IDENTIFIER = com.niederme.MailMoi.ShareExtension;
+					PRODUCT_NAME = "$(TARGET_NAME)";
+					SKIP_INSTALL = YES;
+					SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+					SWIFT_EMIT_LOC_STRINGS = YES;
+					SWIFT_VERSION = 5.0;
+					TARGETED_DEVICE_FAMILY = "1,2";
+				};
+				name = Release;
+			};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A80000010000000000000001 /* Build configuration list for PBXProject "MailMoi" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A70000010000000000000001 /* Debug */,
+				A70000010000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+			A80000010000000000000003 /* Build configuration list for PBXNativeTarget "MailMoi" */ = {
+				isa = XCConfigurationList;
+				buildConfigurations = (
+					A70000010000000000000003 /* Debug */,
+					A70000010000000000000004 /* Release */,
+				);
+				defaultConfigurationIsVisible = 0;
+				defaultConfigurationName = Release;
+			};
+			B90000010000000000000001 /* Build configuration list for PBXNativeTarget "MailMoiShare" */ = {
+				isa = XCConfigurationList;
+				buildConfigurations = (
+					A70000010000000000000005 /* Debug */,
+					A70000010000000000000006 /* Release */,
+				);
+				defaultConfigurationIsVisible = 0;
+				defaultConfigurationName = Release;
+			};
+/* End XCConfigurationList section */
+	};
+	rootObject = A60000010000000000000001 /* Project object */;
+}

@@ -1,0 +1,24 @@
+import SwiftUI
+
+@main
+struct MailMoiApp: App {
+    @StateObject private var model = AppModel()
+    @Environment(\.scenePhase) private var scenePhase
+
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+                .environmentObject(model)
+                .task {
+                    await model.startup()
+                }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                Task {
+                    await model.retryNow()
+                }
+            }
+        }
+    }
+}
