@@ -1,6 +1,6 @@
 # MailMoi
 
-MailMoi is a native SwiftUI app for iPhone, iPad, and macOS that turns shared links into polished Gmail messages. It uses Gmail OAuth, keeps a durable offline queue, and includes a native Share Extension so links can be sent from the system share sheet without getting dropped.
+MailMoi is a native SwiftUI app for iPhone, iPad, and macOS that turns shared links into polished, responsive emails. It uses Gmail OAuth, keeps a durable offline queue, and includes a native Share Extension so links can be sent from the system share sheet without getting dropped.
 
 ## Release 0.1
 
@@ -21,15 +21,16 @@ The app is built entirely with Apple-native frameworks, including `SwiftUI`, `Au
 Each email is sent through the Gmail API with a subject in this format:
 
 ```text
-[Mail Moi] <article title>
+<article title> (Sent via MailMoi)
 ```
 
 For reachable web URLs, MailMoi attempts to enrich the message before sending:
 
-- Uses the best available article title.
-- Pulls excerpt text when the page exposes it.
+- Uses the page `<title>` when available, with sensible metadata fallbacks.
+- Pulls excerpt text when the page exposes a description.
 - Generates a short summary when enough content is available.
 - Inlines a preview image when the page exposes one and the image fetch succeeds.
+- Renders the HTML email as a responsive card layout for desktop and mobile clients.
 
 If metadata lookup fails, MailMoi falls back to the title, excerpt, and URL captured from the app or share sheet.
 
