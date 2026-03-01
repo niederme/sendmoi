@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1290" height="2796" viewBox="0 0 1290 2796">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff1f5"/>
+      <stop offset="48%" stop-color="#fde2ea"/>
+      <stop offset="100%" stop-color="#fac8d8"/>
+    </linearGradient>
+    <linearGradient id="inbox" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1c0e14"/>
+      <stop offset="100%" stop-color="#0e0709"/>
+    </linearGradient>
+    <linearGradient id="link" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#e11d48"/>
+      <stop offset="100%" stop-color="#f43f5e"/>
+    </linearGradient>
+    <linearGradient id="unread" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#e11d48"/>
+      <stop offset="100%" stop-color="#be185d"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1290" height="2796" fill="url(#bg)"/>
+  <circle cx="1090" cy="340" r="240" fill="#e11d48" opacity="0.08"/>
+  <circle cx="200" cy="2460" r="270" fill="#f43f5e" opacity="0.07"/>
+
+  <!-- Wordmark -->
+  <text x="110" y="250" fill="#9f1239" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="44" font-weight="700" letter-spacing="6">MAILMOI</text>
+
+  <!-- Headline -->
+  <text x="110" y="470" fill="#3f0419" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="136" font-weight="800">Arrives Clean.</text>
+  <text x="110" y="610" fill="#3f0419" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="136" font-weight="800">Lands In Gmail.</text>
+  <text x="110" y="730" fill="#7e2343" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="52" font-weight="500">Every share becomes a formatted email—bold</text>
+  <text x="110" y="798" fill="#7e2343" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="52" font-weight="500">title, excerpt, and a tap-ready link.</text>
+
+  <!-- Phone frame -->
+  <rect x="145" y="930" width="1000" height="1440" rx="120" fill="#1a0810"/>
+  <!-- Screen -->
+  <rect x="181" y="970" width="928" height="1360" rx="86" fill="#fdf8fa"/>
+  <!-- pill -->
+  <rect x="500" y="1005" width="290" height="18" rx="9" fill="#f0d0da"/>
+
+  <!-- Email client header / nav -->
+  <rect x="181" y="970" width="928" height="110" rx="86" fill="#ffffff"/>
+  <rect x="181" y="1030" width="928" height="50" fill="#ffffff"/>
+  <text x="470" y="1052" fill="#1a0810" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="44" font-weight="700">Inbox</text>
+
+  <!-- Inbox list separator -->
+  <rect x="245" y="1082" width="800" height="2" fill="#f0e0e6"/>
+
+  <!-- Email row — unread -->
+  <rect x="245" y="1090" width="800" height="220" rx="0" fill="#ffffff"/>
+  <!-- Unread indicator dot -->
+  <circle cx="270" cy="1200" r="18" fill="url(#unread)"/>
+  <!-- Sender -->
+  <text x="306" y="1148" fill="#1a0810" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="34" font-weight="700">you@gmail.com</text>
+  <!-- Timestamp -->
+  <text x="910" y="1148" fill="#9f1239" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="26" font-weight="500">Now</text>
+  <!-- Subject (bold = unread) -->
+  <text x="306" y="1198" fill="#1a0810" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="32" font-weight="700">How elite teams handle async updates</text>
+  <!-- Preview snippet -->
+  <text x="306" y="1242" fill="#7d5566" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="26">How the best distributed teams keep information...</text>
+  <!-- Divider -->
+  <rect x="245" y="1312" width="800" height="2" fill="#f0e0e6"/>
+
+  <!-- Second row (read) -->
+  <rect x="245" y="1314" width="800" height="200" rx="0" fill="#fdf8fa"/>
+  <circle cx="270" cy="1414" r="18" fill="#dbb0bc" opacity="0.5"/>
+  <text x="306" y="1366" fill="#5c3a46" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="34" font-weight="500">you@gmail.com</text>
+  <text x="910" y="1366" fill="#c9a0ad" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="26">Yesterday</text>
+  <text x="306" y="1412" fill="#5c3a46" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="32" font-weight="500">A field guide to better founder notes</text>
+  <text x="306" y="1452" fill="#9f7585" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="26">The simplest note-taking system actually...</text>
+  <!-- Divider -->
+  <rect x="245" y="1516" width="800" height="2" fill="#f0e0e6"/>
+
+  <!-- Open email view below (separated by a label) -->
+  <text x="285" y="1580" fill="#9f1239" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="28" font-weight="700" letter-spacing="3">OPEN EMAIL</text>
+
+  <!-- Email content card -->
+  <rect x="245" y="1606" width="800" height="640" rx="38" fill="#ffffff" stroke="#f5c5d0" stroke-width="6"/>
+
+  <!-- Email header inside card -->
+  <text x="285" y="1668" fill="#7d5566" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="26">From: you@gmail.com   ·   To: founder@studio.com</text>
+  <rect x="285" y="1688" width="720" height="2" fill="#f5c5d0"/>
+
+  <!-- Subject line -->
+  <text x="285" y="1732" fill="#1a0810" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="38" font-weight="800">How elite teams handle</text>
+  <text x="285" y="1778" fill="#1a0810" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="38" font-weight="800">async updates</text>
+
+  <!-- Excerpt in italic style -->
+  <text x="285" y="1840" fill="#5c3a46" font-family="Georgia, serif" font-size="30" font-style="italic">How the best distributed teams keep information</text>
+  <text x="285" y="1878" fill="#5c3a46" font-family="Georgia, serif" font-size="30" font-style="italic">flowing without interrupting each other's deep work.</text>
+
+  <!-- Spacer line -->
+  <rect x="285" y="1910" width="720" height="2" fill="#f5e0e6"/>
+
+  <!-- Link -->
+  <text x="285" y="1962" fill="#9f1239" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="30" font-weight="600" text-decoration="underline">example.com/blog/async-teams</text>
+
+  <!-- Tap indicator -->
+  <rect x="285" y="1988" width="420" height="52" rx="16" fill="#fff0f4" stroke="#fac8d8" stroke-width="4"/>
+  <text x="320" y="2024" fill="#e11d48" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="26" font-weight="600">Tap to open original article</text>
+
+  <!-- HTML format hint -->
+  <rect x="285" y="2060" width="720" height="2" fill="#f5e0e6"/>
+  <text x="285" y="2104" fill="#c9a0ad" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="24">Formatted as rich HTML · renders in any Gmail client</text>
+
+  <!-- Bottom status -->
+  <rect x="245" y="2290" width="800" height="20" rx="10" fill="#f0d0da"/>
+
+  <!-- Feature strip -->
+  <rect x="110" y="2510" width="1070" height="136" rx="40" fill="#ffffff" opacity="0.88"/>
+  <text x="155" y="2586" fill="#9f1239" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="36" font-weight="700">Rich HTML email</text>
+  <text x="555" y="2586" fill="#9f1239" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="36" font-weight="700">Title + excerpt</text>
+  <text x="870" y="2586" fill="#9f1239" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="36" font-weight="700">Tap-ready link</text>
+</svg>

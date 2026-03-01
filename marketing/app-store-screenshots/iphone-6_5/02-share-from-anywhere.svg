@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1290" height="2796" viewBox="0 0 1290 2796">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff8ee"/>
+      <stop offset="48%" stop-color="#ffe8c7"/>
+      <stop offset="100%" stop-color="#ffd3a0"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#172554"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f97316"/>
+      <stop offset="100%" stop-color="#fb7185"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1290" height="2796" fill="url(#bg)"/>
+  <circle cx="1040" cy="410" r="250" fill="#ffffff" opacity="0.26"/>
+  <circle cx="180" cy="2260" r="260" fill="#ffffff" opacity="0.2"/>
+
+  <text x="110" y="250" fill="#7a3a00" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="44" font-weight="700" letter-spacing="6">MAILMOI</text>
+
+  <text x="110" y="470" fill="#3f2404" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="136" font-weight="800">Share From Safari</text>
+  <text x="110" y="610" fill="#3f2404" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="136" font-weight="800">And Any App</text>
+  <text x="110" y="730" fill="#6a4926" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="52" font-weight="500">The extension grabs the headline, source,</text>
+  <text x="110" y="798" fill="#6a4926" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="52" font-weight="500">and URL before you ever leave the share sheet.</text>
+
+  <rect x="110" y="970" width="430" height="510" rx="56" fill="#ffffff" stroke="#ffd8aa" stroke-width="6"/>
+  <rect x="150" y="1012" width="350" height="76" rx="24" fill="#f7f8fc"/>
+  <circle cx="196" cy="1050" r="18" fill="#2563ff"/>
+  <text x="228" y="1062" fill="#1e3159" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="32" font-weight="700">Safari</text>
+  <text x="150" y="1160" fill="#1c2c4f" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="44" font-weight="700">Design systems that</text>
+  <text x="150" y="1212" fill="#1c2c4f" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="44" font-weight="700">actually ship faster</text>
+  <text x="150" y="1312" fill="#6b7c9b" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="28">mailmoi.app/blog/design-systems</text>
+  <rect x="150" y="1360" width="270" height="64" rx="22" fill="#eef3ff"/>
+  <text x="184" y="1403" fill="#29406a" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="28" font-weight="700">Open Share Sheet</text>
+
+  <path d="M575 1240 C700 1110 760 1110 820 1180" fill="none" stroke="#ffffff" stroke-width="26" stroke-linecap="round"/>
+  <path d="M795 1146 L860 1188 L800 1238" fill="none" stroke="#ffffff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <rect x="650" y="910" width="490" height="1560" rx="120" fill="#0d1734"/>
+  <rect x="686" y="950" width="418" height="1480" rx="84" fill="#ffffff"/>
+  <rect x="815" y="984" width="160" height="18" rx="9" fill="#dde6f7"/>
+  <text x="748" y="1092" fill="#162c60" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="48" font-weight="700">Share To MailMoi</text>
+
+  <rect x="738" y="1160" width="314" height="76" rx="24" fill="#f4f7ff"/>
+  <text x="768" y="1209" fill="#4d638c" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="28">founder@studio.com</text>
+
+  <text x="738" y="1310" fill="#0f214a" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="32" font-weight="700">Title</text>
+  <rect x="738" y="1334" width="314" height="124" rx="22" fill="#edf4ff"/>
+  <text x="764" y="1388" fill="#183264" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="26">Design systems that</text>
+  <text x="764" y="1422" fill="#183264" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="26">actually ship faster</text>
+
+  <text x="738" y="1528" fill="#0f214a" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="32" font-weight="700">Excerpt</text>
+  <rect x="738" y="1552" width="314" height="242" rx="22" fill="#edf4ff"/>
+  <text x="764" y="1608" fill="#556d98" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="24">A crisp summary arrives with the</text>
+  <text x="764" y="1640" fill="#556d98" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="24">title, short context, and source.</text>
+  <text x="764" y="1672" fill="#556d98" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="24">Perfect for founders, operators,</text>
+  <text x="764" y="1704" fill="#556d98" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="24">and anyone collecting reads.</text>
+
+  <text x="738" y="1866" fill="#0f214a" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="32" font-weight="700">Source URL</text>
+  <rect x="738" y="1890" width="314" height="114" rx="22" fill="#edf4ff"/>
+  <text x="764" y="1940" fill="#556d98" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="22">mailmoi.app/blog/</text>
+  <text x="764" y="1970" fill="#556d98" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="22">design-systems</text>
+
+  <rect x="738" y="2080" width="314" height="72" rx="24" fill="url(#accent)"/>
+  <text x="826" y="2127" fill="#ffffff" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="28" font-weight="700">SAVE OR SEND</text>
+
+  <rect x="110" y="2510" width="1070" height="136" rx="40" fill="#ffffff" opacity="0.85"/>
+  <text x="160" y="2586" fill="#7a3a00" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="36" font-weight="700">Native iOS share extension</text>
+  <text x="600" y="2586" fill="#7a3a00" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="36" font-weight="700">Pre-fills title + URL</text>
+  <text x="930" y="2586" fill="#7a3a00" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="36" font-weight="700">Fast capture</text>
+</svg>
