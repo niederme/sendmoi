@@ -34,7 +34,7 @@
 		B10000010000000000000009 /* GmailShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000F /* GmailShared.swift */; };
 			B1000001000000000000000A /* SharedSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000010 /* SharedSessionStore.swift */; };
 			B1000001000000000000000B /* GmailDeliveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000011 /* GmailDeliveryService.swift */; };
-			A10000010000000000000011 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000014 /* LaunchScreen.storyboard */; };
+			A10000010000000000000011 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000014 /* LaunchScreen.storyboard */; platformFilter = ios; };
 			B1000001000000000000000C /* SafariPreprocessor.js in Resources */ = {isa = PBXBuildFile; fileRef = B20000010000000000000006 /* SafariPreprocessor.js */; };
 /* End PBXBuildFile section */
 
