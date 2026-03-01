@@ -44,14 +44,21 @@ final class GmailDeliveryService {
 
     func sendEmail(using session: GmailSession, item: QueuedEmail) async throws {
         let preparedItem = await enrich(item: item)
-        let subject = "[Mail Moi] \(preparedItem.title)"
+        let normalizedTitle = Self.renderMarkdownLinksAsPlainText(in: preparedItem.title)
+        let normalizedExcerpt = Self.renderMarkdownLinksAsPlainText(in: preparedItem.excerpt)
+        let normalizedURLString = Self.preferredURLString(
+            from: preparedItem.urlString,
+            title: preparedItem.title,
+            excerpt: preparedItem.excerpt
+        )
+        let subject = "[Mail Moi] \(normalizedTitle)"
         let raw = try Self.makeRawMimeMessage(
             from: session.emailAddress ?? "me",
             to: preparedItem.toEmail,
             subject: subject,
-            title: preparedItem.title,
-            excerpt: preparedItem.excerpt,
-            urlString: preparedItem.urlString
+            title: normalizedTitle,
+            excerpt: normalizedExcerpt,
+            urlString: normalizedURLString
         )
 
         var request = URLRequest(url: GoogleOAuthConfig.gmailSendEndpoint)
@@ -240,6 +247,41 @@ final class GmailDeliveryService {
 
     private static func escapeHTMLAttribute(_ string: String) -> String {
         escapeHTML(string)
+    }
+
+    private static func renderMarkdownLinksAsPlainText(in text: String) -> String {
+        let pattern = #"\[([^\]]+)\]\((https?://[^)\s]+)\)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return text
+        }
+
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        return regex.stringByReplacingMatches(in: text, options: [], range: range, withTemplate: "$1")
+    }
+
+    private static func preferredURLString(from urlString: String, title: String, excerpt: String) -> String {
+        if !urlString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return urlString
+        }
+
+        return firstMarkdownLinkURL(in: title) ?? firstMarkdownLinkURL(in: excerpt) ?? urlString
+    }
+
+    private static func firstMarkdownLinkURL(in text: String) -> String? {
+        let pattern = #"\[[^\]]+\]\((https?://[^)\s]+)\)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return nil
+        }
+
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        guard
+            let match = regex.firstMatch(in: text, options: [], range: range),
+            let urlRange = Range(match.range(at: 1), in: text)
+        else {
+            return nil
+        }
+
+        return String(text[urlRange])
     }
 
     private static func extractMetaTags(from html: String) -> [[String: String]] {

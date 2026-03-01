@@ -431,13 +431,29 @@ private enum SharedItemExtractor {
 
     private static func normalize(_ content: SharedItemContent, using textCandidates: [String]) -> SharedItemContent {
         var normalizedContent = content
+        if let titleMarkdownLink = markdownLink(in: normalizedContent.title) {
+            normalizedContent.title = titleMarkdownLink.text
+            if normalizedContent.urlString.isEmpty {
+                normalizedContent.urlString = titleMarkdownLink.url
+            }
+        }
+
+        if let excerptMarkdownLink = markdownLink(in: normalizedContent.excerpt) {
+            normalizedContent.excerpt = excerptMarkdownLink.text
+            if normalizedContent.urlString.isEmpty {
+                normalizedContent.urlString = excerptMarkdownLink.url
+            }
+        }
+
+        let normalizedCandidates = expandedMarkdownCandidates(from: textCandidates)
+
         if normalizedContent.urlString.isEmpty,
-           let detectedURL = firstDetectedURLString(in: textCandidates) {
+           let detectedURL = firstDetectedURLString(in: normalizedCandidates) {
             normalizedContent.urlString = detectedURL
         }
 
         let host = URL(string: normalizedContent.urlString)?.host?.lowercased()
-        let candidates = unique(strings: textCandidates).filter {
+        let candidates = unique(strings: normalizedCandidates).filter {
             $0.caseInsensitiveCompare(normalizedContent.urlString) != .orderedSame
         }
 
@@ -508,6 +524,41 @@ private enum SharedItemExtractor {
     private static func unique(strings: [String]) -> [String] {
         var seen = Set<String>()
         return strings.filter { seen.insert($0.lowercased()).inserted }
+    }
+
+    private static func expandedMarkdownCandidates(from candidates: [String]) -> [String] {
+        candidates.flatMap { candidate in
+            if let link = markdownLink(in: candidate) {
+                return [link.text, link.url]
+            }
+
+            return [candidate]
+        }
+    }
+
+    private static func markdownLink(in text: String) -> (text: String, url: String)? {
+        let pattern = #"^\[([^\]]+)\]\((https?://[^)\s]+)\)$"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return nil
+        }
+
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        guard
+            let match = regex.firstMatch(in: text, options: [], range: range),
+            match.range.location != NSNotFound,
+            let titleRange = Range(match.range(at: 1), in: text),
+            let urlRange = Range(match.range(at: 2), in: text)
+        else {
+            return nil
+        }
+
+        let title = String(text[titleRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+        let url = String(text[urlRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty, !url.isEmpty else {
+            return nil
+        }
+
+        return (title, url)
     }
 
     private static func firstDetectedURLString(in candidates: [String]) -> String? {
