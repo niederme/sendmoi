@@ -7,6 +7,7 @@ struct ContentView: View {
         NavigationStack {
             Form {
                 accountSection
+                defaultRecipientSection
                 shareSheetSection
                 composeSection
                 queueSection
@@ -29,51 +30,16 @@ struct ContentView: View {
     }
 
     private var accountSummaryDetail: String {
-        let normalizedDefaultRecipient = model.defaultRecipient
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-        let normalizedSessionEmail = model.session?.emailAddress?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-
-        if let normalizedSessionEmail {
-            if normalizedDefaultRecipient.isEmpty {
-                return "Signed in to Gmail"
-            }
-
-            if normalizedDefaultRecipient == normalizedSessionEmail {
-                return "Default recipient matches this account"
-            }
+        if model.session != nil {
+            return "Signed in to Gmail"
         }
 
-        if model.defaultRecipient.isEmpty {
-            return "Tap to manage account"
-        }
-
-        return "Default recipient: \(model.defaultRecipient)"
+        return "Tap to manage account"
     }
 
     private var accountSection: some View {
         Section {
             DisclosureGroup(isExpanded: $model.isAccountSectionExpanded) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Default Recipient")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    #if os(iOS)
-                    TextField("Email address", text: $model.defaultRecipient)
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.emailAddress)
-                        .autocorrectionDisabled()
-                    #else
-                    TextField("Email address", text: $model.defaultRecipient)
-                    #endif
-                }
-
-                Button("Save Default Recipient") {
-                    model.setDefaultRecipient(model.defaultRecipient)
-                }
-
                 if let session = model.session {
                     LabeledContent("From", value: session.emailAddress ?? "Authenticated via Gmail")
                     Button("Sign Out") {
@@ -108,7 +74,33 @@ struct ContentView: View {
         } header: {
             Text("Account")
         } footer: {
-            Text("Tap to manage Gmail and your default recipient.")
+            Text("Tap to manage Gmail sign-in.")
+        }
+    }
+
+    private var defaultRecipientSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Default Recipient")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                #if os(iOS)
+                TextField("Email address", text: $model.defaultRecipient)
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.emailAddress)
+                    .autocorrectionDisabled()
+                #else
+                TextField("Email address", text: $model.defaultRecipient)
+                #endif
+            }
+
+            Button("Save Default Recipient") {
+                model.setDefaultRecipient(model.defaultRecipient)
+            }
+        } header: {
+            Text("Recipient")
+        } footer: {
+            Text("Used as the default when starting from the share sheet.")
         }
     }
 
