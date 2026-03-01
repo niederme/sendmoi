@@ -2,6 +2,11 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject private var model: AppModel
+    @FocusState private var focusedField: Field?
+
+    private enum Field: Hashable {
+        case defaultRecipient
+    }
 
     var body: some View {
         NavigationStack {
@@ -89,14 +94,23 @@ struct ContentView: View {
                     .textInputAutocapitalization(.never)
                     .keyboardType(.emailAddress)
                     .autocorrectionDisabled()
+                    .submitLabel(.done)
+                    .focused($focusedField, equals: .defaultRecipient)
+                    .onSubmit(saveDefaultRecipient)
                 #else
                 TextField("Email address", text: $model.defaultRecipient)
+                    .onSubmit(saveDefaultRecipient)
                 #endif
             }
 
-            Button("Save Default Recipient") {
-                model.setDefaultRecipient(model.defaultRecipient)
+            Button {
+                saveDefaultRecipient()
+            } label: {
+                Text("Save Default Recipient")
+                    .frame(maxWidth: .infinity)
             }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
         } header: {
             Text("Recipient")
         } footer: {
@@ -307,6 +321,11 @@ struct ContentView: View {
 
     private var shouldShowSummarySection: Bool {
         model.isRefreshingDraftPreview || !model.draft.summary.isEmpty
+    }
+
+    private func saveDefaultRecipient() {
+        focusedField = nil
+        model.setDefaultRecipient(model.defaultRecipient)
     }
 
     private func fieldLoadingIndicator(topPadding: CGFloat) -> some View {

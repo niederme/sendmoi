@@ -7,14 +7,15 @@ Last updated: March 1, 2026
 - Repo: `main`
 - Latest intended app version: `0.2`
 - Recent shipped commits:
+  - `334a80e` `Separate recipient settings from account`
   - `ecf4b78` `Add handoff notes and launch screen fix`
   - `1f7086d` `Bump version to 0.2`
-  - `2064381` `Refine compose flow and share sheet behavior`
 
 ## What Changed Recently
 
 - Share-sheet behavior is now controlled by a global `Auto-send` setting in the main app instead of living inside the compose form.
 - The default recipient is now a separate top-level `Recipient` section instead of being nested inside the collapsed `Account` view.
+- The default recipient field now saves via the keyboard submit action (`Done`) and via an explicit prominent `Save Default Recipient` button that dismisses focus before saving.
 - If `Auto-send` is off, the share extension stays open and pre-fills the draft rather than sending immediately.
 - Compose UI was tightened:
   - recent recipients are helper chips under `To`
@@ -33,7 +34,7 @@ Last updated: March 1, 2026
 ## Things To Verify On The Next Machine
 
 1. Open the project in Xcode and confirm the `LaunchScreen.storyboard` warning is gone after reloading the project / cleaning builds.
-2. Confirm the new `Recipient` section placement feels right on iPhone and that `Account` now only handles Gmail sign-in state.
+2. Confirm the new `Recipient` section placement feels right on iPhone, that `Account` now only handles Gmail sign-in state, and that the recipient save action dismisses the keyboard cleanly.
 3. Do a true cold launch on iPhone after reinstalling the app to verify the splash screen appears (Apple caches launch screens aggressively).
 4. Confirm App Store Connect metadata versions match the code version:
    - project is now `0.2`

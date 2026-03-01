@@ -8,7 +8,7 @@ MailMoi currently ships the full core workflow:
 
 - Sign in with Gmail using OAuth 2.0 + PKCE.
 - Send from the authenticated Gmail account.
-- Save a default recipient and reuse recent recipients.
+- Save a default recipient in its own dedicated settings section and reuse recent recipients.
 - Compose manually in the app or start from the native share sheet.
 - Queue every outbound email locally before network delivery.
 - Retry queued emails when the app launches, becomes active, or connectivity returns.
