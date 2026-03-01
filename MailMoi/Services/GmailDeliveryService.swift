@@ -204,10 +204,10 @@ final class GmailDeliveryService {
         ].joined(separator: "\r\n")
 
         let htmlBody = """
-        <h2 style="margin-bottom: 0;">\(escapeHTML(title))</h2>
-        <p style="margin-bottom: 10px;">\(escapeHTML(excerpt))</p>
-        <p style="margin-bottom: 50px;"><a href="\(escapeHTMLAttribute(urlString))">\(escapeHTML(urlString))</a></p>
-        <p style="margin-bottom: 10px;">\(escapeHTML(footer))</p>
+        <h2 style="margin: 0;"><a href="\(escapeHTMLAttribute(urlString))">\(escapeHTML(title))</a></h2>
+        <p style="margin: 5px 0 10px 0;">\(escapeHTML(excerpt))</p>
+        <p style="margin: 0 0 50px 0;"><a href="\(escapeHTMLAttribute(urlString))">\(escapeHTML(urlString))</a></p>
+        <p style="margin: 0 0 10px 0;">\(escapeHTML(footer))</p>
         """
 
         let message = """
