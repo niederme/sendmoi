@@ -2,21 +2,22 @@
 
 MailMoi is a native SwiftUI app for iPhone, iPad, and macOS that turns shared links into polished, responsive emails. It uses Gmail OAuth, keeps a durable offline queue, and includes a native Share Extension so links can be sent from the system share sheet without getting dropped.
 
-## Release 0.1
+## Current Status
 
-Version `0.1` is the first end-to-end release candidate. It ships the full core workflow:
+MailMoi currently ships the full core workflow:
 
 - Sign in with Gmail using OAuth 2.0 + PKCE.
 - Send from the authenticated Gmail account.
 - Save a default recipient and reuse recent recipients.
-- Compose manually in the app or send from the native share sheet.
+- Compose manually in the app or start from the native share sheet.
 - Queue every outbound email locally before network delivery.
 - Retry queued emails when the app launches, becomes active, or connectivity returns.
 - Share queue state, saved recipients, and session data through the App Group `group.com.niederme.mailmoi`.
+- Let the share sheet either send immediately or stay open with a pre-filled draft, based on the global `Auto-send` setting in the app.
 
-The app is built entirely with Apple-native frameworks, including `SwiftUI`, `AuthenticationServices`, `Network`, and `Security`.
+The app is built entirely with Apple-native frameworks, including `SwiftUI`, `AuthenticationServices`, `Network`, `Security`, and `FoundationModels` when available.
 
-## What 0.1 Sends
+## What It Sends
 
 Each email is sent through the Gmail API with a subject in this format:
 
@@ -27,25 +28,26 @@ Each email is sent through the Gmail API with a subject in this format:
 For reachable web URLs, MailMoi attempts to enrich the message before sending:
 
 - Uses the page `<title>` when available, with sensible metadata fallbacks.
-- Pulls excerpt text when the page exposes a description.
+- Pulls a page description when one is available.
 - Generates a short summary when enough content is available.
 - Inlines a preview image when the page exposes one and the image fetch succeeds.
 - Renders the HTML email as a responsive card layout for desktop and mobile clients.
 
-If metadata lookup fails, MailMoi falls back to the title, excerpt, and URL captured from the app or share sheet.
+If metadata lookup fails, MailMoi falls back to the title, description, and URL captured from the app or share sheet.
 
 ## Share Extension
 
 The `MailMoiShare` extension is included for iPhone, iPad, and macOS share sheets.
 
-- It reads title, excerpt, and URL from the shared item when the host app provides them.
-- If a default recipient is already saved and the share contains enough data, it tries to send immediately.
+- It reads the title, description, and URL from the shared item when the host app provides them.
+- If `Auto-send` is enabled and a default recipient is already saved, it tries to send immediately once it has enough data.
+- If `Auto-send` is disabled, it stays open and pre-fills the draft so you can review before sending.
 - If immediate delivery fails, it writes the message into the shared queue and exits cleanly.
-- If the host app only supplies a URL, the extension still allows manual editing before queueing.
+- If the host app only supplies a URL, the extension can still fetch metadata and allow manual editing before queueing.
 
 ## Distribution
 
-Release `0.1` is currently set up to ship through TestFlight.
+The current build is set up to ship through TestFlight.
 
 - Xcode Cloud is configured to start on pushes to `main`.
 - The active workflow archives both iOS and macOS builds.

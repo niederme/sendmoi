@@ -32,9 +32,10 @@
 		B10000010000000000000007 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000010000000000000003 /* ShareViewController.swift */; };
 		B10000010000000000000008 /* GoogleOAuthConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000006 /* GoogleOAuthConfig.swift */; };
 		B10000010000000000000009 /* GmailShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000F /* GmailShared.swift */; };
-		B1000001000000000000000A /* SharedSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000010 /* SharedSessionStore.swift */; };
-		B1000001000000000000000B /* GmailDeliveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000011 /* GmailDeliveryService.swift */; };
-		B1000001000000000000000C /* SafariPreprocessor.js in Resources */ = {isa = PBXBuildFile; fileRef = B20000010000000000000006 /* SafariPreprocessor.js */; };
+			B1000001000000000000000A /* SharedSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000010 /* SharedSessionStore.swift */; };
+			B1000001000000000000000B /* GmailDeliveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000011 /* GmailDeliveryService.swift */; };
+			A10000010000000000000011 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000014 /* LaunchScreen.storyboard */; };
+			B1000001000000000000000C /* SafariPreprocessor.js in Resources */ = {isa = PBXBuildFile; fileRef = B20000010000000000000006 /* SafariPreprocessor.js */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -77,11 +78,12 @@
 		A2000001000000000000000C /* SharedContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedContainer.swift; sourceTree = "<group>"; };
 		A2000001000000000000000D /* MailMoiShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MailMoiShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A2000001000000000000000E /* MailMoi.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MailMoi.entitlements; sourceTree = "<group>"; };
-		A2000001000000000000000F /* GmailShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GmailShared.swift; sourceTree = "<group>"; };
+			A2000001000000000000000F /* GmailShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GmailShared.swift; sourceTree = "<group>"; };
 			A20000010000000000000010 /* SharedSessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedSessionStore.swift; sourceTree = "<group>"; };
 			A20000010000000000000011 /* GmailDeliveryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GmailDeliveryService.swift; sourceTree = "<group>"; };
 			A20000010000000000000012 /* MailMoi-macOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "MailMoi-macOS.entitlements"; sourceTree = "<group>"; };
 			A20000010000000000000013 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+			A20000010000000000000014 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 			B20000010000000000000001 /* ShareExtensionModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareExtensionModel.swift; sourceTree = "<group>"; };
 			B20000010000000000000002 /* ShareView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareView.swift; sourceTree = "<group>"; };
 		B20000010000000000000003 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
@@ -118,19 +120,20 @@
 			);
 			sourceTree = "<group>";
 		};
-		A40000010000000000000002 /* MailMoi */ = {
-			isa = PBXGroup;
-			children = (
+			A40000010000000000000002 /* MailMoi */ = {
+				isa = PBXGroup;
+				children = (
 					A2000001000000000000000B /* Info.plist */,
 					A2000001000000000000000E /* MailMoi.entitlements */,
 					A20000010000000000000012 /* MailMoi-macOS.entitlements */,
 					A20000010000000000000013 /* Assets.xcassets */,
+					A20000010000000000000014 /* LaunchScreen.storyboard */,
 					A20000010000000000000001 /* MailMoiApp.swift */,
 					A20000010000000000000002 /* ContentView.swift */,
 					A20000010000000000000003 /* AppModel.swift */,
-				A20000010000000000000004 /* Models.swift */,
-				A40000010000000000000004 /* Services */,
-			);
+					A20000010000000000000004 /* Models.swift */,
+					A40000010000000000000004 /* Services */,
+				);
 			path = MailMoi;
 			sourceTree = "<group>";
 		};
@@ -244,15 +247,16 @@
 				A50000010000000000000001 /* MailMoi */,
 				B50000010000000000000001 /* MailMoiShare */,
 			);
-		};
-/* End PBXProject section */
+			};
+	/* End PBXProject section */
 
-/* Begin PBXResourcesBuildPhase section */
+	/* Begin PBXResourcesBuildPhase section */
 			A30000010000000000000003 /* Resources */ = {
 				isa = PBXResourcesBuildPhase;
 				buildActionMask = 2147483647;
 				files = (
 					A10000010000000000000010 /* Assets.xcassets in Resources */,
+					A10000010000000000000011 /* LaunchScreen.storyboard in Resources */,
 				);
 				runOnlyForDeploymentPostprocessing = 0;
 			};

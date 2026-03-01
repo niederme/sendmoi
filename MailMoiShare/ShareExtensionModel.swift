@@ -12,19 +12,25 @@ final class ShareExtensionModel: ObservableObject {
     @Published var toEmail = ""
     @Published var title = ""
     @Published var excerpt = ""
+    @Published var summary = ""
     @Published var urlString = ""
+    @Published var previewImageURLString: String?
     @Published var statusMessage = "Preparing your email..."
+    @Published private(set) var autoSendEnabled = true
     @Published var isSaving = false
+    @Published var isRefreshingPreview = false
     @Published var savedRecipients: [String] = []
     @Published var presentationMode: PresentationMode = .processing
 
     private weak var extensionContextRef: NSExtensionContext?
     private let deliveryService = GmailDeliveryService()
+    private var previewTask: Task<Void, Never>?
 
     func attach(extensionContext: NSExtensionContext?) {
         extensionContextRef = extensionContext
         savedRecipients = RecipientStore.load()
         toEmail = RecipientStore.loadDefault()
+        autoSendEnabled = RecipientStore.loadShareSheetAutoSendEnabled()
     }
 
     func loadInitialContent() {
@@ -37,6 +43,9 @@ final class ShareExtensionModel: ObservableObject {
         Task {
             let content = await SharedItemExtractor.extract(from: inputItems)
             apply(content)
+            if !autoSendEnabled || presentationMode == .editing {
+                schedulePreviewRefresh()
+            }
             autoSendIfPossible()
         }
     }
@@ -61,7 +70,9 @@ final class ShareExtensionModel: ObservableObject {
             toEmail: toEmail,
             title: title,
             excerpt: excerpt,
-            urlString: urlString
+            summary: summary,
+            urlString: urlString,
+            previewImageURLString: previewImageURLString
         )
 
         guard draft.isValidForQueue else {
@@ -74,7 +85,9 @@ final class ShareExtensionModel: ObservableObject {
             toEmail: draft.toEmail.trimmingCharacters(in: .whitespacesAndNewlines),
             title: draft.trimmedTitle,
             excerpt: draft.trimmedExcerpt,
-            urlString: draft.trimmedURLString
+            summary: draft.trimmedSummary.isEmpty ? nil : draft.trimmedSummary,
+            urlString: draft.trimmedURLString,
+            previewImageURLString: draft.previewImageURLString
         )
 
         isSaving = true
@@ -111,8 +124,11 @@ final class ShareExtensionModel: ObservableObject {
         } else if toEmail.isEmpty {
             statusMessage = "Set a default recipient in the MailMoi app, or enter one here."
             presentationMode = .editing
-        } else {
+        } else if autoSendEnabled {
             statusMessage = "Sending..."
+        } else {
+            statusMessage = "Review and tap Send when ready."
+            presentationMode = .editing
         }
     }
 
@@ -121,7 +137,9 @@ final class ShareExtensionModel: ObservableObject {
             toEmail: toEmail,
             title: title,
             excerpt: excerpt,
-            urlString: urlString
+            summary: summary,
+            urlString: urlString,
+            previewImageURLString: previewImageURLString
         )
 
         guard draft.isValidForQueue else {
@@ -129,8 +147,69 @@ final class ShareExtensionModel: ObservableObject {
             return
         }
 
+        guard autoSendEnabled else {
+            statusMessage = "Review and tap Send when ready."
+            presentationMode = .editing
+            return
+        }
+
         presentationMode = .processing
         queueAndComplete()
+    }
+
+    func schedulePreviewRefresh() {
+        previewTask?.cancel()
+
+        let normalizedURLString = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: normalizedURLString),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "http" || scheme == "https" else {
+            isRefreshingPreview = false
+            summary = ""
+            previewImageURLString = nil
+            return
+        }
+
+        let titleSnapshot = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let excerptSnapshot = excerpt.trimmingCharacters(in: .whitespacesAndNewlines)
+        isRefreshingPreview = true
+
+        previewTask = Task { [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: 350_000_000)
+            } catch {
+                return
+            }
+
+            guard let self else { return }
+            let metadata = await self.deliveryService.fetchDraftPreview(
+                urlString: normalizedURLString,
+                fallbackTitle: titleSnapshot
+            )
+
+            await MainActor.run {
+                guard self.urlString.trimmingCharacters(in: .whitespacesAndNewlines) == normalizedURLString else {
+                    return
+                }
+
+                self.isRefreshingPreview = false
+
+                if titleSnapshot.isEmpty,
+                   let previewTitle = metadata?.title,
+                   !previewTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    self.title = previewTitle
+                }
+
+                if excerptSnapshot.isEmpty,
+                   let previewDescription = metadata?.description,
+                   !previewDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    self.excerpt = previewDescription
+                }
+
+                self.summary = metadata?.summary ?? ""
+                self.previewImageURLString = metadata?.imageURLString
+            }
+        }
     }
 
     private func sendImmediatelyOrQueue(_ item: QueuedEmail) async throws {
@@ -256,10 +335,10 @@ private enum SharedItemExtractor {
 
     private static func loadTexts(from provider: NSItemProvider) async -> [String] {
         let candidateIdentifiers = [
+            UTType.html.identifier,
             "public.url-name",
             UTType.plainText.identifier,
             UTType.text.identifier,
-            UTType.html.identifier,
             UTType.rtf.identifier
         ]
 
@@ -271,6 +350,11 @@ private enum SharedItemExtractor {
         var values: [String] = []
 
         for typeIdentifier in matchingIdentifiers {
+            if typeIdentifier == UTType.html.identifier {
+                values.append(contentsOf: await loadHTMLTextCandidates(from: provider))
+                continue
+            }
+
             if let text = await loadText(from: provider, typeIdentifier: typeIdentifier) {
                 values.append(contentsOf: usefulLines(in: text))
             }
@@ -285,6 +369,96 @@ private enum SharedItemExtractor {
                 continuation.resume(returning: normalizeLoadedText(item, typeIdentifier: typeIdentifier))
             }
         }
+    }
+
+    private static func loadHTMLTextCandidates(from provider: NSItemProvider) async -> [String] {
+        guard let html = await loadHTML(from: provider) else {
+            return []
+        }
+
+        var values: [String] = []
+
+        if let title = preferredHTMLTitle(from: html) {
+            values.append(title)
+        }
+
+        if let text = plainText(fromHTML: html) {
+            values.append(contentsOf: usefulLines(in: text))
+        }
+
+        return unique(strings: values)
+    }
+
+    private static func loadHTML(from provider: NSItemProvider) async -> String? {
+        await withCheckedContinuation { continuation in
+            provider.loadItem(forTypeIdentifier: UTType.html.identifier, options: nil) { item, _ in
+                continuation.resume(returning: htmlString(from: item))
+            }
+        }
+    }
+
+    private static func htmlString(from item: NSSecureCoding?) -> String? {
+        if let string = item as? String {
+            return normalized(string)
+        }
+
+        if let attributedString = item as? NSAttributedString {
+            return normalized(attributedString.string)
+        }
+
+        if let url = item as? URL {
+            if url.isFileURL,
+               let data = try? Data(contentsOf: url) {
+                return decodedHTMLString(from: data)
+            }
+
+            return normalized(url.absoluteString)
+        }
+
+        if let data = item as? Data {
+            return decodedHTMLString(from: data)
+        }
+
+        return nil
+    }
+
+    private static func decodedHTMLString(from data: Data) -> String? {
+        if let utf8 = String(data: data, encoding: .utf8) {
+            return normalized(utf8)
+        }
+
+        if let unicode = String(data: data, encoding: .unicode) {
+            return normalized(unicode)
+        }
+
+        if let latin1 = String(data: data, encoding: .isoLatin1) {
+            return normalized(latin1)
+        }
+
+        return nil
+    }
+
+    private static func preferredHTMLTitle(from html: String) -> String? {
+        if let title = firstMatch(in: html, pattern: #"<title\b[^>]*>(.*?)</title>"#),
+           let normalizedTitle = normalizedHTMLContent(title) {
+            return normalizedTitle
+        }
+
+        let metaCandidates = [
+            ("property", "og:title"),
+            ("name", "twitter:title")
+        ]
+
+        let tags = extractMetaTags(from: html)
+
+        for (attribute, value) in metaCandidates {
+            if let content = tags.first(where: { $0[attribute]?.lowercased() == value })?["content"],
+               let normalizedTitle = normalizedHTMLContent(content) {
+                return normalizedTitle
+            }
+        }
+
+        return nil
     }
 
     private static func loadPropertyListStrings(from provider: NSItemProvider) async -> [String] {
@@ -377,6 +551,74 @@ private enum SharedItemExtractor {
         }
 
         return nil
+    }
+
+    private static func extractMetaTags(from html: String) -> [[String: String]] {
+        let pattern = "<meta\\b[^>]*>"
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
+            return []
+        }
+
+        let nsHTML = html as NSString
+        return regex.matches(in: html, range: NSRange(location: 0, length: nsHTML.length)).compactMap { match in
+            let tag = nsHTML.substring(with: match.range)
+            let attributes = parseAttributes(from: tag)
+            return attributes.isEmpty ? nil : attributes
+        }
+    }
+
+    private static func parseAttributes(from tag: String) -> [String: String] {
+        let pattern = #"([a-zA-Z_:.-]+)\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return [:]
+        }
+
+        let nsTag = tag as NSString
+        var attributes: [String: String] = [:]
+
+        for match in regex.matches(in: tag, range: NSRange(location: 0, length: nsTag.length)) {
+            let key = nsTag.substring(with: match.range(at: 1)).lowercased()
+            let valueRange: NSRange
+
+            if match.range(at: 3).location != NSNotFound {
+                valueRange = match.range(at: 3)
+            } else if match.range(at: 4).location != NSNotFound {
+                valueRange = match.range(at: 4)
+            } else {
+                valueRange = match.range(at: 5)
+            }
+
+            attributes[key] = nsTag.substring(with: valueRange)
+        }
+
+        return attributes
+    }
+
+    private static func normalizedHTMLContent(_ content: String) -> String? {
+        let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return nil
+        }
+
+        return plainText(fromHTML: "<span>\(trimmed)</span>") ?? normalized(trimmed)
+    }
+
+    private static func firstMatch(in text: String, pattern: String) -> String? {
+        guard let regex = try? NSRegularExpression(
+            pattern: pattern,
+            options: [.caseInsensitive, .dotMatchesLineSeparators]
+        ) else {
+            return nil
+        }
+
+        let nsText = text as NSString
+        guard let match = regex.firstMatch(in: text, range: NSRange(location: 0, length: nsText.length)),
+              match.numberOfRanges > 1,
+              match.range(at: 1).location != NSNotFound else {
+            return nil
+        }
+
+        return nsText.substring(with: match.range(at: 1))
     }
 
     private static func extractStrings(fromPropertyList item: NSSecureCoding?) -> [String] {

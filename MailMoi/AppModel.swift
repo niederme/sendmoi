@@ -7,13 +7,18 @@ final class AppModel: ObservableObject {
     @Published var queuedEmails: [QueuedEmail] = []
     @Published var savedRecipients: [String] = []
     @Published var defaultRecipient = ""
+    @Published var shareSheetAutoSendEnabled = true
     @Published var session: GmailSession?
     @Published var statusMessage = "Configure Google OAuth, sign in, then queue or send links."
     @Published var isBusy = false
+    @Published var isRefreshingDraftPreview = false
     @Published var isOnline = false
+    @Published var isAccountSectionExpanded = true
 
     private let client = GmailAPIClient()
+    private let deliveryService = GmailDeliveryService()
     private let monitor = NetworkMonitor()
+    private var draftPreviewTask: Task<Void, Never>?
 
     init() {
         monitor.onStatusChange = { [weak self] online in
@@ -26,6 +31,7 @@ final class AppModel: ObservableObject {
     func startup() async {
         savedRecipients = RecipientStore.load()
         defaultRecipient = RecipientStore.loadDefault()
+        shareSheetAutoSendEnabled = RecipientStore.loadShareSheetAutoSendEnabled()
         if draft.toEmail.isEmpty {
             draft.toEmail = defaultRecipient
         }
@@ -45,6 +51,8 @@ final class AppModel: ObservableObject {
             statusMessage = "Could not read saved Gmail credentials: \(error.localizedDescription)"
         }
 
+        isAccountSectionExpanded = session == nil || !GoogleOAuthConfig.isConfigured
+
         await processQueue()
     }
 
@@ -58,6 +66,7 @@ final class AppModel: ObservableObject {
             try KeychainStore.save(session: signedInSession)
             try SharedSessionStore.save(signedInSession)
             statusMessage = "Signed in as \(signedInSession.emailAddress ?? "your Gmail account")."
+            isAccountSectionExpanded = false
             reloadQueueFromDisk()
         } catch {
             statusMessage = "Sign in failed: \(error.localizedDescription)"
@@ -76,6 +85,7 @@ final class AppModel: ObservableObject {
             try KeychainStore.clearSession()
             SharedSessionStore.clear()
             session = nil
+            isAccountSectionExpanded = true
             statusMessage = "Signed out. Queued items stay on disk until you send them."
         } catch {
             statusMessage = "Could not remove saved Gmail credentials: \(error.localizedDescription)"
@@ -93,12 +103,16 @@ final class AppModel: ObservableObject {
             toEmail: normalized.toEmail,
             title: normalized.trimmedTitle,
             excerpt: normalized.trimmedExcerpt,
-            urlString: normalized.trimmedURLString
+            summary: normalized.trimmedSummary.isEmpty ? nil : normalized.trimmedSummary,
+            urlString: normalized.trimmedURLString,
+            previewImageURLString: normalized.previewImageURLString
         )
 
         queuedEmails.insert(item, at: 0)
         persistQueue()
+        draftPreviewTask?.cancel()
         draft = ShareDraft(toEmail: defaultRecipient)
+        isRefreshingDraftPreview = false
         statusMessage = "Saved offline. The app will keep retrying until Gmail accepts it."
         await processQueue()
     }
@@ -157,6 +171,64 @@ final class AppModel: ObservableObject {
         draft.toEmail = defaultRecipient
     }
 
+    func setShareSheetAutoSendEnabled(_ isEnabled: Bool) {
+        RecipientStore.setShareSheetAutoSendEnabled(isEnabled)
+        shareSheetAutoSendEnabled = RecipientStore.loadShareSheetAutoSendEnabled()
+    }
+
+    func scheduleDraftPreviewRefresh() {
+        draftPreviewTask?.cancel()
+
+        let snapshot = normalizeDraft(draft)
+        guard let url = URL(string: snapshot.trimmedURLString),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "http" || scheme == "https" else {
+            isRefreshingDraftPreview = false
+            draft.summary = ""
+            draft.previewImageURLString = nil
+            return
+        }
+
+        isRefreshingDraftPreview = true
+
+        draftPreviewTask = Task { [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: 350_000_000)
+            } catch {
+                return
+            }
+
+            guard let self else { return }
+            let metadata = await self.deliveryService.fetchDraftPreview(
+                urlString: snapshot.trimmedURLString,
+                fallbackTitle: snapshot.trimmedTitle
+            )
+
+            await MainActor.run {
+                guard self.draft.trimmedURLString == snapshot.trimmedURLString else {
+                    return
+                }
+
+                self.isRefreshingDraftPreview = false
+
+                if self.draft.trimmedTitle.isEmpty,
+                   let title = metadata?.title,
+                   !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    self.draft.title = title
+                }
+
+                if self.draft.trimmedExcerpt.isEmpty,
+                   let description = metadata?.description,
+                   !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    self.draft.excerpt = description
+                }
+
+                self.draft.summary = metadata?.summary ?? ""
+                self.draft.previewImageURLString = metadata?.imageURLString
+            }
+        }
+    }
+
     func retryNow() async {
         savedRecipients = RecipientStore.load()
         defaultRecipient = RecipientStore.loadDefault()
@@ -180,6 +252,7 @@ final class AppModel: ObservableObject {
         copy.toEmail = draft.toEmail.trimmingCharacters(in: .whitespacesAndNewlines)
         copy.title = draft.trimmedTitle
         copy.excerpt = draft.trimmedExcerpt
+        copy.summary = draft.trimmedSummary
         copy.urlString = draft.trimmedURLString
         return copy
     }

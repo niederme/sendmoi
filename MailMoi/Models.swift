@@ -5,10 +5,13 @@ struct ShareDraft: Codable, Identifiable, Equatable {
     var toEmail: String = ""
     var title: String = ""
     var excerpt: String = ""
+    var summary: String = ""
     var urlString: String = ""
+    var previewImageURLString: String?
 
     var trimmedTitle: String { title.trimmingCharacters(in: .whitespacesAndNewlines) }
     var trimmedExcerpt: String { excerpt.trimmingCharacters(in: .whitespacesAndNewlines) }
+    var trimmedSummary: String { summary.trimmingCharacters(in: .whitespacesAndNewlines) }
     var trimmedURLString: String { urlString.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     var isValidForQueue: Bool {
@@ -23,16 +26,30 @@ struct QueuedEmail: Codable, Identifiable, Equatable {
     let toEmail: String
     let title: String
     let excerpt: String
+    let summary: String?
     let urlString: String
+    let previewImageURLString: String?
     let createdAt: Date
     var lastError: String?
 
-    init(id: UUID = UUID(), toEmail: String, title: String, excerpt: String, urlString: String, createdAt: Date = .now, lastError: String? = nil) {
+    init(
+        id: UUID = UUID(),
+        toEmail: String,
+        title: String,
+        excerpt: String,
+        summary: String? = nil,
+        urlString: String,
+        previewImageURLString: String? = nil,
+        createdAt: Date = .now,
+        lastError: String? = nil
+    ) {
         self.id = id
         self.toEmail = toEmail
         self.title = title
         self.excerpt = excerpt
+        self.summary = summary
         self.urlString = urlString
+        self.previewImageURLString = previewImageURLString
         self.createdAt = createdAt
         self.lastError = lastError
     }
