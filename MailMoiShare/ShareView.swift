@@ -236,13 +236,25 @@ struct ShareView: View {
     }
 
     private var processingView: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .controlSize(.large)
-            Text(model.statusMessage)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+        VStack(spacing: 20) {
+            VStack(spacing: 12) {
+                ProgressView()
+                    .controlSize(.large)
+                Text(model.statusMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            if model.autoSendEnabled && model.isSaving {
+                Button("Edit") {
+                    model.stopAutoSendAndEdit()
+                }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
+                .controlSize(.small)
+                .tint(.primary)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(24)

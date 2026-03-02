@@ -25,6 +25,7 @@ final class ShareExtensionModel: ObservableObject {
     private weak var extensionContextRef: NSExtensionContext?
     private let deliveryService = GmailDeliveryService()
     private var previewTask: Task<Void, Never>?
+    private var sendTask: Task<Void, Never>?
 
     func attach(extensionContext: NSExtensionContext?) {
         extensionContextRef = extensionContext
@@ -92,17 +93,35 @@ final class ShareExtensionModel: ObservableObject {
 
         isSaving = true
 
-        Task {
-            do {
-                try await sendImmediatelyOrQueue(item)
-                RecipientStore.record(item.toEmail)
-                extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
-            } catch {
-                statusMessage = "Could not send or save this share item: \(error.localizedDescription)"
-                presentationMode = .editing
+        sendTask = Task { [weak self] in
+            guard let self else { return }
+            defer {
+                self.isSaving = false
+                self.sendTask = nil
             }
-            isSaving = false
+
+            do {
+                try await self.sendImmediatelyOrQueue(item)
+                RecipientStore.record(item.toEmail)
+                self.extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
+            } catch is CancellationError {
+                return
+            } catch {
+                self.statusMessage = "Could not send or save this share item: \(error.localizedDescription)"
+                self.presentationMode = .editing
+            }
         }
+    }
+
+    func stopAutoSendAndEdit() {
+        guard presentationMode == .processing, isSaving else { return }
+
+        sendTask?.cancel()
+        sendTask = nil
+        isSaving = false
+        statusMessage = "Review and tap Send when ready."
+        presentationMode = .editing
+        schedulePreviewRefresh()
     }
 
     private func apply(_ content: SharedItemContent) {
@@ -129,7 +148,7 @@ final class ShareExtensionModel: ObservableObject {
             statusMessage = "Set a default recipient in the MailMoi app, or enter one here."
             presentationMode = .editing
         } else if autoSendEnabled {
-            statusMessage = "Sending..."
+            statusMessage = "Auto-Sending..."
         } else {
             statusMessage = "Review and tap Send when ready."
             presentationMode = .editing
@@ -157,6 +176,7 @@ final class ShareExtensionModel: ObservableObject {
             return
         }
 
+        statusMessage = "Auto-Sending..."
         presentationMode = .processing
         queueAndComplete()
     }
@@ -219,20 +239,28 @@ final class ShareExtensionModel: ObservableObject {
     }
 
     private func sendImmediatelyOrQueue(_ item: QueuedEmail) async throws {
+        try Task.checkCancellation()
+
         do {
             if let session = try SharedSessionStore.load() {
+                try Task.checkCancellation()
                 let validSession = try await deliveryService.ensureValidSession(session)
+                try Task.checkCancellation()
                 try await flushQueuedEmails(using: validSession)
+                try Task.checkCancellation()
                 try await deliveryService.sendEmail(using: validSession, item: item)
                 try SharedSessionStore.save(validSession)
                 SharedContainer.removeManagedMediaIfPresent(urlString: item.previewImageURLString)
                 statusMessage = "Sent."
                 return
             }
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
             statusMessage = "Send failed. Saving offline instead."
         }
 
+        try Task.checkCancellation()
         try QueueStore.append(item)
         statusMessage = "Saved offline."
     }
@@ -241,11 +269,15 @@ final class ShareExtensionModel: ObservableObject {
         var queue = try QueueStore.load()
 
         while let next = queue.last {
+            try Task.checkCancellation()
+
             do {
                 try await deliveryService.sendEmail(using: session, item: next)
                 SharedContainer.removeManagedMediaIfPresent(urlString: next.previewImageURLString)
                 queue.removeLast()
                 try QueueStore.save(queue)
+            } catch is CancellationError {
+                throw CancellationError()
             } catch {
                 if let index = queue.indices.last {
                     queue[index].lastError = error.localizedDescription

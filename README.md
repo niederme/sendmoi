@@ -45,6 +45,7 @@ The `MailMoiShare` extension is included for iPhone, iPad, and macOS share sheet
 - It accepts URL, text, image, HTML, and JavaScript-preprocessed share payloads from the host app.
 - It reads the title, description, URL, and first shared image from the shared item when the host app provides them.
 - If `Auto-send` is enabled and a default recipient is already saved, it tries to send immediately once it has enough data.
+- While auto-send is in progress, the sheet shows an `Auto-Sending...` state with a secondary `Edit` action that stops the in-flight auto-send attempt and returns to the draft without changing the saved `Auto-send` preference.
 - If `Auto-send` is disabled, it stays open and pre-fills the draft so you can review before sending.
 - If immediate delivery fails, it writes the message into the shared queue and exits cleanly.
 - If the host app only supplies a URL, the extension can still fetch metadata and allow manual editing before queueing.

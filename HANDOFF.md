@@ -39,6 +39,7 @@ Last updated: March 2, 2026
   - low-quality summaries are filtered more aggressively, and summaries are skipped for X/Twitter and Overcast sources
   - the app now uses a branded `mail-moi.icon` Icon Composer asset, with refreshed raster icons and updated bundle icon references
   - iOS startup now includes a short branded splash overlay in addition to the launch storyboard
+  - the share extension processing state now says `Auto-Sending...` and exposes a small bordered `Edit` action that cancels auto-send and returns to the draft without changing the saved preference
 
 ## Things To Verify On The Next Machine
 
