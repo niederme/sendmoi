@@ -74,7 +74,7 @@ struct ShareView: View {
                         }
 
                         ZStack(alignment: .topLeading) {
-                            TextField(titleIsLoading ? "" : "Page title", text: $model.title, axis: .vertical)
+                            TextField(titleIsLoading ? "" : "Title", text: $model.title, axis: .vertical)
                                 .lineLimit(3, reservesSpace: true)
 
                             if titleIsLoading {
@@ -103,7 +103,7 @@ struct ShareView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("URL")
+                    Text("Link (Optional)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     #if os(iOS)
@@ -121,7 +121,7 @@ struct ShareView: View {
                 Text(
                     model.autoSendEnabled
                         ? "MailMoi sends immediately when it can. If you're offline or Gmail is unavailable, it saves to the offline queue."
-                        : "MailMoi pre-fills these fields from the page and waits for you to tap Send. If you're offline or Gmail is unavailable, it saves to the offline queue."
+                        : "MailMoi pre-fills these fields from the shared item and waits for you to tap Send. If you're offline or Gmail is unavailable, it saves to the offline queue."
                 )
             }
 

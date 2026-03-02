@@ -9,7 +9,7 @@ final class AppModel: ObservableObject {
     @Published var defaultRecipient = ""
     @Published var shareSheetAutoSendEnabled = true
     @Published var session: GmailSession?
-    @Published var statusMessage = "Configure Google OAuth, sign in, then queue or send links."
+    @Published var statusMessage = "Configure Google OAuth, sign in, then queue or send shared items."
     @Published var isBusy = false
     @Published var isRefreshingDraftPreview = false
     @Published var isOnline = false
@@ -95,13 +95,13 @@ final class AppModel: ObservableObject {
     func queueCurrentDraft() async {
         let normalized = normalizeDraft(draft)
         guard normalized.isValidForQueue else {
-            statusMessage = "Enter a recipient, title, and valid URL before queuing."
+            statusMessage = "Enter a recipient and some content before queuing."
             return
         }
 
         let item = QueuedEmail(
             toEmail: normalized.toEmail,
-            title: normalized.trimmedTitle,
+            title: normalized.queueTitle,
             excerpt: normalized.trimmedExcerpt,
             summary: normalized.trimmedSummary.isEmpty ? nil : normalized.trimmedSummary,
             urlString: normalized.trimmedURLString,
@@ -140,6 +140,7 @@ final class AppModel: ObservableObject {
             while let next = queuedEmails.last {
                 do {
                     try await client.sendEmail(using: validSession, item: next)
+                    SharedContainer.removeManagedMediaIfPresent(urlString: next.previewImageURLString)
                     removeQueuedEmail(id: next.id)
                     RecipientStore.record(next.toEmail)
                     savedRecipients = RecipientStore.load()
@@ -156,8 +157,14 @@ final class AppModel: ObservableObject {
     }
 
     func deleteQueuedEmails(at offsets: IndexSet) {
-        queuedEmails.remove(atOffsets: offsets)
-        persistQueue()
+        let removedIDs = offsets.compactMap { index in
+            queuedEmails.indices.contains(index) ? queuedEmails[index].id : nil
+        }
+        removeQueuedEmails(ids: removedIDs)
+    }
+
+    func deleteQueuedEmail(id: UUID) {
+        removeQueuedEmails(ids: [id])
     }
 
     func useSavedRecipient(_ recipient: String) {
@@ -185,7 +192,9 @@ final class AppModel: ObservableObject {
               scheme == "http" || scheme == "https" else {
             isRefreshingDraftPreview = false
             draft.summary = ""
-            draft.previewImageURLString = nil
+            if !SharedContainer.isManagedMediaURLString(draft.previewImageURLString) {
+                draft.previewImageURLString = nil
+            }
             return
         }
 
@@ -258,7 +267,19 @@ final class AppModel: ObservableObject {
     }
 
     private func removeQueuedEmail(id: UUID) {
-        queuedEmails.removeAll { $0.id == id }
+        removeQueuedEmails(ids: [id])
+    }
+
+    private func removeQueuedEmails(ids: [UUID]) {
+        guard !ids.isEmpty else {
+            return
+        }
+
+        let removedItems = queuedEmails.filter { ids.contains($0.id) }
+        removedItems.forEach { item in
+            SharedContainer.removeManagedMediaIfPresent(urlString: item.previewImageURLString)
+        }
+        queuedEmails.removeAll { ids.contains($0.id) }
         persistQueue()
     }
 

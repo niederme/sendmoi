@@ -137,17 +137,26 @@ final class GmailDeliveryService {
     }
 
     private func buildEmailContent(from item: QueuedEmail) async -> EmailContent {
-        let fallbackTitle = Self.renderMarkdownLinksAsPlainText(in: item.title)
-        let fallbackExcerpt = Self.renderMarkdownLinksAsPlainText(in: item.excerpt)
-        let fallbackSummary = item.summary?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let fallbackImageURLString = item.previewImageURLString
         let fallbackURLString = Self.preferredURLString(
             from: item.urlString,
             title: item.title,
             excerpt: item.excerpt
         )
+        let parsedSocialShare = SharedPostTextParser.parseSocialPostShare(in: item.title)
+            ?? SharedPostTextParser.parseSocialPostShare(in: item.excerpt)
+            ?? SharedPostTextParser.derivedSocialPostShare(from: fallbackURLString)
+        let fallbackTitle = SharedContentFormatter.normalizedTitle(
+            parsedSocialShare?.title ?? Self.renderMarkdownLinksAsPlainText(in: item.title),
+            urlString: fallbackURLString
+        )
+        let parsedSocialExcerpt = parsedSocialShare?.excerpt.trimmingCharacters(in: .whitespacesAndNewlines)
+        let fallbackExcerpt = (parsedSocialExcerpt?.isEmpty == false ? parsedSocialExcerpt : nil)
+            ?? Self.renderMarkdownLinksAsPlainText(in: item.excerpt)
+        let fallbackSummary = item.summary?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let fallbackImageURLString = item.previewImageURLString
 
-        guard let url = URL(string: fallbackURLString),
+        guard let fallbackURLString,
+              let url = URL(string: fallbackURLString),
               let scheme = url.scheme?.lowercased(),
               scheme == "http" || scheme == "https" else {
             return EmailContent(
@@ -174,13 +183,20 @@ final class GmailDeliveryService {
         let resolvedURLString = metadata.urlString ?? fallbackURLString
         let resolvedImageURLString = metadata.imageURLString ?? fallbackImageURLString
         let inlineImage = await fetchInlineImage(from: resolvedImageURLString)
+        let shouldPreferParsedSocialShare = parsedSocialShare != nil && Self.shouldSkipSummary(for: url)
+        let resolvedExcerpt: String
+        if shouldPreferParsedSocialShare, !fallbackExcerpt.isEmpty {
+            resolvedExcerpt = fallbackExcerpt
+        } else {
+            resolvedExcerpt = metadata.excerpt ?? fallbackExcerpt
+        }
 
         return EmailContent(
-            title: metadata.title ?? fallbackTitle,
-            excerpt: metadata.excerpt ?? fallbackExcerpt,
+            title: shouldPreferParsedSocialShare ? fallbackTitle : (metadata.title ?? fallbackTitle),
+            excerpt: resolvedExcerpt,
             summary: metadata.summary ?? fallbackSummary,
             urlString: resolvedURLString,
-            imageURLString: inlineImage == nil ? nil : resolvedImageURLString,
+            imageURLString: resolvedImageURLString,
             inlineImage: inlineImage
         )
     }
@@ -201,17 +217,33 @@ final class GmailDeliveryService {
                 return nil
             }
 
+            let responseURL = httpResponse.url ?? url
             let metaTags = Self.extractMetaTags(from: html)
-            let title = Self.extractPreferredTitle(fromHTML: html, metaTags: metaTags) ?? fallbackTitle
+            let title = SharedContentFormatter.normalizedTitle(
+                Self.extractPreferredTitle(fromHTML: html, metaTags: metaTags) ?? fallbackTitle,
+                urlString: responseURL.absoluteString
+            )
             let excerpt = Self.extractExcerpt(fromMetaTags: metaTags)
-            let summary = await Self.generateSummary(fromHTML: html, title: title, excerpt: excerpt)
+            let summary: String?
+            if Self.shouldSkipSummary(for: responseURL) {
+                summary = nil
+            } else {
+                summary = await Self.generateSummary(fromHTML: html, title: title, excerpt: excerpt)
+            }
 
             return FetchedArticleMetadata(
                 title: title,
                 excerpt: excerpt,
                 summary: summary,
-                urlString: Self.extractPreferredURLString(fromHTML: html, metaTags: metaTags, baseURL: url),
-                imageURLString: Self.extractPreferredImageURLString(fromHTML: html, metaTags: metaTags, baseURL: url)
+                urlString: Self.extractPreferredURLString(
+                    fromHTML: html,
+                    metaTags: metaTags,
+                    requestURL: url,
+                    responseURL: responseURL
+                ),
+                imageURLString: Self.shouldUseFetchedPreviewImage(for: responseURL)
+                    ? Self.extractPreferredImageURLString(fromHTML: html, metaTags: metaTags, baseURL: responseURL)
+                    : nil
             )
         } catch {
             return nil
@@ -236,8 +268,26 @@ final class GmailDeliveryService {
 
     private func fetchInlineImage(from urlString: String?) async -> InlineImage? {
         guard let urlString,
-              let url = URL(string: urlString),
-              let scheme = url.scheme?.lowercased(),
+              let url = URL(string: urlString) else {
+            return nil
+        }
+
+        if url.isFileURL {
+            guard let data = try? Data(contentsOf: url),
+                  !data.isEmpty,
+                  let mimeType = Self.supportedImageMimeType(responseMimeType: nil, urlString: urlString) else {
+                return nil
+            }
+
+            return InlineImage(
+                contentID: "mailmoi-inline-image-\(UUID().uuidString)",
+                mimeType: mimeType,
+                filename: "mailmoi-image.\(Self.fileExtension(forMimeType: mimeType))",
+                data: data
+            )
+        }
+
+        guard let scheme = url.scheme?.lowercased(),
               scheme == "http" || scheme == "https" else {
             return nil
         }
@@ -357,8 +407,11 @@ final class GmailDeliveryService {
             lines.append(summary)
         }
 
-        lines.append("")
-        lines.append("Source: \(content.urlString)")
+        if let sourceURLString = content.urlString, !sourceURLString.isEmpty {
+            lines.append("")
+            lines.append("Source: \(sourceURLString)")
+        }
+
         lines.append("")
         lines.append(footer)
 
@@ -367,9 +420,10 @@ final class GmailDeliveryService {
 
     private static func makeHTMLBody(content: EmailContent, footer: String) -> String {
         let fontFamily = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif"
-        let hasImage = content.inlineImage != nil
+        let hasImage = preferredDisplayImageSource(for: content) != nil
         let titleTopPadding = hasImage ? "20px" : "50px"
         let imageBlock = makeImageBlock(content: content)
+        let titleMarkup = makeTitleMarkup(content: content, fontFamily: fontFamily)
         let excerptBlock = content.excerpt.isEmpty ? "" : """
                             <tr>
                               <td class="mm-card-pad mm-excerpt" style="padding: 15px 50px 20px 50px; font-family: \(fontFamily); font-size: 26px; line-height: 31px; color: #111111;">
@@ -411,9 +465,7 @@ final class GmailDeliveryService {
                       \(imageBlock)
                       <tr>
                         <td class="mm-card-pad mm-title-pad" style="padding: \(titleTopPadding) 50px 0 50px; font-family: \(fontFamily); font-size: 36px; line-height: 43px; font-weight: 700; color: #111111;">
-                          <a class="mm-title-link" href="\(escapeHTMLAttribute(content.urlString))" style="color: #111111; text-decoration: none;">
-                            <span class="mm-title" style="font-family: \(fontFamily); font-size: 36px; line-height: 43px; font-weight: 700; color: #111111;">\(escapeHTML(content.title))</span>
-                          </a>
+                          \(titleMarkup)
                         </td>
                       </tr>
                       \(excerptBlock)
@@ -436,27 +488,63 @@ final class GmailDeliveryService {
     }
 
     private static func makeImageBlock(content: EmailContent) -> String {
-        guard let inlineImage = content.inlineImage else {
+        guard let imageSource = preferredDisplayImageSource(for: content) else {
             return ""
         }
 
         return """
                       <tr>
                         <td class="mm-card-pad mm-image-pad" style="padding: 50px 50px 0 50px;">
-                          <img src="cid:\(escapeHTMLAttribute(inlineImage.contentID))" alt="\(escapeHTMLAttribute(content.title))" width="750" style="display: block; width: 100%; height: auto; border: 0; outline: none; text-decoration: none;">
+                          <img src="\(escapeHTMLAttribute(imageSource))" alt="\(escapeHTMLAttribute(content.title))" width="750" style="display: block; width: 100%; height: auto; border: 0; outline: none; text-decoration: none;">
                         </td>
                       </tr>
                       """
     }
 
+    private static func preferredDisplayImageSource(for content: EmailContent) -> String? {
+        if let inlineImage = content.inlineImage {
+            return "cid:\(inlineImage.contentID)"
+        }
+
+        guard let urlString = content.imageURLString,
+              let url = URL(string: urlString),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "http" || scheme == "https" else {
+            return nil
+        }
+
+        return urlString
+    }
+
+    private static func makeTitleMarkup(content: EmailContent, fontFamily: String) -> String {
+        let titleSpan = """
+                        <span class="mm-title" style="font-family: \(fontFamily); font-size: 36px; line-height: 43px; font-weight: 700; color: #111111;">\(escapeHTML(content.title))</span>
+                        """
+
+        guard let urlString = content.urlString, !urlString.isEmpty else {
+            return titleSpan
+        }
+
+        return """
+                          <a class="mm-title-link" href="\(escapeHTMLAttribute(urlString))" style="color: #111111; text-decoration: none;">
+                            \(titleSpan)
+                          </a>
+                          """
+    }
+
     private static func makeSummaryBlock(content: EmailContent, fontFamily: String) -> String {
-        let sourceBlock = """
-                              <tr>
-                                <td class="mm-card-pad mm-card-bottom" style="padding: 15px 50px 50px 50px; font-family: \(fontFamily); font-size: 14px; line-height: 17px; color: #111111;">
-                                  <span>Source: </span><a href="\(escapeHTMLAttribute(content.urlString))" style="color: #111111; text-decoration: underline;">\(escapeHTML(content.urlString))</a>
-                                </td>
-                              </tr>
-                              """
+        let sourceBlock: String
+        if let urlString = content.urlString, !urlString.isEmpty {
+            sourceBlock = """
+                          <tr>
+                            <td class="mm-card-pad mm-card-bottom" style="padding: 15px 50px 50px 50px; font-family: \(fontFamily); font-size: 14px; line-height: 17px; color: #111111;">
+                              <span>Source: </span><a href="\(escapeHTMLAttribute(urlString))" style="color: #111111; text-decoration: underline;">\(escapeHTML(urlString))</a>
+                            </td>
+                          </tr>
+                          """
+        } else {
+            sourceBlock = ""
+        }
 
         guard let summary = content.summary, !summary.isEmpty else {
             return sourceBlock
@@ -518,7 +606,15 @@ final class GmailDeliveryService {
 
     private static func supportedImageMimeType(responseMimeType: String?, urlString: String) -> String? {
         let normalized = responseMimeType?.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        let supported = ["image/png", "image/jpeg", "image/gif"]
+        let supported = [
+            "image/png",
+            "image/jpeg",
+            "image/gif",
+            "image/webp",
+            "image/heic",
+            "image/tiff",
+            "image/bmp"
+        ]
 
         if let normalized, supported.contains(normalized) {
             return normalized
@@ -532,6 +628,14 @@ final class GmailDeliveryService {
             return "image/jpeg"
         case "gif":
             return "image/gif"
+        case "webp":
+            return "image/webp"
+        case "heic":
+            return "image/heic"
+        case "tif", "tiff":
+            return "image/tiff"
+        case "bmp":
+            return "image/bmp"
         default:
             return nil
         }
@@ -543,44 +647,58 @@ final class GmailDeliveryService {
             return "png"
         case "image/gif":
             return "gif"
+        case "image/webp":
+            return "webp"
+        case "image/heic":
+            return "heic"
+        case "image/tiff":
+            return "tiff"
+        case "image/bmp":
+            return "bmp"
         default:
             return "jpg"
         }
     }
 
     private static func renderMarkdownLinksAsPlainText(in text: String) -> String {
-        let pattern = #"\[([^\]]+)\]\((https?://[^)\s]+)\)"#
-        guard let regex = try? NSRegularExpression(pattern: pattern) else {
-            return text
-        }
-
-        let range = NSRange(text.startIndex..<text.endIndex, in: text)
-        return regex.stringByReplacingMatches(in: text, options: [], range: range, withTemplate: "$1")
+        SharedPostTextParser.plainTextByRenderingMarkdownLikeLinks(in: text)
     }
 
-    private static func preferredURLString(from urlString: String, title: String, excerpt: String) -> String {
-        if !urlString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return urlString
+    private static func preferredURLString(from urlString: String, title: String, excerpt: String) -> String? {
+        let trimmedURLString = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedURLString.isEmpty {
+            return trimmedURLString
         }
 
-        return firstMarkdownLinkURL(in: title) ?? firstMarkdownLinkURL(in: excerpt) ?? urlString
+        return firstMarkdownLinkURL(in: title) ?? firstMarkdownLinkURL(in: excerpt)
     }
 
     private static func firstMarkdownLinkURL(in text: String) -> String? {
-        let pattern = #"\[[^\]]+\]\((https?://[^)\s]+)\)"#
-        guard let regex = try? NSRegularExpression(pattern: pattern) else {
-            return nil
+        SharedPostTextParser.firstMarkdownLikeLinkURL(in: text)
+    }
+
+    private static func shouldSkipSummary(for url: URL) -> Bool {
+        guard let host = url.host?.lowercased() else {
+            return false
         }
 
-        let range = NSRange(text.startIndex..<text.endIndex, in: text)
-        guard
-            let match = regex.firstMatch(in: text, options: [], range: range),
-            let urlRange = Range(match.range(at: 1), in: text)
-        else {
-            return nil
+        return host == "x.com" ||
+            host == "www.x.com" ||
+            host == "twitter.com" ||
+            host == "www.twitter.com" ||
+            host == "overcast.fm" ||
+            host == "www.overcast.fm"
+    }
+
+    private static func shouldUseFetchedPreviewImage(for url: URL) -> Bool {
+        guard let host = url.host?.lowercased() else {
+            return true
         }
 
-        return String(text[urlRange])
+        return host != "x.com" &&
+            host != "www.x.com" &&
+            host != "twitter.com" &&
+            host != "www.twitter.com"
     }
 
     private static func extractPreferredTitle(fromHTML html: String, metaTags: [[String: String]]) -> String? {
@@ -604,7 +722,12 @@ final class GmailDeliveryService {
         return nil
     }
 
-    private static func extractPreferredURLString(fromHTML html: String, metaTags: [[String: String]], baseURL: URL) -> String? {
+    private static func extractPreferredURLString(
+        fromHTML html: String,
+        metaTags: [[String: String]],
+        requestURL: URL,
+        responseURL: URL
+    ) -> String? {
         let candidates = [
             ("property", "og:url"),
             ("name", "twitter:url")
@@ -612,18 +735,26 @@ final class GmailDeliveryService {
 
         for (attribute, value) in candidates {
             if let content = metaTags.first(where: { $0[attribute]?.lowercased() == value })?["content"],
-               let resolved = resolvedURLString(content, relativeTo: baseURL) {
-                return resolved
+               let resolved = resolvedURLString(content, relativeTo: responseURL) {
+                return Self.preferredSourceURLString(
+                    candidateURLString: resolved,
+                    requestURL: requestURL,
+                    responseURL: responseURL
+                )
             }
         }
 
         let linkTags = extractTags(named: "link", from: html)
         if let canonicalHref = linkTags.first(where: { ($0["rel"] ?? "").lowercased().contains("canonical") })?["href"],
-           let resolved = resolvedURLString(canonicalHref, relativeTo: baseURL) {
-            return resolved
+           let resolved = resolvedURLString(canonicalHref, relativeTo: responseURL) {
+            return Self.preferredSourceURLString(
+                candidateURLString: resolved,
+                requestURL: requestURL,
+                responseURL: responseURL
+            )
         }
 
-        return baseURL.absoluteString
+        return responseURL.absoluteString
     }
 
     private static func extractPreferredImageURLString(fromHTML html: String, metaTags: [[String: String]], baseURL: URL) -> String? {
@@ -815,35 +946,47 @@ final class GmailDeliveryService {
         }
 
         let cleanedText = normalizeArticleText(plainText, title: title, excerpt: excerpt)
-        guard wordCount(in: cleanedText) > 100 else {
+        guard wordCount(in: cleanedText) > 100,
+              passesSummaryInputQualityGate(cleanedText, title: title) else {
             return nil
         }
 
         if let aiSummary = await summarizeWithFoundationModels(cleanedText, title: title, minWords: 75, maxWords: 100) {
-            return stripSummaryPreamble(from: aiSummary, title: title)
+            let normalized = stripSummaryPreamble(from: aiSummary, title: title)
+            return passesSummaryOutputQualityGate(normalized) ? normalized : nil
         }
 
         guard let fallbackSummary = summarize(cleanedText, minWords: 75, maxWords: 100) else {
             return nil
         }
 
-        return stripSummaryPreamble(from: fallbackSummary, title: title)
+        let normalized = stripSummaryPreamble(from: fallbackSummary, title: title)
+        return passesSummaryOutputQualityGate(normalized) ? normalized : nil
     }
 
     private static func extractPreferredSection(from html: String) -> String? {
-        let patterns = [
-            #"<article\b[^>]*>(.*?)</article>"#,
-            #"<main\b[^>]*>(.*?)</main>"#,
-            #"<body\b[^>]*>(.*?)</body>"#
+        let candidates = [
+            (pattern: #"<article\b[^>]*>(.*?)</article>"#, baseScore: 500),
+            (pattern: #"<(main|section|div)\b[^>]*(?:id|class|itemprop)\s*=\s*["'][^"']*(article|content|story|post|entry|body)[^"']*["'][^>]*>(.*?)</\1>"#, baseScore: 350),
+            (pattern: #"<main\b[^>]*>(.*?)</main>"#, baseScore: 150),
+            (pattern: #"<body\b[^>]*>(.*?)</body>"#, baseScore: 0)
         ]
 
-        for pattern in patterns {
-            if let section = firstMatch(in: html, pattern: pattern) {
-                return section
+        var bestSection: String?
+        var bestScore = Int.min
+
+        for candidate in candidates {
+            let sections = allMatches(in: html, pattern: candidate.pattern)
+            for section in sections {
+                let score = scoreSection(section, baseScore: candidate.baseScore)
+                if score > bestScore {
+                    bestScore = score
+                    bestSection = section
+                }
             }
         }
 
-        return nil
+        return bestSection
     }
 
     private static func firstMatch(in text: String, pattern: String) -> String? {
@@ -862,6 +1005,49 @@ final class GmailDeliveryService {
         }
 
         return nsText.substring(with: match.range(at: 1))
+    }
+
+    private static func allMatches(in text: String, pattern: String) -> [String] {
+        guard let regex = try? NSRegularExpression(
+            pattern: pattern,
+            options: [.caseInsensitive, .dotMatchesLineSeparators]
+        ) else {
+            return []
+        }
+
+        let nsText = text as NSString
+        return regex.matches(in: text, range: NSRange(location: 0, length: nsText.length)).compactMap { match in
+            let preferredRangeIndex: Int
+
+            if match.numberOfRanges > 3,
+               match.range(at: 3).location != NSNotFound {
+                preferredRangeIndex = 3
+            } else if match.numberOfRanges > 1,
+                      match.range(at: 1).location != NSNotFound {
+                preferredRangeIndex = 1
+            } else {
+                return nil
+            }
+
+            return nsText.substring(with: match.range(at: preferredRangeIndex))
+        }
+    }
+
+    private static func scoreSection(_ html: String, baseScore: Int) -> Int {
+        let stripped = stripNonContentTags(from: html)
+        guard let plainText = plainText(fromHTMLForSummary: stripped) else {
+            return Int.min
+        }
+
+        let lines = plainText
+            .components(separatedBy: .newlines)
+            .map(collapseWhitespace(in:))
+            .filter { !$0.isEmpty }
+        let longLines = lines.filter { wordCount(in: $0) >= 12 }
+        let junkLines = lines.filter { looksLikeNonBodyLine($0) || looksLikeFeedOrPromoLine($0) || looksLikeCodeOrScript($0) }
+        let words = wordCount(in: lines.joined(separator: " "))
+
+        return baseScore + (words * 2) + (longLines.count * 40) - (junkLines.count * 80)
     }
 
     private static func stripNonContentTags(from html: String) -> String {
@@ -939,6 +1125,14 @@ final class GmailDeliveryService {
                     return nil
                 }
 
+                if looksLikeFeedOrPromoLine(collapsed) {
+                    return nil
+                }
+
+                if looksLikeCodeOrScript(collapsed) {
+                    return nil
+                }
+
                 if let excerptLower,
                    lowered == excerptLower {
                     return nil
@@ -984,6 +1178,162 @@ final class GmailDeliveryService {
         }
 
         return false
+    }
+
+    private static func looksLikeFeedOrPromoLine(_ line: String) -> Bool {
+        let lowered = line.lowercased()
+        let directMarkers = [
+            "sign up",
+            "the latest",
+            "newsletter",
+            "horoscope",
+            "horoscopes",
+            "podcast by",
+            "more more more",
+            "can we talk about our spring issue",
+            "your weekly horoscopes",
+            "for new york night school"
+        ]
+
+        if directMarkers.contains(where: { lowered.contains($0) }) {
+            return true
+        }
+
+        let headlineLikeWords = line.split(whereSeparator: \.isWhitespace)
+        let hasDateToken = lowered.range(of: #"\b\d{1,2}/\d{1,2}/\d{2,4}\b"#, options: .regularExpression) != nil
+        let hasTimeToken = lowered.range(of: #"\b\d{1,2}:\d{2}\s*[ap]\.m\.\b"#, options: .regularExpression) != nil
+
+        if (hasDateToken || hasTimeToken) && headlineLikeWords.count <= 16 {
+            return true
+        }
+
+        let titlecaseWords = headlineLikeWords.filter { word in
+            guard let first = word.first else {
+                return false
+            }
+            return first.isUppercase
+        }.count
+
+        if headlineLikeWords.count >= 6,
+           headlineLikeWords.count <= 18,
+           titlecaseWords >= max(headlineLikeWords.count - 2, 4),
+           !line.contains(".") {
+            return true
+        }
+
+        return false
+    }
+
+    private static func looksLikeCodeOrScript(_ line: String) -> Bool {
+        let lowered = line.lowercased()
+        let directMarkers = [
+            "function(",
+            "function ",
+            "return ",
+            "document.",
+            "window.",
+            ".prototype",
+            "appendchild(",
+            "createelement(",
+            "addeventlistener(",
+            "jquery",
+            "eval(",
+            "parsejson",
+            "xmlhttprequest",
+            "||",
+            "&&"
+        ]
+
+        if directMarkers.contains(where: { lowered.contains($0) }) {
+            return true
+        }
+
+        let punctuationScalars = line.unicodeScalars.filter {
+            CharacterSet(charactersIn: "{}[]();=<>&|\\").contains($0)
+        }.count
+        if line.count >= 100,
+           punctuationScalars >= 12,
+           (line.contains("{") || line.contains("}") || lowered.contains("function") || lowered.contains("return")) {
+            return true
+        }
+
+        return false
+    }
+
+    private static func passesSummaryInputQualityGate(_ text: String, title: String) -> Bool {
+        let lines = text
+            .components(separatedBy: .newlines)
+            .map(collapseWhitespace(in:))
+            .filter { !$0.isEmpty }
+
+        guard !lines.isEmpty else {
+            return false
+        }
+
+        let junkLines = lines.filter { looksLikeFeedOrPromoLine($0) }
+        if junkLines.count >= max(2, lines.count / 3) {
+            return false
+        }
+
+        let nonBodyLines = lines.filter { looksLikeNonBodyLine($0) }
+        if nonBodyLines.count >= max(3, lines.count / 2) {
+            return false
+        }
+
+        let codeLines = lines.filter { looksLikeCodeOrScript($0) }
+        if !codeLines.isEmpty {
+            return false
+        }
+
+        let lowered = text.lowercased()
+        let titleLower = title.lowercased()
+        if lowered.contains("sign up") && !titleLower.contains("sign up") {
+            return false
+        }
+
+        return true
+    }
+
+    private static func passesSummaryOutputQualityGate(_ summary: String) -> Bool {
+        let normalized = collapseWhitespace(in: summary)
+        guard wordCount(in: normalized) >= 20 else {
+            return false
+        }
+
+        if looksLikeFeedOrPromoLine(normalized) {
+            return false
+        }
+
+        if looksLikeCodeOrScript(normalized) {
+            return false
+        }
+
+        let lowered = normalized.lowercased()
+        let markers = [
+            "sign up",
+            "the latest",
+            "your weekly horoscopes",
+            "more more more"
+        ]
+
+        if markers.contains(where: { lowered.contains($0) }) {
+            return false
+        }
+
+        let dateCount = countMatches(in: lowered, pattern: #"\b\d{1,2}/\d{1,2}/\d{2,4}\b"#)
+        if dateCount > 1 {
+            return false
+        }
+
+        return true
+    }
+
+    private static func countMatches(in text: String, pattern: String) -> Int {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
+            return 0
+        }
+
+        return regex.numberOfMatches(in: text, range: NSRange(location: 0, length: (text as NSString).length))
     }
 
     private static func summarize(_ text: String, minWords: Int, maxWords: Int) -> String? {
@@ -1080,6 +1430,34 @@ final class GmailDeliveryService {
             .joined(separator: " ")
     }
 
+    private static func normalizedHost(from url: URL) -> String? {
+        url.host?.lowercased().replacingOccurrences(of: "www.", with: "")
+    }
+
+    private static func preferredSourceURLString(candidateURLString: String, requestURL: URL, responseURL: URL) -> String {
+        guard
+            let candidateURL = URL(string: candidateURLString),
+            let requestHost = normalizedHost(from: requestURL),
+            let candidateHost = normalizedHost(from: candidateURL)
+        else {
+            return candidateURLString
+        }
+
+        let preservesProviderSourceHosts: Set<String> = ["overcast.fm"]
+        if preservesProviderSourceHosts.contains(requestHost),
+           candidateHost != requestHost {
+            return requestURL.absoluteString
+        }
+
+        if let responseHost = normalizedHost(from: responseURL),
+           preservesProviderSourceHosts.contains(responseHost),
+           candidateHost != responseHost {
+            return responseURL.absoluteString
+        }
+
+        return candidateURLString
+    }
+
     private static func looksLikeModelRefusal(_ text: String) -> Bool {
         let lowered = text.lowercased()
         let refusalMarkers = [
@@ -1110,26 +1488,26 @@ final class GmailDeliveryService {
         let excerptSource = truncate(text, to: 700)
         let session = LanguageModelSession(model: model) {
             """
-            You summarize already-published articles and web pages for a read-later email.
+            You summarize already-published web content for a read-later email.
             Return plain text only.
             Write between \(minWords) and \(maxWords) words when the source supports it.
-            Treat the content as an article summary request, not advice, classification, or a safety review.
-            Summarize only what is already published in the provided article text.
+            Treat the content as a summary request, not advice, classification, or a safety review.
+            Summarize only what is already published in the provided source text.
             Ignore image captions, credits, product listings, bylines, and promotional or subscription copy.
             Be neutral, concise, and specific.
             Do not repeat the title verbatim.
             Focus on the main point of the page.
-            Do not introduce the summary with phrases like "Here is a summary" or "This article is about".
+            Do not introduce the summary with phrases like "Here is a summary" or "This post is about".
             Start directly with the substance.
             """
         }
 
         let prompt = """
-        Summarize this article for an email digest.
+        Summarize this content for an email digest.
 
         Title: \(title)
 
-        Article content:
+        Source content:
         \(excerptSource)
         """
 
@@ -1198,7 +1576,7 @@ private struct EmailContent {
     let title: String
     let excerpt: String
     let summary: String?
-    let urlString: String
+    let urlString: String?
     let imageURLString: String?
     let inlineImage: InlineImage?
 }

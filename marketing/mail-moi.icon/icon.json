@@ -1,0 +1,42 @@
+{
+  "fill" : {
+    "automatic-gradient" : "display-p3:0.16833,0.49707,0.99902,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "glass" : false,
+          "image-name" : "4 – moi.svg",
+          "name" : "4 – moi"
+        },
+        {
+          "blend-mode" : "normal",
+          "glass" : false,
+          "hidden" : false,
+          "image-name" : "3 – paperplane.svg",
+          "name" : "3 – paperplane"
+        },
+        {
+          "glass" : false,
+          "image-name" : "1 – BG 4.svg",
+          "name" : "1 – BG 4"
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}

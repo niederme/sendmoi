@@ -76,14 +76,14 @@ final class ShareExtensionModel: ObservableObject {
         )
 
         guard draft.isValidForQueue else {
-            statusMessage = "Enter a recipient, title, and valid URL before saving."
+            statusMessage = "Enter a recipient and some content before saving."
             presentationMode = .editing
             return
         }
 
         let item = QueuedEmail(
             toEmail: draft.toEmail.trimmingCharacters(in: .whitespacesAndNewlines),
-            title: draft.trimmedTitle,
+            title: draft.queueTitle,
             excerpt: draft.trimmedExcerpt,
             summary: draft.trimmedSummary.isEmpty ? nil : draft.trimmedSummary,
             urlString: draft.trimmedURLString,
@@ -118,7 +118,11 @@ final class ShareExtensionModel: ObservableObject {
             urlString = content.urlString
         }
 
-        if title.isEmpty && excerpt.isEmpty && urlString.isEmpty {
+        if previewImageURLString == nil {
+            previewImageURLString = content.previewImageURLString
+        }
+
+        if title.isEmpty && excerpt.isEmpty && urlString.isEmpty && previewImageURLString == nil {
             statusMessage = "Nothing was extracted automatically. You can still fill it in manually."
             presentationMode = .editing
         } else if toEmail.isEmpty {
@@ -166,7 +170,9 @@ final class ShareExtensionModel: ObservableObject {
               scheme == "http" || scheme == "https" else {
             isRefreshingPreview = false
             summary = ""
-            previewImageURLString = nil
+            if !SharedContainer.isManagedMediaURLString(previewImageURLString) {
+                previewImageURLString = nil
+            }
             return
         }
 
@@ -219,6 +225,7 @@ final class ShareExtensionModel: ObservableObject {
                 try await flushQueuedEmails(using: validSession)
                 try await deliveryService.sendEmail(using: validSession, item: item)
                 try SharedSessionStore.save(validSession)
+                SharedContainer.removeManagedMediaIfPresent(urlString: item.previewImageURLString)
                 statusMessage = "Sent."
                 return
             }
@@ -236,6 +243,7 @@ final class ShareExtensionModel: ObservableObject {
         while let next = queue.last {
             do {
                 try await deliveryService.sendEmail(using: session, item: next)
+                SharedContainer.removeManagedMediaIfPresent(urlString: next.previewImageURLString)
                 queue.removeLast()
                 try QueueStore.save(queue)
             } catch {
@@ -253,6 +261,7 @@ private struct SharedItemContent {
     var title = ""
     var excerpt = ""
     var urlString = ""
+    var previewImageURLString: String?
 }
 
 private enum SharedItemExtractor {
@@ -281,6 +290,11 @@ private enum SharedItemExtractor {
                     content.urlString = url.absoluteString
                 }
 
+                if content.previewImageURLString == nil,
+                   let imageURLString = await loadStoredImageURLString(from: provider) {
+                    content.previewImageURLString = imageURLString
+                }
+
                 let textValues = await loadTexts(from: provider)
                 if !textValues.isEmpty {
                     textCandidates.append(contentsOf: textValues)
@@ -294,6 +308,10 @@ private enum SharedItemExtractor {
         }
 
         content = normalize(content, using: textCandidates)
+
+        if content.title.isEmpty, content.previewImageURLString != nil {
+            content.title = "Shared Photo"
+        }
 
         if content.title.isEmpty, let host = URL(string: content.urlString)?.host {
             content.title = host
@@ -329,6 +347,82 @@ private enum SharedItemExtractor {
                 }
 
                 continuation.resume(returning: nil)
+            }
+        }
+    }
+
+    private static func loadStoredImageURLString(from provider: NSItemProvider) async -> String? {
+        let typeIdentifier = preferredImageTypeIdentifier(from: provider)
+        guard !typeIdentifier.isEmpty else {
+            return nil
+        }
+
+        if let data = await loadImageData(from: provider, typeIdentifier: typeIdentifier) {
+            let fileExtension = preferredImageFileExtension(for: typeIdentifier)
+            let fileURL = try? SharedContainer.storeSharedMedia(data: data, fileExtension: fileExtension)
+            return fileURL?.absoluteString
+        }
+
+        return nil
+    }
+
+    private static func preferredImageTypeIdentifier(from provider: NSItemProvider) -> String {
+        let candidates = [
+            UTType.jpeg.identifier,
+            UTType.png.identifier,
+            UTType.gif.identifier,
+            UTType.tiff.identifier,
+            UTType.bmp.identifier,
+            UTType.heic.identifier,
+            UTType.image.identifier
+        ]
+
+        return candidates.first(where: { provider.hasItemConformingToTypeIdentifier($0) }) ?? ""
+    }
+
+    private static func preferredImageFileExtension(for typeIdentifier: String) -> String {
+        switch typeIdentifier {
+        case UTType.heic.identifier:
+            return "heic"
+        case UTType.png.identifier:
+            return "png"
+        case UTType.gif.identifier:
+            return "gif"
+        case UTType.tiff.identifier:
+            return "tiff"
+        case UTType.bmp.identifier:
+            return "bmp"
+        default:
+            return "jpg"
+        }
+    }
+
+    private static func loadImageData(from provider: NSItemProvider, typeIdentifier: String) async -> Data? {
+        if let data = await loadImageDataRepresentation(from: provider, typeIdentifier: typeIdentifier) {
+            return data
+        }
+
+        return await loadImageFileRepresentationData(from: provider, typeIdentifier: typeIdentifier)
+    }
+
+    private static func loadImageDataRepresentation(from provider: NSItemProvider, typeIdentifier: String) async -> Data? {
+        await withCheckedContinuation { continuation in
+            provider.loadDataRepresentation(forTypeIdentifier: typeIdentifier) { data, _ in
+                continuation.resume(returning: data)
+            }
+        }
+    }
+
+    private static func loadImageFileRepresentationData(from provider: NSItemProvider, typeIdentifier: String) async -> Data? {
+        await withCheckedContinuation { continuation in
+            provider.loadFileRepresentation(forTypeIdentifier: typeIdentifier) { url, _ in
+                guard let url,
+                      let data = try? Data(contentsOf: url) else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+
+                continuation.resume(returning: data)
             }
         }
     }
@@ -673,6 +767,26 @@ private enum SharedItemExtractor {
 
     private static func normalize(_ content: SharedItemContent, using textCandidates: [String]) -> SharedItemContent {
         var normalizedContent = content
+        if let socialShare = SharedPostTextParser.parseSocialPostShare(in: normalizedContent.title) {
+            normalizedContent.title = socialShare.title
+            if normalizedContent.excerpt.isEmpty {
+                normalizedContent.excerpt = socialShare.excerpt
+            }
+            if normalizedContent.urlString.isEmpty, let url = socialShare.url {
+                normalizedContent.urlString = url
+            }
+        }
+
+        if let socialShare = SharedPostTextParser.parseSocialPostShare(in: normalizedContent.excerpt) {
+            if normalizedContent.title.isEmpty {
+                normalizedContent.title = socialShare.title
+            }
+            normalizedContent.excerpt = socialShare.excerpt
+            if normalizedContent.urlString.isEmpty, let url = socialShare.url {
+                normalizedContent.urlString = url
+            }
+        }
+
         if let titleMarkdownLink = markdownLink(in: normalizedContent.title) {
             normalizedContent.title = titleMarkdownLink.text
             if normalizedContent.urlString.isEmpty {
@@ -688,6 +802,14 @@ private enum SharedItemExtractor {
         }
 
         let normalizedCandidates = expandedMarkdownCandidates(from: textCandidates)
+        if let socialShare = normalizedCandidates.compactMap(SharedPostTextParser.parseSocialPostShare(in:)).first {
+            if normalizedContent.title.isEmpty {
+                normalizedContent.title = socialShare.title
+            }
+            if normalizedContent.excerpt.isEmpty {
+                normalizedContent.excerpt = socialShare.excerpt
+            }
+        }
 
         if normalizedContent.urlString.isEmpty,
            let detectedURL = firstDetectedURLString(in: normalizedCandidates) {
@@ -697,6 +819,29 @@ private enum SharedItemExtractor {
         let host = URL(string: normalizedContent.urlString)?.host?.lowercased()
         let candidates = unique(strings: normalizedCandidates).filter {
             $0.caseInsensitiveCompare(normalizedContent.urlString) != .orderedSame
+        }
+        let derivedSocialShare = SharedPostTextParser.derivedSocialPostShare(from: normalizedContent.urlString)
+
+        if let derivedSocialShare {
+            let shouldReplaceTitle =
+                normalizedContent.title.isEmpty ||
+                looksLikeHost(normalizedContent.title, host: host) ||
+                normalizedContent.title.caseInsensitiveCompare(normalizedContent.urlString) == .orderedSame
+
+            if shouldReplaceTitle {
+                normalizedContent.title = derivedSocialShare.title
+            }
+
+            if normalizedContent.excerpt.isEmpty, !derivedSocialShare.excerpt.isEmpty {
+                normalizedContent.excerpt = derivedSocialShare.excerpt
+            }
+        }
+
+        if !normalizedContent.title.isEmpty {
+            normalizedContent.title = SharedContentFormatter.normalizedTitle(
+                normalizedContent.title,
+                urlString: normalizedContent.urlString
+            )
         }
 
         if shouldPromoteExcerptToTitle(content: normalizedContent, host: host) {
@@ -779,28 +924,7 @@ private enum SharedItemExtractor {
     }
 
     private static func markdownLink(in text: String) -> (text: String, url: String)? {
-        let pattern = #"^\[([^\]]+)\]\((https?://[^)\s]+)\)$"#
-        guard let regex = try? NSRegularExpression(pattern: pattern) else {
-            return nil
-        }
-
-        let range = NSRange(text.startIndex..<text.endIndex, in: text)
-        guard
-            let match = regex.firstMatch(in: text, options: [], range: range),
-            match.range.location != NSNotFound,
-            let titleRange = Range(match.range(at: 1), in: text),
-            let urlRange = Range(match.range(at: 2), in: text)
-        else {
-            return nil
-        }
-
-        let title = String(text[titleRange]).trimmingCharacters(in: .whitespacesAndNewlines)
-        let url = String(text[urlRange]).trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !title.isEmpty, !url.isEmpty else {
-            return nil
-        }
-
-        return (title, url)
+        SharedPostTextParser.markdownLikeLink(in: text)
     }
 
     private static func firstDetectedURLString(in candidates: [String]) -> String? {

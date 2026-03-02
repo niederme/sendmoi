@@ -1,6 +1,6 @@
 # MailMoi Handoff
 
-Last updated: March 1, 2026
+Last updated: March 2, 2026
 
 ## Current State
 
@@ -30,6 +30,15 @@ Last updated: March 1, 2026
   - `PRIVACY.md`
   - iOS launch screen asset and storyboard (`Splash.imageset`, `LaunchScreen.storyboard`)
 - `README.md` now reflects current behavior instead of hardcoding the old `0.1` release framing.
+- New in the current working tree:
+  - the macOS app now uses a desktop-style card layout instead of reusing the iPhone/iPad form
+  - image-only shares are first-class queue items, with fallback titles like `Shared Photo`
+  - share-extension media is persisted into the shared App Group container and deleted after send / queue deletion
+  - the share extension activation rule now accepts image, text, URL, HTML, and property-list payloads
+  - X/Twitter share text and Overcast links are normalized more aggressively before sending
+  - low-quality summaries are filtered more aggressively, and summaries are skipped for X/Twitter and Overcast sources
+  - the app now uses a branded `mail-moi.icon` Icon Composer asset, with refreshed raster icons and updated bundle icon references
+  - iOS startup now includes a short branded splash overlay in addition to the launch storyboard
 
 ## Things To Verify On The Next Machine
 
@@ -39,6 +48,9 @@ Last updated: March 1, 2026
 4. Confirm App Store Connect metadata versions match the code version:
    - project is now `0.2`
    - App Store Connect screenshot previously showed macOS app version `1.0`
+5. Share a photo directly from Photos (without a URL) and confirm it can be queued, sent, and removed without leaving orphaned files in the App Group container.
+6. Share an X/Twitter post and an Overcast episode and confirm the title / source URL / summary behavior looks intentional rather than noisy.
+7. Run the macOS target and confirm the desktop card layout feels right at common window sizes, especially queue deletion and account disclosure behavior.
 
 ## Local Setup
 
