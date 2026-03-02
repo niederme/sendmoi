@@ -20,14 +20,32 @@ struct ContentView: View {
 
     @ViewBuilder
     private var rootContent: some View {
-        #if os(macOS)
+        if usesDesktopLayout {
         desktopContent
-        #else
+        } else {
         mobileContent
+        }
+    }
+
+    private var usesDesktopLayout: Bool {
+        #if os(macOS) || targetEnvironment(macCatalyst)
+        true
+        #else
+        ProcessInfo.processInfo.isiOSAppOnMac
         #endif
     }
 
     private var mobileContent: some View {
+        GeometryReader { proxy in
+            if proxy.size.width >= 700 {
+                wideIOSContent
+            } else {
+                compactMobileContent
+            }
+        }
+    }
+
+    private var compactMobileContent: some View {
         Form {
             accountSection
             defaultRecipientSection
@@ -52,11 +70,11 @@ struct ContentView: View {
             return "Signed in to Gmail"
         }
 
-        #if os(macOS)
+        if usesDesktopLayout {
         return "Click to manage account"
-        #else
+        } else {
         return "Tap to manage account"
-        #endif
+        }
     }
 
     private var accountSection: some View {
@@ -309,6 +327,21 @@ struct ContentView: View {
         }
     }
 
+    private var desktopRecentRecipientsChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(recentRecipientSuggestions, id: \.self) { recipient in
+                    Button(recipient) {
+                        model.useSavedRecipient(recipient)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+            }
+        }
+        .scrollClipDisabled()
+    }
+
     private var previewImageURL: URL? {
         guard let urlString = model.draft.previewImageURLString else {
             return nil
@@ -326,11 +359,11 @@ struct ContentView: View {
     }
 
     private var accountSectionFooterText: String {
-        #if os(macOS)
+        if usesDesktopLayout {
         return "Manage Gmail sign-in for the desktop app."
-        #else
+        } else {
         return "Tap to manage Gmail sign-in."
-        #endif
+        }
     }
 
     private var queueFooterText: String {
@@ -430,14 +463,30 @@ struct ContentView: View {
     }
 }
 
-#if os(macOS)
 extension ContentView {
+    private var wideIOSContent: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                desktopTopRow
+                desktopComposeCard
+                desktopQueueCard
+                desktopStatusCard
+                desktopAttribution
+            }
+            .frame(maxWidth: 920)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
+            .frame(maxWidth: .infinity, alignment: .top)
+        }
+        .background(desktopBackground.ignoresSafeArea())
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
     private var desktopContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 desktopHeader
-                desktopAccountCard
-                desktopPreferencesCard
+                desktopTopRow
                 desktopComposeCard
                 desktopQueueCard
                 desktopStatusCard
@@ -476,45 +525,29 @@ extension ContentView {
         }
     }
 
+    private var desktopTopRow: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: 18) {
+                desktopAccountCard
+                    .frame(maxWidth: .infinity, alignment: .top)
+                desktopPreferencesCard
+                    .frame(maxWidth: .infinity, alignment: .top)
+            }
+
+            VStack(alignment: .leading, spacing: 18) {
+                desktopAccountCard
+                desktopPreferencesCard
+            }
+        }
+    }
+
     private var desktopAccountCard: some View {
         desktopSectionCard(
             title: "Account",
-            subtitle: accountSectionFooterText
+            subtitle: accountSectionFooterText,
+            fixedHeight: desktopTopCardHeight
         ) {
-            DisclosureGroup(isExpanded: $model.isAccountSectionExpanded) {
-                VStack(alignment: .leading, spacing: 12) {
-                    if let session = model.session {
-                        desktopReadout(label: "Signed in as", value: session.emailAddress ?? "Authenticated via Gmail")
-
-                        HStack {
-                            Button("Sign Out", role: .destructive) {
-                                model.signOut()
-                            }
-                            .disabled(model.isBusy)
-
-                            Spacer()
-                        }
-                    } else {
-                        Text("No Gmail account connected.")
-                            .foregroundStyle(.secondary)
-
-                        Button("Sign In With Google") {
-                            Task {
-                                await model.signIn()
-                            }
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
-                    }
-
-                    if !GoogleOAuthConfig.isConfigured {
-                        Text("Set `GoogleOAuthConfig.clientID` before signing in.")
-                            .font(.footnote)
-                            .foregroundStyle(.orange)
-                    }
-                }
-                .padding(.top, 12)
-            } label: {
+            VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .center, spacing: 14) {
                     Image(systemName: model.session == nil ? "person.crop.circle.badge.exclamationmark" : "checkmark.shield.fill")
                         .font(.system(size: 24))
@@ -530,27 +563,58 @@ extension ContentView {
 
                     Spacer()
                 }
-                .contentShape(Rectangle())
+
+                if let session = model.session {
+                    desktopReadout(label: "Signed in as", value: session.emailAddress ?? "Authenticated via Gmail")
+
+                    HStack {
+                        Button("Sign Out", role: .destructive) {
+                            model.signOut()
+                        }
+                        .disabled(model.isBusy)
+
+                        Spacer()
+                    }
+                } else {
+                    Text("No Gmail account connected.")
+                        .foregroundStyle(.secondary)
+
+                    HStack {
+                        Button("Sign In With Google") {
+                            Task {
+                                await model.signIn()
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
+
+                        Spacer()
+                    }
+                }
+
+                if !GoogleOAuthConfig.isConfigured {
+                    Text("Set `GoogleOAuthConfig.clientID` before signing in.")
+                        .font(.footnote)
+                        .foregroundStyle(.orange)
+                }
             }
         }
     }
 
     private var desktopPreferencesCard: some View {
-        desktopSectionCard(title: "Preferences") {
-            VStack(alignment: .leading, spacing: 18) {
+        desktopSectionCard(
+            title: "Preferences",
+            fixedHeight: desktopTopCardHeight
+        ) {
+            VStack(alignment: .leading, spacing: 14) {
                 VStack(alignment: .leading, spacing: 10) {
                     desktopFieldLabel("Default Recipient")
 
-                    TextField("Email address", text: $model.defaultRecipient)
-                        .textFieldStyle(.roundedBorder)
-                        .onSubmit(saveDefaultRecipient)
-
                     HStack {
-                        Text("Used as the default when starting from the share sheet.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-
-                        Spacer()
+                        TextField("Email address", text: $model.defaultRecipient)
+                            .textFieldStyle(.roundedBorder)
+                            .onSubmit(saveDefaultRecipient)
+                            .frame(maxWidth: .infinity)
 
                         Button("Save Default Recipient") {
                             saveDefaultRecipient()
@@ -558,6 +622,10 @@ extension ContentView {
                         .buttonStyle(.borderedProminent)
                         .disabled(model.isBusy)
                     }
+
+                    Text("Used as the default when starting from the share sheet.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
 
                 Divider()
@@ -581,67 +649,13 @@ extension ContentView {
     private var desktopComposeCard: some View {
         desktopSectionCard(title: "Compose") {
             VStack(alignment: .leading, spacing: 16) {
-                desktopInputGroup("To") {
-                    TextField("Email address", text: $model.draft.toEmail)
-                        .textFieldStyle(.roundedBorder)
-
-                    if !recentRecipientSuggestions.isEmpty {
-                        recentRecipientsView
-                    }
-                }
-
-                desktopInputGroup("Title") {
-                    HStack(alignment: .top, spacing: 12) {
-                        if previewImageURL != nil || model.isRefreshingDraftPreview {
-                            previewThumbnail
-                        }
-
-                        ZStack(alignment: .topLeading) {
-                            TextField(titleIsLoading ? "" : "Title", text: $model.draft.title, axis: .vertical)
-                                .textFieldStyle(.roundedBorder)
-                                .lineLimit(3, reservesSpace: true)
-
-                            if titleIsLoading {
-                                fieldLoadingIndicator(topPadding: 8)
-                                    .padding(.leading, 8)
-                            }
-                        }
-                    }
-                }
-
-                desktopInputGroup("Description") {
-                    ZStack(alignment: .topLeading) {
-                        TextEditor(text: $model.draft.excerpt)
-                            .frame(minHeight: 140)
-                            .padding(6)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.primary.opacity(0.03))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-                            )
-
-                        if descriptionIsLoading {
-                            fieldLoadingIndicator(topPadding: 14)
-                                .padding(.leading, 14)
-                        }
-                    }
-                }
-
-                if shouldShowSummarySection {
-                    desktopInputGroup("AI Summary") {
-                        previewMetadataContent
-                    }
-                }
-
-                desktopInputGroup("Link (Optional)") {
-                    TextField("https://example.com", text: $model.draft.urlString)
-                        .textFieldStyle(.roundedBorder)
-                }
+                desktopComposeMainColumn
 
                 HStack {
+                    Text("Drafts queue locally and retry automatically when the network is available.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+
                     Spacer()
 
                     Button {
@@ -658,6 +672,132 @@ extension ContentView {
                 }
             }
         }
+    }
+
+    private var desktopComposeMainColumn: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                desktopInputGroup("To") {
+                    TextField("Email address", text: $model.draft.toEmail)
+                        .textFieldStyle(.roundedBorder)
+
+                    if !recentRecipientSuggestions.isEmpty {
+                        desktopRecentRecipientsChips
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                desktopInputGroup("Link") {
+                    TextField("https://example.com", text: $model.draft.urlString)
+                        .textFieldStyle(.roundedBorder)
+                }
+                .frame(width: 250, alignment: .leading)
+            }
+
+            if shouldShowDesktopPreviewPanel {
+                desktopPreviewPanel
+            }
+
+            desktopInputGroup("Title") {
+                ZStack(alignment: .topLeading) {
+                    TextField(titleIsLoading ? "" : "Title", text: $model.draft.title, axis: .vertical)
+                        .textFieldStyle(.plain)
+                        .font(.title3.weight(.medium))
+                        .lineLimit(3, reservesSpace: true)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(desktopEditorSurface)
+
+                    if titleIsLoading {
+                        fieldLoadingIndicator(topPadding: 12)
+                            .padding(.leading, 14)
+                    }
+                }
+            }
+
+            desktopInputGroup("Description") {
+                ZStack(alignment: .topLeading) {
+                    TextEditor(text: $model.draft.excerpt)
+                        .scrollContentBackground(.hidden)
+                        .font(.body)
+                        .frame(minHeight: 220)
+                        .padding(10)
+                        .background(desktopEditorSurface)
+
+                    if descriptionIsLoading {
+                        fieldLoadingIndicator(topPadding: 18)
+                            .padding(.leading, 18)
+                    }
+                }
+            }
+        }
+    }
+
+    private var shouldShowDesktopPreviewPanel: Bool {
+        (previewImageURL != nil) || model.isRefreshingDraftPreview || shouldShowSummarySection
+    }
+
+    private var desktopPreviewPanel: some View {
+        HStack(alignment: .top, spacing: 14) {
+            if previewImageURL != nil || model.isRefreshingDraftPreview {
+                Group {
+                    if let previewURL = previewImageURL {
+                        AsyncImage(url: previewURL) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                            default:
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color.primary.opacity(0.03))
+                                    ProgressView()
+                                        .controlSize(.small)
+                                }
+                            }
+                        }
+                    } else {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.primary.opacity(0.03))
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                    }
+                }
+                .frame(width: 120, height: 88)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Preview")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+
+                if shouldShowSummarySection {
+                    Text("AI Summary")
+                        .font(.footnote.weight(.semibold))
+                    previewMetadataContent
+                } else if model.isRefreshingDraftPreview {
+                    Text("Fetching page details...")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.primary.opacity(0.03))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+        )
     }
 
     private var desktopQueueCard: some View {
@@ -774,9 +914,23 @@ extension ContentView {
         )
     }
 
+    private var desktopTopCardHeight: CGFloat {
+        250
+    }
+
+    private var desktopEditorSurface: some View {
+        RoundedRectangle(cornerRadius: 14)
+            .fill(Color.primary.opacity(0.03))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+            )
+    }
+
     private func desktopSectionCard<Content: View>(
         title: String,
         subtitle: String? = nil,
+        fixedHeight: CGFloat? = nil,
         @ViewBuilder content: () -> Content
     ) -> some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -793,8 +947,13 @@ extension ContentView {
 
             content()
         }
-        .padding(20)
+        .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(
+            minHeight: fixedHeight,
+            maxHeight: fixedHeight,
+            alignment: .topLeading
+        )
         .background(
             RoundedRectangle(cornerRadius: 20)
                 .fill(.ultraThinMaterial)
@@ -832,7 +991,6 @@ extension ContentView {
         }
     }
 }
-#endif
 
 #Preview {
     ContentView()
