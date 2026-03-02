@@ -591,6 +591,12 @@ final class GmailDeliveryService {
             return "cid:\(inlineImage.contentID)"
         }
 
+        if let urlString = content.urlString,
+           let url = URL(string: urlString),
+           Self.requiresInlineImageDisplay(for: url) {
+            return nil
+        }
+
         guard let urlString = content.imageURLString,
               let url = URL(string: urlString),
               let scheme = url.scheme?.lowercased(),
@@ -795,6 +801,33 @@ final class GmailDeliveryService {
             host == "www.x.com" ||
             host == "twitter.com" ||
             host == "www.twitter.com"
+    }
+
+    private static func isInstagramHost(_ url: URL) -> Bool {
+        guard let host = url.host?.lowercased() else {
+            return false
+        }
+
+        return host == "instagram.com" ||
+            host == "www.instagram.com" ||
+            host == "m.instagram.com"
+    }
+
+    private static func isThreadsHost(_ url: URL) -> Bool {
+        guard let host = url.host?.lowercased() else {
+            return false
+        }
+
+        return host == "threads.net" ||
+            host == "www.threads.net" ||
+            host == "m.threads.net" ||
+            host == "threads.com" ||
+            host == "www.threads.com" ||
+            host == "m.threads.com"
+    }
+
+    private static func requiresInlineImageDisplay(for url: URL) -> Bool {
+        isInstagramHost(url) || isThreadsHost(url)
     }
 
     private static func canonicalizedTweetURLString(_ urlString: String?) -> String? {
