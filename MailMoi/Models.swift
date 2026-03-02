@@ -177,6 +177,49 @@ enum SharedPostTextParser {
         return nil
     }
 
+    static func parseLinkedSocialPostShare(title: String, excerpt: String, urlString: String?) -> ParsedSocialPostShare? {
+        let normalizedExcerpt = collapseWhitespace(in: excerpt)
+        guard !normalizedExcerpt.isEmpty else {
+            return nil
+        }
+
+        let pattern = #"^From\s+@([A-Za-z0-9_]+)\s+(.+?)\s+(https?://t\.co/[^\s]+)(?:\s+via\s+@([A-Za-z0-9_]+))?\s*$"#
+        guard let regex = try? NSRegularExpression(
+            pattern: pattern,
+            options: [.caseInsensitive, .dotMatchesLineSeparators]
+        ) else {
+            return nil
+        }
+
+        let range = NSRange(normalizedExcerpt.startIndex..<normalizedExcerpt.endIndex, in: normalizedExcerpt)
+        guard
+            let match = regex.firstMatch(in: normalizedExcerpt, options: [], range: range),
+            match.numberOfRanges >= 4,
+            let authorRange = Range(match.range(at: 1), in: normalizedExcerpt),
+            let bodyRange = Range(match.range(at: 2), in: normalizedExcerpt),
+            let shortURLRange = Range(match.range(at: 3), in: normalizedExcerpt)
+        else {
+            return nil
+        }
+
+        let author = collapseWhitespace(in: String(normalizedExcerpt[authorRange]))
+        let body = collapseWhitespace(in: String(normalizedExcerpt[bodyRange]))
+        let shortURL = String(normalizedExcerpt[shortURLRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !author.isEmpty, !body.isEmpty else {
+            return nil
+        }
+
+        let preferredLinkedURL =
+            preferredContentURL(title: title, currentURLString: urlString)
+            ?? shortURL
+
+        return ParsedSocialPostShare(
+            title: "Post on X by @\(author)",
+            excerpt: body,
+            url: preferredLinkedURL
+        )
+    }
+
     static func derivedSocialPostShare(from urlString: String?) -> ParsedSocialPostShare? {
         guard
             let urlString = urlString?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -219,6 +262,29 @@ enum SharedPostTextParser {
         )
     }
 
+    static func preferredContentURL(title: String, currentURLString: String?) -> String? {
+        let titleURL = preferredLinkedURLString(candidate: title)
+        let currentURL = normalizedWebURLString(from: currentURLString)
+
+        guard let titleURL else {
+            return currentURL
+        }
+
+        guard let currentURL else {
+            return titleURL
+        }
+
+        guard let currentHost = URL(string: currentURL)?.host?.lowercased() else {
+            return titleURL
+        }
+
+        if currentHost == "t.co" || currentHost == "www.t.co" || socialNetworkLabel(for: currentHost) != nil {
+            return titleURL
+        }
+
+        return currentURL
+    }
+
     private static func unwrapBracketPair(in text: String) -> String {
         guard text.hasPrefix("["),
               text.hasSuffix("]"),
@@ -259,6 +325,59 @@ enum SharedPostTextParser {
         }
 
         return trimmedCandidate
+    }
+
+    private static func preferredLinkedURLString(candidate: String?) -> String? {
+        guard
+            let candidate = normalizedWebURLString(from: candidate),
+            let url = URL(string: candidate),
+            let host = url.host?.lowercased()
+        else {
+            return nil
+        }
+
+        if host == "t.co" || host == "www.t.co" || socialNetworkLabel(for: host) != nil {
+            return nil
+        }
+
+        return url.absoluteString
+    }
+
+    private static func normalizedWebURLString(from candidate: String?) -> String? {
+        guard
+            let candidate = candidate?.trimmingCharacters(in: .whitespacesAndNewlines),
+            !candidate.isEmpty
+        else {
+            return nil
+        }
+
+        if let url = firstDetectedWebURL(in: candidate) {
+            return url.absoluteString
+        }
+
+        return nil
+    }
+
+    private static func firstDetectedWebURL(in text: String) -> URL? {
+        guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) else {
+            return nil
+        }
+
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        for match in detector.matches(in: text, options: [], range: range) {
+            guard
+                match.resultType == .link,
+                let url = match.url,
+                let scheme = url.scheme?.lowercased(),
+                scheme == "http" || scheme == "https"
+            else {
+                continue
+            }
+
+            return url
+        }
+
+        return nil
     }
 }
 

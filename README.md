@@ -35,6 +35,7 @@ For reachable web URLs, MailMoi attempts to enrich the message before sending:
 - Inlines a preview image when the page exposes one and the image fetch succeeds.
 - Renders the HTML email as a responsive card layout for desktop and mobile clients.
 - Normalizes common shared-post formats, including X/Twitter share text and Overcast titles, before building the email.
+- Promotes real article URLs out of shared social-post text when possible, instead of preserving short links or social wrapper URLs.
 
 If metadata lookup fails, MailMoi falls back to the title, description, image, and URL captured from the app or share sheet.
 
@@ -44,6 +45,7 @@ The `MailMoiShare` extension is included for iPhone, iPad, and macOS share sheet
 
 - It accepts URL, text, image, HTML, and JavaScript-preprocessed share payloads from the host app.
 - It reads the title, description, URL, and first shared image from the shared item when the host app provides them.
+- For X/Twitter shares, it can rewrite noisy shared text into a cleaner draft and canonicalize tweet URLs before fetching preview metadata.
 - If `Auto-send` is enabled and a default recipient is already saved, it tries to send immediately once it has enough data.
 - While auto-send is in progress, the sheet shows an `Auto-Sending...` state with a secondary `Edit` action that stops the in-flight auto-send attempt and returns to the draft without changing the saved `Auto-send` preference.
 - If `Auto-send` is disabled, it stays open and pre-fills the draft so you can review before sending.

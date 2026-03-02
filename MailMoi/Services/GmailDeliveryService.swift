@@ -61,7 +61,12 @@ final class GmailDeliveryService {
     }
 
     func fetchDraftPreview(urlString: String, fallbackTitle: String) async -> DraftPreviewMetadata? {
-        guard let url = URL(string: urlString),
+        guard let rawURL = URL(string: urlString) else {
+            return nil
+        }
+
+        let url = Self.canonicalizedTweetURL(rawURL)
+        guard
               let scheme = url.scheme?.lowercased(),
               scheme == "http" || scheme == "https" else {
             return nil
@@ -137,33 +142,61 @@ final class GmailDeliveryService {
     }
 
     private func buildEmailContent(from item: QueuedEmail) async -> EmailContent {
+        let parsedLinkedSocialShare = SharedPostTextParser.parseLinkedSocialPostShare(
+            title: item.title,
+            excerpt: item.excerpt,
+            urlString: item.urlString
+        )
+        let promotedContentURL = SharedPostTextParser.preferredContentURL(
+            title: item.title,
+            currentURLString: parsedLinkedSocialShare?.url ?? item.urlString
+        )
         let fallbackURLString = Self.preferredURLString(
-            from: item.urlString,
+            from: promotedContentURL,
             title: item.title,
             excerpt: item.excerpt
         )
         let parsedSocialShare = SharedPostTextParser.parseSocialPostShare(in: item.title)
             ?? SharedPostTextParser.parseSocialPostShare(in: item.excerpt)
+            ?? parsedLinkedSocialShare
             ?? SharedPostTextParser.derivedSocialPostShare(from: fallbackURLString)
         let fallbackTitle = SharedContentFormatter.normalizedTitle(
-            parsedSocialShare?.title ?? Self.renderMarkdownLinksAsPlainText(in: item.title),
+            Self.normalizedDisplayText(
+                parsedSocialShare?.title ?? Self.fallbackDisplayTitle(from: item.title, fallbackURLString: fallbackURLString)
+            ),
             urlString: fallbackURLString
         )
         let parsedSocialExcerpt = parsedSocialShare?.excerpt.trimmingCharacters(in: .whitespacesAndNewlines)
-        let fallbackExcerpt = (parsedSocialExcerpt?.isEmpty == false ? parsedSocialExcerpt : nil)
-            ?? Self.renderMarkdownLinksAsPlainText(in: item.excerpt)
+        let fallbackExcerpt = Self.normalizedDisplayText(
+            (parsedSocialExcerpt?.isEmpty == false ? parsedSocialExcerpt : nil)
+                ?? Self.renderMarkdownLinksAsPlainText(in: item.excerpt)
+        )
         let fallbackSummary = item.summary?.trimmingCharacters(in: .whitespacesAndNewlines)
         let fallbackImageURLString = item.previewImageURLString
 
-        guard let fallbackURLString,
-              let url = URL(string: fallbackURLString),
-              let scheme = url.scheme?.lowercased(),
-              scheme == "http" || scheme == "https" else {
+        let canonicalFallbackURLString = Self.canonicalizedTweetURLString(fallbackURLString) ?? fallbackURLString
+        guard let canonicalFallbackURLString,
+              let rawURL = URL(string: canonicalFallbackURLString) else {
             return EmailContent(
                 title: fallbackTitle,
                 excerpt: fallbackExcerpt,
                 summary: fallbackSummary,
-                urlString: fallbackURLString,
+                urlString: canonicalFallbackURLString,
+                imageURLString: fallbackImageURLString,
+                inlineImage: await fetchInlineImage(from: fallbackImageURLString)
+            )
+        }
+
+        let url = Self.canonicalizedTweetURL(rawURL)
+        let sanitizedFallbackExcerpt = Self.isMeaninglessTweetExcerpt(fallbackExcerpt, for: url) ? "" : fallbackExcerpt
+        guard
+              let scheme = url.scheme?.lowercased(),
+              scheme == "http" || scheme == "https" else {
+            return EmailContent(
+                title: fallbackTitle,
+                excerpt: sanitizedFallbackExcerpt,
+                summary: fallbackSummary,
+                urlString: url.absoluteString,
                 imageURLString: fallbackImageURLString,
                 inlineImage: await fetchInlineImage(from: fallbackImageURLString)
             )
@@ -172,23 +205,23 @@ final class GmailDeliveryService {
         guard let metadata = await fetchArticleMetadata(for: url, fallbackTitle: fallbackTitle) else {
             return EmailContent(
                 title: fallbackTitle,
-                excerpt: fallbackExcerpt,
+                excerpt: sanitizedFallbackExcerpt,
                 summary: fallbackSummary,
-                urlString: fallbackURLString,
+                urlString: url.absoluteString,
                 imageURLString: fallbackImageURLString,
                 inlineImage: await fetchInlineImage(from: fallbackImageURLString)
             )
         }
 
-        let resolvedURLString = metadata.urlString ?? fallbackURLString
+        let resolvedURLString = Self.canonicalizedTweetURLString(metadata.urlString ?? url.absoluteString) ?? (metadata.urlString ?? url.absoluteString)
         let resolvedImageURLString = metadata.imageURLString ?? fallbackImageURLString
         let inlineImage = await fetchInlineImage(from: resolvedImageURLString)
         let shouldPreferParsedSocialShare = parsedSocialShare != nil && Self.shouldSkipSummary(for: url)
         let resolvedExcerpt: String
-        if shouldPreferParsedSocialShare, !fallbackExcerpt.isEmpty {
-            resolvedExcerpt = fallbackExcerpt
+        if shouldPreferParsedSocialShare, !sanitizedFallbackExcerpt.isEmpty {
+            resolvedExcerpt = sanitizedFallbackExcerpt
         } else {
-            resolvedExcerpt = metadata.excerpt ?? fallbackExcerpt
+            resolvedExcerpt = metadata.excerpt ?? sanitizedFallbackExcerpt
         }
 
         return EmailContent(
@@ -202,7 +235,9 @@ final class GmailDeliveryService {
     }
 
     private func fetchArticleMetadata(for url: URL, fallbackTitle: String) async -> FetchedArticleMetadata? {
-        var request = URLRequest(url: url)
+        let canonicalURL = Self.canonicalizedTweetURL(url)
+        let shouldTryXOEmbedFallback = Self.isTweetHost(canonicalURL)
+        var request = URLRequest(url: canonicalURL)
         request.httpMethod = "GET"
         request.setValue("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", forHTTPHeaderField: "Accept")
         request.setValue(Locale.preferredLanguages.prefix(2).joined(separator: ", "), forHTTPHeaderField: "Accept-Language")
@@ -214,36 +249,86 @@ final class GmailDeliveryService {
             guard let httpResponse = response as? HTTPURLResponse,
                   (200..<300).contains(httpResponse.statusCode),
                   let html = decodeHTML(data: data) else {
+                if shouldTryXOEmbedFallback {
+                    return await fetchXOEmbedMetadata(for: canonicalURL, fallbackTitle: fallbackTitle)
+                }
                 return nil
             }
 
-            let responseURL = httpResponse.url ?? url
+            let responseURL = Self.canonicalizedTweetURL(httpResponse.url ?? canonicalURL)
             let metaTags = Self.extractMetaTags(from: html)
             let title = SharedContentFormatter.normalizedTitle(
                 Self.extractPreferredTitle(fromHTML: html, metaTags: metaTags) ?? fallbackTitle,
                 urlString: responseURL.absoluteString
             )
-            let excerpt = Self.extractExcerpt(fromMetaTags: metaTags)
+            let rawExcerpt = Self.extractExcerpt(fromMetaTags: metaTags)
+            let excerpt = Self.isMeaninglessTweetExcerpt(rawExcerpt, for: responseURL) ? nil : rawExcerpt
             let summary: String?
             if Self.shouldSkipSummary(for: responseURL) {
                 summary = nil
             } else {
                 summary = await Self.generateSummary(fromHTML: html, title: title, excerpt: excerpt)
             }
+            let imageURLString = Self.extractPreferredImageURLString(fromHTML: html, metaTags: metaTags, baseURL: responseURL)
+            let oEmbedMetadata: FetchedArticleMetadata?
+            if Self.isTweetHost(responseURL), (excerpt == nil || imageURLString == nil) {
+                oEmbedMetadata = await fetchXOEmbedMetadata(for: responseURL, fallbackTitle: fallbackTitle)
+            } else {
+                oEmbedMetadata = nil
+            }
 
             return FetchedArticleMetadata(
                 title: title,
-                excerpt: excerpt,
+                excerpt: excerpt ?? oEmbedMetadata?.excerpt,
                 summary: summary,
                 urlString: Self.extractPreferredURLString(
                     fromHTML: html,
                     metaTags: metaTags,
-                    requestURL: url,
+                    requestURL: canonicalURL,
                     responseURL: responseURL
                 ),
-                imageURLString: Self.shouldUseFetchedPreviewImage(for: responseURL)
-                    ? Self.extractPreferredImageURLString(fromHTML: html, metaTags: metaTags, baseURL: responseURL)
-                    : nil
+                imageURLString: imageURLString ?? oEmbedMetadata?.imageURLString
+            )
+        } catch {
+            if shouldTryXOEmbedFallback {
+                return await fetchXOEmbedMetadata(for: canonicalURL, fallbackTitle: fallbackTitle)
+            }
+            return nil
+        }
+    }
+
+    private func fetchXOEmbedMetadata(for url: URL, fallbackTitle: String) async -> FetchedArticleMetadata? {
+        guard let endpoint = Self.makeXOEmbedEndpoint(for: url) else {
+            return nil
+        }
+
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
+        request.timeoutInterval = 5
+
+        do {
+            let (data, response) = try await URLSession.mailMoiMetadata.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200..<300).contains(httpResponse.statusCode) else {
+                return nil
+            }
+
+            let payload = try decoder.decode(XOEmbedResponse.self, from: data)
+            let excerpt = Self.extractExcerptFromXOEmbedHTML(payload.html, authorName: payload.authorName)
+            let imageURLString = Self.resolvedURLString(payload.thumbnailURLString ?? "", relativeTo: url)
+
+            if excerpt == nil && imageURLString == nil {
+                return nil
+            }
+
+            return FetchedArticleMetadata(
+                title: fallbackTitle,
+                excerpt: excerpt,
+                summary: nil,
+                urlString: url.absoluteString,
+                imageURLString: imageURLString
             )
         } catch {
             return nil
@@ -664,8 +749,19 @@ final class GmailDeliveryService {
         SharedPostTextParser.plainTextByRenderingMarkdownLikeLinks(in: text)
     }
 
-    private static func preferredURLString(from urlString: String, title: String, excerpt: String) -> String? {
-        let trimmedURLString = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+    private static func fallbackDisplayTitle(from rawTitle: String, fallbackURLString: String?) -> String {
+        let renderedTitle = renderMarkdownLinksAsPlainText(in: rawTitle)
+        if let detectedURLString = SharedPostTextParser.preferredContentURL(title: renderedTitle, currentURLString: nil),
+           let host = URL(string: fallbackURLString ?? detectedURLString)?.host?.replacingOccurrences(of: "www.", with: ""),
+           !host.isEmpty {
+            return host
+        }
+
+        return renderedTitle
+    }
+
+    private static func preferredURLString(from urlString: String?, title: String, excerpt: String) -> String? {
+        let trimmedURLString = urlString?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if !trimmedURLString.isEmpty {
             return trimmedURLString
         }
@@ -690,26 +786,80 @@ final class GmailDeliveryService {
             host == "www.overcast.fm"
     }
 
-    private static func shouldUseFetchedPreviewImage(for url: URL) -> Bool {
+    private static func isTweetHost(_ url: URL) -> Bool {
         guard let host = url.host?.lowercased() else {
-            return true
+            return false
         }
 
-        return host != "x.com" &&
-            host != "www.x.com" &&
-            host != "twitter.com" &&
-            host != "www.twitter.com"
+        return host == "x.com" ||
+            host == "www.x.com" ||
+            host == "twitter.com" ||
+            host == "www.twitter.com"
+    }
+
+    private static func canonicalizedTweetURLString(_ urlString: String?) -> String? {
+        guard let urlString,
+              let url = URL(string: urlString) else {
+            return urlString
+        }
+
+        return canonicalizedTweetURL(url).absoluteString
+    }
+
+    private static func canonicalizedTweetURL(_ url: URL) -> URL {
+        guard isTweetHost(url),
+              var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return url
+        }
+
+        let pathComponents = components.path.split(separator: "/").map(String.init)
+        let normalizedPathComponents: [String]
+
+        if pathComponents.count >= 4,
+           pathComponents[1].lowercased() == "status",
+           pathComponents[3].lowercased() == "mediaviewer" {
+            normalizedPathComponents = Array(pathComponents.prefix(3))
+        } else if pathComponents.count >= 2,
+                  pathComponents.last?.lowercased() == "mediaviewer",
+                  let tweetID = components.queryItems?.first(where: { $0.name == "currentTweet" })?.value,
+                  let tweetUser = components.queryItems?.first(where: { $0.name == "currentTweetUser" })?.value,
+                  !tweetID.isEmpty,
+                  !tweetUser.isEmpty {
+            normalizedPathComponents = [tweetUser, "status", tweetID]
+        } else if pathComponents.count >= 3,
+                  pathComponents[1].lowercased() == "status" {
+            normalizedPathComponents = Array(pathComponents.prefix(3))
+        } else {
+            normalizedPathComponents = pathComponents
+        }
+
+        components.path = "/" + normalizedPathComponents.joined(separator: "/")
+        components.query = nil
+        components.fragment = nil
+        return components.url ?? url
+    }
+
+    private static func makeXOEmbedEndpoint(for url: URL) -> URL? {
+        let canonicalURL = canonicalizedTweetURL(url)
+        guard isTweetHost(canonicalURL) else {
+            return nil
+        }
+
+        var components = URLComponents(string: "https://publish.twitter.com/oembed")
+        components?.queryItems = [
+            URLQueryItem(name: "url", value: canonicalURL.absoluteString),
+            URLQueryItem(name: "omit_script", value: "true"),
+            URLQueryItem(name: "dnt", value: "true"),
+            URLQueryItem(name: "align", value: "center")
+        ]
+        return components?.url
     }
 
     private static func extractPreferredTitle(fromHTML html: String, metaTags: [[String: String]]) -> String? {
-        if let title = firstMatch(in: html, pattern: #"<title\b[^>]*>(.*?)</title>"#),
-           let normalized = normalizedMetaContent(title) {
-            return normalized
-        }
-
         let candidates = [
+            ("name", "twitter:title"),
             ("property", "og:title"),
-            ("name", "twitter:title")
+            ("name", "title")
         ]
 
         for (attribute, value) in candidates {
@@ -717,6 +867,11 @@ final class GmailDeliveryService {
                let normalized = normalizedMetaContent(content) {
                 return normalized
             }
+        }
+
+        if let title = firstMatch(in: html, pattern: #"<title\b[^>]*>(.*?)</title>"#),
+           let normalized = normalizedMetaContent(title) {
+            return normalized
         }
 
         return nil
@@ -729,8 +884,8 @@ final class GmailDeliveryService {
         responseURL: URL
     ) -> String? {
         let candidates = [
-            ("property", "og:url"),
-            ("name", "twitter:url")
+            ("name", "twitter:url"),
+            ("property", "og:url")
         ]
 
         for (attribute, value) in candidates {
@@ -759,10 +914,11 @@ final class GmailDeliveryService {
 
     private static func extractPreferredImageURLString(fromHTML html: String, metaTags: [[String: String]], baseURL: URL) -> String? {
         let metaCandidates = [
+            ("name", "twitter:image"),
+            ("name", "twitter:image:src"),
             ("property", "og:image"),
             ("property", "og:image:url"),
-            ("name", "twitter:image"),
-            ("name", "twitter:image:src")
+            ("property", "og:image:secure_url")
         ]
 
         for (attribute, value) in metaCandidates {
@@ -770,6 +926,10 @@ final class GmailDeliveryService {
                let resolved = resolvedURLString(content, relativeTo: baseURL) {
                 return resolved
             }
+        }
+
+        if Self.shouldSkipSummary(for: baseURL) {
+            return nil
         }
 
         let preferredSection = extractPreferredSection(from: html) ?? html
@@ -812,9 +972,9 @@ final class GmailDeliveryService {
 
     private static func extractExcerpt(fromMetaTags tags: [[String: String]]) -> String? {
         let candidates = [
+            ("name", "twitter:description"),
             ("property", "og:description"),
-            ("name", "description"),
-            ("name", "twitter:description")
+            ("name", "description")
         ]
 
         for (attribute, value) in candidates {
@@ -825,6 +985,58 @@ final class GmailDeliveryService {
         }
 
         return nil
+    }
+
+    private static func extractExcerptFromXOEmbedHTML(_ html: String?, authorName: String?) -> String? {
+        guard
+            let html,
+            let plainText = plainText(fromHTMLForSummary: html)
+        else {
+            return nil
+        }
+
+        let authorNameLower = authorName?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let lines = plainText
+            .components(separatedBy: .newlines)
+            .map(normalizedDisplayText)
+            .filter { !$0.isEmpty }
+            .filter { line in
+                let lowered = line.lowercased()
+                if lowered == "x" || lowered == "twitter" || lowered == "view on x" || lowered == "view on twitter" {
+                    return false
+                }
+
+                if line.hasPrefix("—") || line.hasPrefix("-") {
+                    return false
+                }
+
+                if let authorNameLower, lowered.contains(authorNameLower), lowered.contains("@") {
+                    return false
+                }
+
+                return true
+            }
+
+        guard !lines.isEmpty else {
+            return nil
+        }
+
+        let joined = lines.joined(separator: " ")
+        let collapsed = collapseWhitespace(in: joined)
+        guard !collapsed.isEmpty else {
+            return nil
+        }
+
+        return stripTrailingURLs(from: collapsed)
+    }
+
+    private static func isMeaninglessTweetExcerpt(_ excerpt: String?, for url: URL) -> Bool {
+        guard isTweetHost(url),
+              let excerpt = excerpt?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() else {
+            return false
+        }
+
+        return excerpt.isEmpty || excerpt == "x" || excerpt == "twitter"
     }
 
     private static func parseAttributes(from tag: String) -> [String: String] {
@@ -856,27 +1068,11 @@ final class GmailDeliveryService {
     }
 
     private static func normalizedMetaContent(_ content: String) -> String? {
-        let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
+        let normalized = normalizedDisplayText(content)
+        guard !normalized.isEmpty else {
             return nil
         }
-
-        let wrapped = "<span>\(trimmed)</span>"
-        guard let data = wrapped.data(using: .utf8) else {
-            return trimmed
-        }
-
-        let options: [NSAttributedString.DocumentReadingOptionKey: Any] = [
-            .documentType: NSAttributedString.DocumentType.html,
-            .characterEncoding: String.Encoding.utf8.rawValue
-        ]
-
-        if let attributed = try? NSAttributedString(data: data, options: options, documentAttributes: nil) {
-            let normalized = attributed.string.trimmingCharacters(in: .whitespacesAndNewlines)
-            return normalized.isEmpty ? nil : normalized
-        }
-
-        return trimmed
+        return normalized
     }
 
     private static func resolvedURLString(_ rawValue: String, relativeTo baseURL: URL) -> String? {
@@ -1430,6 +1626,60 @@ final class GmailDeliveryService {
             .joined(separator: " ")
     }
 
+    private static func normalizedDisplayText(_ text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return ""
+        }
+
+        var current = trimmed
+        for _ in 0..<3 {
+            let decoded = decodeHTMLEntities(in: current).trimmingCharacters(in: .whitespacesAndNewlines)
+            if decoded.isEmpty || decoded == current {
+                return decoded
+            }
+            current = decoded
+        }
+
+        return current
+    }
+
+    private static func stripTrailingURLs(from text: String) -> String {
+        var current = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let pattern = #"\s+https?://\S+$"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
+            return current
+        }
+
+        while true {
+            let range = NSRange(current.startIndex..<current.endIndex, in: current)
+            let next = regex.stringByReplacingMatches(in: current, options: [], range: range, withTemplate: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if next == current || next.isEmpty {
+                return current
+            }
+            current = next
+        }
+    }
+
+    private static func decodeHTMLEntities(in text: String) -> String {
+        let wrapped = "<span>\(text)</span>"
+        guard let data = wrapped.data(using: .utf8) else {
+            return text
+        }
+
+        let options: [NSAttributedString.DocumentReadingOptionKey: Any] = [
+            .documentType: NSAttributedString.DocumentType.html,
+            .characterEncoding: String.Encoding.utf8.rawValue
+        ]
+
+        guard let attributed = try? NSAttributedString(data: data, options: options, documentAttributes: nil) else {
+            return text
+        }
+
+        return attributed.string
+    }
+
     private static func normalizedHost(from url: URL) -> String? {
         url.host?.lowercased().replacingOccurrences(of: "www.", with: "")
     }
@@ -1606,6 +1856,18 @@ private struct InlineImage {
     let mimeType: String
     let filename: String
     let data: Data
+}
+
+private struct XOEmbedResponse: Decodable {
+    let authorName: String?
+    let html: String?
+    let thumbnailURLString: String?
+
+    enum CodingKeys: String, CodingKey {
+        case authorName = "author_name"
+        case html
+        case thumbnailURLString = "thumbnail_url"
+    }
 }
 
 private extension URLSession {

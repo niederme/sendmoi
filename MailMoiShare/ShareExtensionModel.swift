@@ -833,6 +833,25 @@ private enum SharedItemExtractor {
             }
         }
 
+        if let linkedSocialShare = SharedPostTextParser.parseLinkedSocialPostShare(
+            title: normalizedContent.title,
+            excerpt: normalizedContent.excerpt,
+            urlString: normalizedContent.urlString
+        ) {
+            normalizedContent.title = linkedSocialShare.title
+            normalizedContent.excerpt = linkedSocialShare.excerpt
+            if let url = linkedSocialShare.url {
+                normalizedContent.urlString = url
+            }
+        }
+
+        if let promotedContentURL = SharedPostTextParser.preferredContentURL(
+            title: normalizedContent.title,
+            currentURLString: normalizedContent.urlString
+        ) {
+            normalizedContent.urlString = promotedContentURL
+        }
+
         let normalizedCandidates = expandedMarkdownCandidates(from: textCandidates)
         if let socialShare = normalizedCandidates.compactMap(SharedPostTextParser.parseSocialPostShare(in:)).first {
             if normalizedContent.title.isEmpty {

@@ -36,6 +36,7 @@ Last updated: March 2, 2026
   - share-extension media is persisted into the shared App Group container and deleted after send / queue deletion
   - the share extension activation rule now accepts image, text, URL, HTML, and property-list payloads
   - X/Twitter share text and Overcast links are normalized more aggressively before sending
+  - shared X/Twitter links now prefer canonical tweet/content URLs, with an X oEmbed fallback for tweet previews when page metadata is weak
   - low-quality summaries are filtered more aggressively, and summaries are skipped for X/Twitter and Overcast sources
   - the app now uses a branded `mail-moi.icon` Icon Composer asset, with refreshed raster icons and updated bundle icon references
   - iOS startup now includes a short branded splash overlay in addition to the launch storyboard
