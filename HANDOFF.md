@@ -39,7 +39,7 @@ Last updated: March 3, 2026
   - X/Twitter share text and Overcast links are normalized more aggressively before sending
   - shared X/Twitter links now prefer canonical tweet/content URLs, with an X oEmbed fallback for tweet previews when page metadata is weak
   - low-quality summaries are filtered more aggressively, and summaries are skipped for X/Twitter and Overcast sources
-  - the app now uses a branded `mail-moi.icon` Icon Composer asset as the only app icon source; the legacy `AppIcon.appiconset` was removed and Xcode no longer bundles every discovered icon set
+  - the project keeps the branded `mail-moi.icon` source asset, and the iOS app now also includes a restored `AppIcon.appiconset` with an opaque 1024x1024 icon for App Store Connect uploads
   - iOS startup now includes a short branded splash overlay in addition to the launch storyboard
   - the share extension processing state now says `Auto-Sending...` and exposes a small bordered `Edit` action that cancels auto-send and returns to the draft without changing the saved preference
 
@@ -54,7 +54,7 @@ Last updated: March 3, 2026
 5. Share a photo directly from Photos (without a URL) and confirm it can be queued, sent, and removed without leaving orphaned files in the App Group container.
 6. Share an X/Twitter post and an Overcast episode and confirm the title / source URL / summary behavior looks intentional rather than noisy.
 7. Run the macOS target and confirm the desktop card layout feels right at common window sizes, especially queue deletion and account disclosure behavior.
-8. Archive and upload a fresh build, then verify whether App Store Connect shows the `mail-moi` icon for the new build; if not, treat the missing thumbnail as an App Store Connect `.icon` rendering issue rather than a stale project asset.
+8. Archive and upload a fresh build, then verify whether App Store Connect shows the restored `AppIcon` thumbnail for the new iOS build.
 9. Confirm the next Xcode Cloud iOS upload succeeds with build number `2`; the previous failure was `The bundle version must be higher than the previously uploaded version.`
 
 ## Local Setup

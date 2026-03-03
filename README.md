@@ -60,7 +60,7 @@ The current build is set up to ship through TestFlight.
 - Xcode Cloud is configured to start on pushes to `main`.
 - The active workflow archives both iOS and macOS builds.
 - Successful archives are prepared for `TestFlight (Internal Testing Only)`.
-- The app and share extension now use the branded `mail-moi` Icon Composer asset instead of the old generic app icon set.
+- The project keeps the branded `mail-moi.icon` source asset, and the iOS app now also includes a restored `AppIcon.appiconset` for App Store Connect-compatible uploads.
 
 That means a merge into `main` should automatically enqueue a new TestFlight build for the current internal testers.
 
