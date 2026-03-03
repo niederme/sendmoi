@@ -36,8 +36,6 @@
 		B1000001000000000000000A /* SharedSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000010 /* SharedSessionStore.swift */; };
 		B1000001000000000000000B /* GmailDeliveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000011 /* GmailDeliveryService.swift */; };
 		B1000001000000000000000C /* SafariPreprocessor.js in Resources */ = {isa = PBXBuildFile; fileRef = B20000010000000000000006 /* SafariPreprocessor.js */; };
-		DC6FF07B2F55D5CB00415EAC /* mail-moi.icon in Resources */ = {isa = PBXBuildFile; fileRef = DC6FF07A2F55D5CB00415EAC /* mail-moi.icon */; };
-		DC6FF07C2F55D5CB00415EAC /* mail-moi.icon in Resources */ = {isa = PBXBuildFile; fileRef = DC6FF07A2F55D5CB00415EAC /* mail-moi.icon */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -259,7 +257,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DC6FF07B2F55D5CB00415EAC /* mail-moi.icon in Resources */,
 				A10000010000000000000010 /* Assets.xcassets in Resources */,
 				A10000010000000000000011 /* LaunchScreen.storyboard in Resources */,
 			);
@@ -270,7 +267,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				B1000001000000000000000C /* SafariPreprocessor.js in Resources */,
-				DC6FF07C2F55D5CB00415EAC /* mail-moi.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -429,7 +425,7 @@
 				CODE_SIGN_ENTITLEMENTS = MailMoi/MailMoi.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "MailMoi/MailMoi-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 289GY9L343;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -458,7 +454,7 @@
 				CODE_SIGN_ENTITLEMENTS = MailMoi/MailMoi.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "MailMoi/MailMoi-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 289GY9L343;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -487,7 +483,7 @@
 				CODE_SIGN_ENTITLEMENTS = MailMoiShare/MailMoiShare.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "MailMoiShare/MailMoiShare-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = 289GY9L343;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MailMoiShare/Info.plist;
@@ -517,7 +513,7 @@
 				CODE_SIGN_ENTITLEMENTS = MailMoiShare/MailMoiShare.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "MailMoiShare/MailMoiShare-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = 289GY9L343;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MailMoiShare/Info.plist;

@@ -60,9 +60,17 @@ The current build is set up to ship through TestFlight.
 - Xcode Cloud is configured to start on pushes to `main`.
 - The active workflow archives both iOS and macOS builds.
 - Successful archives are prepared for `TestFlight (Internal Testing Only)`.
-- The project keeps the branded `mail-moi.icon` source asset, and the app now uses a restored full `AppIcon.appiconset` so iOS and macOS uploads share one App Store Connect-compatible icon pipeline.
+- The project keeps the branded `mail-moi.icon` design source, while the app ships from the checked-in `AppIcon.appiconset` so iPhone, iPad, and macOS all use the same explicit asset-catalog icon set.
 
 That means a merge into `main` should automatically enqueue a new TestFlight build for the current internal testers.
+
+Before each archive, you can run:
+
+```sh
+./scripts/prepare_release.sh --version 0.3
+```
+
+That command updates `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` across both targets, then prints the current signing team and bundle IDs so the release settings are easy to verify before uploading. If you only need the next build number, run `./scripts/prepare_release.sh` with no arguments.
 
 ## Local Development
 
