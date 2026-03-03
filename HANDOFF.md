@@ -31,6 +31,7 @@ Last updated: March 3, 2026
   - iOS launch screen asset and storyboard (`Splash.imageset`, `LaunchScreen.storyboard`)
 - `README.md` now reflects current behavior instead of hardcoding the old `0.1` release framing.
 - New in the current working tree:
+  - `CURRENT_PROJECT_VERSION` is now `2` for both targets so Xcode Cloud uploads do not reuse the previously uploaded bundle version `1`
   - the macOS app now uses a desktop-style card layout instead of reusing the iPhone/iPad form
   - image-only shares are first-class queue items, with fallback titles like `Shared Photo`
   - share-extension media is persisted into the shared App Group container and deleted after send / queue deletion
@@ -54,6 +55,7 @@ Last updated: March 3, 2026
 6. Share an X/Twitter post and an Overcast episode and confirm the title / source URL / summary behavior looks intentional rather than noisy.
 7. Run the macOS target and confirm the desktop card layout feels right at common window sizes, especially queue deletion and account disclosure behavior.
 8. Archive and upload a fresh build, then verify whether App Store Connect shows the `mail-moi` icon for the new build; if not, treat the missing thumbnail as an App Store Connect `.icon` rendering issue rather than a stale project asset.
+9. Confirm the next Xcode Cloud iOS upload succeeds with build number `2`; the previous failure was `The bundle version must be higher than the previously uploaded version.`
 
 ## Local Setup
 
