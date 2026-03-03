@@ -31,7 +31,7 @@ Last updated: March 3, 2026
   - iOS launch screen asset and storyboard (`Splash.imageset`, `LaunchScreen.storyboard`)
 - `README.md` now reflects current behavior instead of hardcoding the old `0.1` release framing.
 - New in the current working tree:
-  - `CURRENT_PROJECT_VERSION` is now `2` for both targets so Xcode Cloud uploads do not reuse the previously uploaded bundle version `1`
+  - `CURRENT_PROJECT_VERSION` is now `3` for both targets so the next Xcode Cloud upload does not reuse the already-uploaded bundle version `2`
   - the macOS app now uses a desktop-style card layout instead of reusing the iPhone/iPad form
   - image-only shares are first-class queue items, with fallback titles like `Shared Photo`
   - share-extension media is persisted into the shared App Group container and deleted after send / queue deletion
@@ -39,7 +39,7 @@ Last updated: March 3, 2026
   - X/Twitter share text and Overcast links are normalized more aggressively before sending
   - shared X/Twitter links now prefer canonical tweet/content URLs, with an X oEmbed fallback for tweet previews when page metadata is weak
   - low-quality summaries are filtered more aggressively, and summaries are skipped for X/Twitter and Overcast sources
-  - the project keeps the branded `mail-moi.icon` source asset, and the iOS app now also includes a restored `AppIcon.appiconset` with an opaque 1024x1024 icon for App Store Connect uploads
+  - the project keeps the branded `mail-moi.icon` source asset, and the app now uses a restored full `AppIcon.appiconset` generated from the branded 1024x1024 source so iOS and macOS uploads share one asset-catalog icon path
   - iOS startup now includes a short branded splash overlay in addition to the launch storyboard
   - the share extension processing state now says `Auto-Sending...` and exposes a small bordered `Edit` action that cancels auto-send and returns to the draft without changing the saved preference
 
@@ -54,8 +54,8 @@ Last updated: March 3, 2026
 5. Share a photo directly from Photos (without a URL) and confirm it can be queued, sent, and removed without leaving orphaned files in the App Group container.
 6. Share an X/Twitter post and an Overcast episode and confirm the title / source URL / summary behavior looks intentional rather than noisy.
 7. Run the macOS target and confirm the desktop card layout feels right at common window sizes, especially queue deletion and account disclosure behavior.
-8. Archive and upload a fresh build, then verify whether App Store Connect shows the restored `AppIcon` thumbnail for the new iOS build.
-9. Confirm the next Xcode Cloud iOS upload succeeds with build number `2`; the previous failure was `The bundle version must be higher than the previously uploaded version.`
+8. Archive and upload a fresh build, then verify whether App Store Connect accepts the restored full `AppIcon` set for both iOS and macOS and shows the expected thumbnail.
+9. Confirm the next Xcode Cloud upload succeeds with build number `3`; the previous failure was `The bundle version must be higher than the previously uploaded version.`
 
 ## Local Setup
 
