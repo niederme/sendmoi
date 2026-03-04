@@ -847,93 +847,56 @@ extension ContentView {
     private var desktopComposeCard: some View {
         desktopSectionCard(
             title: "Compose",
-            subtitle: "Build the draft and queue it for delivery."
+            subtitle: "Drafting and editing now happen in the share sheet."
         ) {
             VStack(alignment: .leading, spacing: 14) {
-                VStack(alignment: .leading, spacing: 8) {
-                    desktopFieldLabel("To")
+                Text("MailMoi now treats the main app as a control center for account, defaults, and queue recovery. To create a new draft, share a link, note, or image from another app into MailMoi.")
+                    .font(.body)
 
-                    TextField("Email address", text: $model.draft.toEmail)
-                        .textFieldStyle(.roundedBorder)
+                VStack(alignment: .leading, spacing: 10) {
+                    desktopFieldLabel("Current Delivery Defaults")
 
-                    if !model.savedRecipients.isEmpty {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach(model.savedRecipients.prefix(6), id: \.self) { recipient in
-                                    Button(recipient) {
-                                        model.useSavedRecipient(recipient)
-                                    }
-                                    .buttonStyle(.bordered)
-                                    .controlSize(.small)
-                                }
-                            }
-                        }
-                    }
+                    desktopReadout(
+                        label: "Default Recipient",
+                        value: model.defaultRecipient.isEmpty ? "Not set" : model.defaultRecipient
+                    )
+
+                    desktopReadout(
+                        label: "Share Sheet",
+                        value: model.shareSheetAutoSendEnabled ? "Auto-send enabled" : "Manual review before send"
+                    )
+
+                    desktopReadout(
+                        label: "Gmail Session",
+                        value: model.session?.emailAddress ?? "No Gmail account connected"
+                    )
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
-                    desktopFieldLabel("Title")
+                    desktopFieldLabel("How To Compose")
 
-                    TextField("Title", text: $model.draft.title)
-                        .textFieldStyle(.roundedBorder)
-                }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    desktopFieldLabel("Description")
-
-                    TextEditor(text: $model.draft.excerpt)
-                        .frame(minHeight: 110)
-                        .padding(8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.primary.opacity(0.03))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-                        )
-                }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    desktopFieldLabel("Link (Optional)")
-
-                    TextField("https://example.com", text: $model.draft.urlString)
-                        .textFieldStyle(.roundedBorder)
-                }
-
-                if !model.draft.summary.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        desktopFieldLabel("AI Summary")
-
-                        Text(model.draft.summary)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.primary.opacity(0.03))
-                            )
-                    }
+                    Text("1. Share content into MailMoi from Safari, Photos, or another app.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    Text("2. Edit the draft in the share sheet if Auto-send is off.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    Text("3. If sending cannot finish immediately, MailMoi keeps the item in the offline queue and retries later.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
 
                 HStack {
-                    Text("Queue links, notes, and images for Gmail delivery.")
+                    Text("Use the queue panel to monitor items that still need delivery.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
 
                     Spacer()
 
-                    Button {
-                        Task {
-                            await model.queueCurrentDraft()
-                        }
-                    } label: {
-                        Text(model.isBusy ? "Working..." : "Queue And Send")
-                            .frame(minWidth: 120)
+                    Button("View Queue") {
+                        desktopSelection = .queue
                     }
                     .buttonStyle(.borderedProminent)
-                    .disabled(model.isBusy)
                 }
             }
         }
