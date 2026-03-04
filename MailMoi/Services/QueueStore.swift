@@ -25,6 +25,18 @@ enum QueueStore {
         try save(queue)
     }
 
+    @discardableResult
+    static func replace(_ item: QueuedEmail) throws -> Bool {
+        var queue = try load()
+        guard let index = queue.firstIndex(where: { $0.id == item.id }) else {
+            return false
+        }
+
+        queue[index] = item
+        try save(queue)
+        return true
+    }
+
     private static func queueFileURL() throws -> URL {
         try SharedContainer.appDirectoryURL().appendingPathComponent(fileName, isDirectory: false)
     }

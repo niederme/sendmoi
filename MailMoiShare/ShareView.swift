@@ -129,6 +129,7 @@ struct ShareView: View {
                 statusMessageView
             }
         }
+        .disabled(model.isSaving)
     }
 
     private var previewThumbnail: some View {
@@ -247,8 +248,11 @@ struct ShareView: View {
             }
 
             if model.autoSendEnabled && model.isSaving {
-                Button("Edit") {
+                Button {
                     model.stopAutoSendAndEdit()
+                } label: {
+                    Text("Edit")
+                        .padding(.horizontal, 8)
                 }
                 .buttonStyle(.bordered)
                 .buttonBorderShape(.capsule)

@@ -9,13 +9,13 @@ MailMoi currently ships the full core workflow:
 - Sign in with Gmail using OAuth 2.0 + PKCE.
 - Send from the authenticated Gmail account.
 - Save a default recipient in its own dedicated settings section and reuse recent recipients.
-- Compose manually in the app or start from the native share sheet.
+- Use the app to manage Gmail, recipient defaults, share-sheet behavior, and the offline queue.
 - Handle links, pasted post text, and image-only shares as first-class queueable items.
 - Queue every outbound email locally before network delivery.
 - Retry queued emails when the app launches, becomes active, or connectivity returns.
 - Share queue state, saved recipients, and session data through the App Group `group.com.niederme.mailmoi`.
 - Let the share sheet either send immediately or stay open with a pre-filled draft, based on the global `Auto-send` setting in the app.
-- Use a form-based layout on iPhone and iPad, and a desktop card layout on macOS.
+- Use a settings-style form on iPhone and iPad, and a desktop card layout on macOS.
 
 The app is built entirely with Apple-native frameworks, including `SwiftUI`, `AuthenticationServices`, `Network`, `Security`, and `FoundationModels` when available.
 
@@ -37,7 +37,7 @@ For reachable web URLs, MailMoi attempts to enrich the message before sending:
 - Normalizes common shared-post formats, including X/Twitter share text and Overcast titles, before building the email.
 - Promotes real article URLs out of shared social-post text when possible, instead of preserving short links or social wrapper URLs.
 
-If metadata lookup fails, MailMoi falls back to the title, description, image, and URL captured from the app or share sheet.
+If metadata lookup fails, MailMoi falls back to the title, description, image, and URL captured from the shared item.
 
 ## Share Extension
 
@@ -46,8 +46,9 @@ The `MailMoiShare` extension is included for iPhone, iPad, and macOS share sheet
 - It accepts URL, text, image, HTML, and JavaScript-preprocessed share payloads from the host app.
 - It reads the title, description, URL, and first shared image from the shared item when the host app provides them.
 - For X/Twitter shares, it can rewrite noisy shared text into a cleaner draft and canonicalize tweet URLs before fetching preview metadata.
-- If `Auto-send` is enabled and a default recipient is already saved, it tries to send immediately once it has enough data.
-- While auto-send is in progress, the sheet shows an `Auto-Sending...` state with a secondary `Edit` action that stops the in-flight auto-send attempt and returns to the draft without changing the saved `Auto-send` preference.
+- If `Auto-send` is enabled and a default recipient is already saved, it waits 0.5 seconds after the draft is ready, then tries to send automatically.
+- While auto-send is in progress, the sheet shows an `Auto-Sending...` state with a secondary `Edit` action that stays available during that 0.5-second grace period and still cancels the in-flight auto-send attempt without changing the saved `Auto-send` preference.
+- If you tap `Send`, MailMoi first saves the draft to the queue, dismisses the sheet immediately, and then continues best-effort preview enrichment and delivery in the background. If that background work does not finish, the queued item is retried later.
 - If `Auto-send` is disabled, it stays open and pre-fills the draft so you can review before sending.
 - If immediate delivery fails, it writes the message into the shared queue and exits cleanly.
 - If the host app only supplies a URL, the extension can still fetch metadata and allow manual editing before queueing.

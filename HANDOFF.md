@@ -1,6 +1,6 @@
 # MailMoi Handoff
 
-Last updated: March 3, 2026
+Last updated: March 4, 2026
 
 ## Current State
 
@@ -17,11 +17,8 @@ Last updated: March 3, 2026
 - The default recipient is now a separate top-level `Recipient` section instead of being nested inside the collapsed `Account` view.
 - The default recipient field now saves via the keyboard submit action (`Done`) and via an explicit prominent `Save Default Recipient` button that dismisses focus before saving.
 - If `Auto-send` is off, the share extension stays open and pre-fills the draft rather than sending immediately.
-- Compose UI was tightened:
-  - recent recipients are helper chips under `To`
-  - title is a 3-line field
-  - description and summary loaders are shown only when useful
-  - the primary action is a real button
+- The main app no longer exposes a manual compose section; drafting and editing now live only in the share sheet.
+- The leftover manual-compose state was also removed from `AppModel`, so the main app no longer keeps its own unused draft metadata pipeline.
 - Email rendering was updated:
   - linked headline is no longer permanently underlined
   - summary preamble cleanup was added
@@ -42,12 +39,13 @@ Last updated: March 3, 2026
   - shared X/Twitter links now prefer canonical tweet/content URLs, with an X oEmbed fallback for tweet previews when page metadata is weak
   - low-quality summaries are filtered more aggressively, and summaries are skipped for X/Twitter and Overcast sources
   - iOS startup now includes a short branded splash overlay in addition to the launch storyboard
-  - the share extension processing state now says `Auto-Sending...` and exposes a small bordered `Edit` action that cancels auto-send and returns to the draft without changing the saved preference
+  - the share extension processing state now says `Auto-Sending...`, keeps `Edit` available for a 0.5-second grace period before auto-send starts, and uses a roomier bordered `Edit` action that still cancels auto-send and returns to the draft without changing the saved preference
+  - manual sends now queue first and dismiss the sheet immediately, then continue best-effort preview enrichment and delivery in the background; if that work does not finish, the queued item remains for later retry
 
 ## Things To Verify On The Next Machine
 
 1. Open the project in Xcode and confirm the `LaunchScreen.storyboard` warning is gone after reloading the project / cleaning builds.
-2. Confirm the new `Recipient` section placement feels right on iPhone, that `Account` now only handles Gmail sign-in state, and that the recipient save action dismisses the keyboard cleanly.
+2. Confirm the new `Recipient` section placement feels right on iPhone, that `Account` now only handles Gmail sign-in state, that the recipient save action dismisses the keyboard cleanly, and that the manual compose section is gone from the main app.
 3. Do a true cold launch on iPhone after reinstalling the app to verify the splash screen appears (Apple caches launch screens aggressively).
 4. Confirm App Store Connect metadata versions match the code version:
    - project is now `0.2`
