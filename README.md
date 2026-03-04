@@ -9,7 +9,7 @@ MailMoi currently ships the full core workflow:
 - Sign in with Gmail using OAuth 2.0 + PKCE.
 - Send from the authenticated Gmail account.
 - Save a default recipient in its own dedicated settings section and reuse recent recipients.
-- Use the app to manage Gmail, recipient defaults, share-sheet behavior, and the offline queue.
+- Use the app to manage Gmail, recipient defaults, share-sheet behavior, desktop compose drafts, and the offline queue.
 - Handle links, pasted post text, and image-only shares as first-class queueable items.
 - Queue every outbound email locally before network delivery.
 - Retry queued emails when the app launches, becomes active, or connectivity returns.

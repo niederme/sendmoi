@@ -844,6 +844,101 @@ extension ContentView {
         }
     }
 
+    private var desktopComposeCard: some View {
+        desktopSectionCard(
+            title: "Compose",
+            subtitle: "Build the draft and queue it for delivery."
+        ) {
+            VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 8) {
+                    desktopFieldLabel("To")
+
+                    TextField("Email address", text: $model.draft.toEmail)
+                        .textFieldStyle(.roundedBorder)
+
+                    if !model.savedRecipients.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(model.savedRecipients.prefix(6), id: \.self) { recipient in
+                                    Button(recipient) {
+                                        model.useSavedRecipient(recipient)
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.small)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    desktopFieldLabel("Title")
+
+                    TextField("Title", text: $model.draft.title)
+                        .textFieldStyle(.roundedBorder)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    desktopFieldLabel("Description")
+
+                    TextEditor(text: $model.draft.excerpt)
+                        .frame(minHeight: 110)
+                        .padding(8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.primary.opacity(0.03))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                        )
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    desktopFieldLabel("Link (Optional)")
+
+                    TextField("https://example.com", text: $model.draft.urlString)
+                        .textFieldStyle(.roundedBorder)
+                }
+
+                if !model.draft.summary.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        desktopFieldLabel("AI Summary")
+
+                        Text(model.draft.summary)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.primary.opacity(0.03))
+                            )
+                    }
+                }
+
+                HStack {
+                    Text("Queue links, notes, and images for Gmail delivery.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+
+                    Spacer()
+
+                    Button {
+                        Task {
+                            await model.queueCurrentDraft()
+                        }
+                    } label: {
+                        Text(model.isBusy ? "Working..." : "Queue And Send")
+                            .frame(minWidth: 120)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(model.isBusy)
+                }
+            }
+        }
+    }
+
     private var desktopQueueCard: some View {
         desktopSectionCard(
             title: "Offline Queue",
