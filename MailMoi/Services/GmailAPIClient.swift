@@ -11,6 +11,7 @@ import AppKit
 struct OAuthAuthorizationRequest {
     let url: URL
     let codeVerifier: String
+    let state: String
 }
 
 final class GmailAPIClient {
@@ -32,9 +33,20 @@ final class GmailAPIClient {
             callbackScheme: GoogleOAuthConfig.redirectScheme
         )
         guard
-            let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false),
-            let code = components.queryItems?.first(where: { $0.name == "code" })?.value
+            let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false)
         else {
+            throw GmailAPIError.invalidRedirect
+        }
+
+        guard components.queryItems?.first(where: { $0.name == "state" })?.value == request.state else {
+            throw GmailAPIError.invalidState
+        }
+
+        if let authorizationError = Self.authorizationError(from: components.queryItems ?? []) {
+            throw authorizationError
+        }
+
+        guard let code = components.queryItems?.first(where: { $0.name == "code" })?.value else {
             throw GmailAPIError.invalidRedirect
         }
 
@@ -102,6 +114,7 @@ final class GmailAPIClient {
     private func makeAuthorizationRequest() throws -> OAuthAuthorizationRequest {
         let codeVerifier = Self.randomVerifier()
         let challenge = Self.codeChallenge(for: codeVerifier)
+        let state = Self.randomState()
         var components = URLComponents(url: GoogleOAuthConfig.authorizationEndpoint, resolvingAgainstBaseURL: false)
         components?.queryItems = [
             URLQueryItem(name: "client_id", value: GoogleOAuthConfig.clientID),
@@ -110,6 +123,7 @@ final class GmailAPIClient {
             URLQueryItem(name: "scope", value: GoogleOAuthConfig.scopes.joined(separator: " ")),
             URLQueryItem(name: "access_type", value: "offline"),
             URLQueryItem(name: "prompt", value: "consent"),
+            URLQueryItem(name: "state", value: state),
             URLQueryItem(name: "code_challenge", value: challenge),
             URLQueryItem(name: "code_challenge_method", value: "S256")
         ]
@@ -117,7 +131,7 @@ final class GmailAPIClient {
         guard let url = components?.url else {
             throw GmailAPIError.invalidResponse
         }
-        return OAuthAuthorizationRequest(url: url, codeVerifier: codeVerifier)
+        return OAuthAuthorizationRequest(url: url, codeVerifier: codeVerifier, state: state)
     }
 
     private func send(_ request: URLRequest) async throws -> Data {
@@ -163,9 +177,35 @@ final class GmailAPIClient {
         return nil
     }
 
+    private static func authorizationError(from queryItems: [URLQueryItem]) -> GmailAPIError? {
+        guard let code = queryItems.first(where: { $0.name == "error" })?.value else {
+            return nil
+        }
+
+        let description = queryItems
+            .first(where: { $0.name == "error_description" })?
+            .value?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if code == "access_denied" {
+            return .signInCanceled
+        }
+
+        if let description, !description.isEmpty {
+            return .authorizationFailed("Google sign-in failed: \(description)")
+        }
+
+        return .authorizationFailed("Google sign-in failed (\(code)).")
+    }
+
     private static func randomVerifier() -> String {
         let charset = Array("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~")
         return String((0..<64).compactMap { _ in charset.randomElement() })
+    }
+
+    private static func randomState() -> String {
+        let charset = Array("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~")
+        return String((0..<32).compactMap { _ in charset.randomElement() })
     }
 
     private static func codeChallenge(for verifier: String) -> String {
@@ -187,8 +227,16 @@ private final class OAuthCoordinator: NSObject, ASWebAuthenticationPresentationC
             ) { callbackURL, error in
                 if let callbackURL {
                     continuation.resume(returning: callbackURL)
+                } else if let error {
+                    let nsError = error as NSError
+                    if nsError.domain == ASWebAuthenticationSessionErrorDomain,
+                       nsError.code == ASWebAuthenticationSessionError.canceledLogin.rawValue {
+                        continuation.resume(throwing: GmailAPIError.signInCanceled)
+                    } else {
+                        continuation.resume(throwing: error)
+                    }
                 } else {
-                    continuation.resume(throwing: error ?? GmailAPIError.invalidRedirect)
+                    continuation.resume(throwing: GmailAPIError.invalidRedirect)
                 }
             }
 

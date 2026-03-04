@@ -5,6 +5,10 @@ enum GmailAPIError: LocalizedError {
     case invalidResponse
     case missingRefreshToken
     case invalidRedirect
+    case invalidState
+    case signInCanceled
+    case authorizationFailed(String)
+    case rateLimitExceeded(String)
     case transport(Error)
     case api(String)
 
@@ -18,6 +22,14 @@ enum GmailAPIError: LocalizedError {
             return "Google did not return a refresh token. Re-authenticate and keep prompt=consent enabled."
         case .invalidRedirect:
             return "The OAuth redirect could not be parsed."
+        case .invalidState:
+            return "The OAuth redirect did not match the original sign-in request."
+        case .signInCanceled:
+            return "Google sign-in was canceled."
+        case .authorizationFailed(let message):
+            return message
+        case .rateLimitExceeded(let message):
+            return message
         case .transport(let error):
             return error.localizedDescription
         case .api(let message):

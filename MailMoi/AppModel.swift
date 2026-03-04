@@ -11,6 +11,7 @@ final class AppModel: ObservableObject {
     @Published var isBusy = false
     @Published var isOnline = false
     @Published var isAccountSectionExpanded = true
+    @Published var shouldShowOnboarding = false
 
     private let client = GmailAPIClient()
     private let monitor = NetworkMonitor()
@@ -43,12 +44,14 @@ final class AppModel: ObservableObject {
         }
 
         isAccountSectionExpanded = session == nil || !GoogleOAuthConfig.isConfigured
+        shouldShowOnboarding = !RecipientStore.loadHasCompletedOnboarding()
 
         await processQueue()
     }
 
-    func signIn() async {
-        guard !isBusy else { return }
+    @discardableResult
+    func signIn() async -> Bool {
+        guard !isBusy else { return false }
         isBusy = true
 
         do {
@@ -67,7 +70,10 @@ final class AppModel: ObservableObject {
 
         if session != nil {
             await processQueue()
+            return true
         }
+
+        return false
     }
 
     func signOut() {
@@ -146,6 +152,30 @@ final class AppModel: ObservableObject {
         defaultRecipient = RecipientStore.loadDefault()
         reloadQueueFromDisk()
         await processQueue()
+    }
+
+    func resetSetup() {
+        guard !isBusy else { return }
+
+        do {
+            try KeychainStore.clearSession()
+            SharedSessionStore.clear()
+            RecipientStore.resetSetup()
+
+            session = nil
+            defaultRecipient = RecipientStore.loadDefault()
+            shareSheetAutoSendEnabled = RecipientStore.loadShareSheetAutoSendEnabled()
+            isAccountSectionExpanded = true
+            shouldShowOnboarding = true
+            statusMessage = "Setup reset. Walk through the guide to reconnect Gmail and reconfigure defaults."
+        } catch {
+            statusMessage = "Could not reset setup: \(error.localizedDescription)"
+        }
+    }
+
+    func completeOnboarding() {
+        RecipientStore.setHasCompletedOnboarding(true)
+        shouldShowOnboarding = false
     }
 
     private func reloadQueueFromDisk() {

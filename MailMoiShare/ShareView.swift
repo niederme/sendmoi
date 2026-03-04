@@ -5,8 +5,18 @@ struct ShareView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if model.presentationMode == .editing {
+            ZStack {
+                if showsAutoSendOverlayLayout {
+                    editorView
+                        .allowsHitTesting(false)
+                        .overlay {
+                            Rectangle()
+                                .fill(.black.opacity(0.58))
+                                .ignoresSafeArea()
+                        }
+
+                    autoSendOverlayCard
+                } else if model.presentationMode == .editing {
                     editorView
                 } else {
                     processingView
@@ -26,12 +36,13 @@ struct ShareView: View {
                     #endif
                 }
 
-                if model.presentationMode == .editing {
+                if showsSendToolbarItem {
                     ToolbarItem(placement: .confirmationAction) {
-                        Button(model.isSaving ? "Sending..." : "Send") {
+                        Button(sendButtonTitle) {
                             model.queueAndComplete()
                         }
-                        .disabled(model.isSaving)
+                        .disabled(sendButtonDisabled)
+                        .opacity(model.presentationMode == .editing ? 1 : 0.38)
                         #if os(macOS)
                         .keyboardShortcut(.defaultAction)
                         #endif
@@ -59,6 +70,11 @@ struct ShareView: View {
                     #else
                     TextField("Email address", text: $model.toEmail)
                     #endif
+                    if let recipientValidationMessage = model.recipientValidationMessage {
+                        Text(recipientValidationMessage)
+                            .font(.caption2)
+                            .foregroundStyle(.red)
+                    }
                     if !recentRecipientSuggestions.isEmpty {
                         recentRecipientsView
                     }
@@ -236,6 +252,52 @@ struct ShareView: View {
             .padding(.top, topPadding)
     }
 
+    private var autoSendOverlayCard: some View {
+        VStack(spacing: 14) {
+            ProgressView()
+                .controlSize(.large)
+
+            Text(model.statusMessage)
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundStyle(.primary)
+
+            if model.isSaving {
+                Button {
+                    model.stopAutoSendAndEdit()
+                } label: {
+                    Text("Edit")
+                        .fontWeight(.semibold)
+                        .padding(.horizontal, 22)
+                        .padding(.vertical, 10)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.primary)
+                .background(
+                    Capsule()
+                        .fill(overlayButtonFill)
+                        .overlay {
+                            Capsule()
+                                .strokeBorder(overlayBorderColor, lineWidth: 1)
+                        }
+                )
+            }
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 22)
+        .frame(maxWidth: 248)
+        .background {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(overlayCardFill)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .strokeBorder(overlayBorderColor, lineWidth: 1)
+                }
+        }
+        .shadow(color: .black.opacity(0.16), radius: 10, y: 4)
+        .padding(24)
+    }
+
     private var processingView: some View {
         VStack(spacing: 20) {
             VStack(spacing: 12) {
@@ -277,6 +339,56 @@ struct ShareView: View {
             "Review and tap Send when ready."
         ]
 
+        if showsAutoSendOverlayLayout {
+            return false
+        }
+
+        if model.statusMessage == model.recipientValidationMessage {
+            return false
+        }
+
         return !hiddenMessages.contains(model.statusMessage)
+    }
+
+    private var showsAutoSendOverlayLayout: Bool {
+        model.presentationMode == .processing &&
+        model.autoSendEnabled &&
+        model.statusMessage == "Auto-Sending..."
+    }
+
+    private var showsSendToolbarItem: Bool {
+        model.presentationMode == .editing || showsAutoSendOverlayLayout
+    }
+
+    private var sendButtonTitle: String {
+        if model.isSaving {
+            return "Sending…"
+        }
+
+        return "Send"
+    }
+
+    private var sendButtonDisabled: Bool {
+        model.presentationMode != .editing || model.isSaving || model.recipientValidationMessage != nil
+    }
+
+    private var overlayBorderColor: Color {
+        .white.opacity(0.08)
+    }
+
+    private var overlayCardFill: Color {
+        #if os(iOS)
+        return Color(uiColor: .secondarySystemBackground).opacity(0.94)
+        #else
+        return Color(nsColor: .controlBackgroundColor).opacity(0.96)
+        #endif
+    }
+
+    private var overlayButtonFill: Color {
+        #if os(iOS)
+        return Color(uiColor: .tertiarySystemBackground).opacity(0.98)
+        #else
+        return Color(nsColor: .underPageBackgroundColor).opacity(0.98)
+        #endif
     }
 }

@@ -4,6 +4,7 @@ import FoundationModels
 #endif
 
 final class GmailDeliveryService {
+    private static let previewMetadataCache = PreviewMetadataCache()
     private let decoder = JSONDecoder()
 
     init() {
@@ -43,6 +44,7 @@ final class GmailDeliveryService {
     }
 
     func sendEmail(using session: GmailSession, item: QueuedEmail) async throws {
+        try SendRateLimiter.validateSendAllowed(for: session)
         let content = await buildEmailContent(from: item)
         let subject = "\(content.title) (Sent via MailMoi)"
         let raw = try Self.makeRawMimeMessage(
@@ -58,6 +60,7 @@ final class GmailDeliveryService {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(GmailSendRequest(raw: raw))
         _ = try await send(request)
+        SendRateLimiter.recordSuccessfulSend(for: session)
     }
 
     func fetchDraftPreview(urlString: String, fallbackTitle: String) async -> DraftPreviewMetadata? {
@@ -236,6 +239,19 @@ final class GmailDeliveryService {
 
     private func fetchArticleMetadata(for url: URL, fallbackTitle: String) async -> FetchedArticleMetadata? {
         let canonicalURL = Self.canonicalizedTweetURL(url)
+        let cacheKey = canonicalURL.absoluteString
+        if let cachedMetadata = await Self.previewMetadataCache.metadata(for: cacheKey) {
+            return cachedMetadata.materialized(fallbackTitle: fallbackTitle, requestURLString: cacheKey)
+        }
+
+        guard let cachedMetadata = await fetchAndCacheArticleMetadata(for: canonicalURL) else {
+            return nil
+        }
+
+        return cachedMetadata.materialized(fallbackTitle: fallbackTitle, requestURLString: cacheKey)
+    }
+
+    private func fetchAndCacheArticleMetadata(for canonicalURL: URL) async -> CachedArticleMetadata? {
         let shouldTryXOEmbedFallback = Self.isTweetHost(canonicalURL)
         var request = URLRequest(url: canonicalURL)
         request.httpMethod = "GET"
@@ -250,34 +266,38 @@ final class GmailDeliveryService {
                   (200..<300).contains(httpResponse.statusCode),
                   let html = decodeHTML(data: data) else {
                 if shouldTryXOEmbedFallback {
-                    return await fetchXOEmbedMetadata(for: canonicalURL, fallbackTitle: fallbackTitle)
+                    return await fetchXOEmbedMetadata(for: canonicalURL)
                 }
                 return nil
             }
 
             let responseURL = Self.canonicalizedTweetURL(httpResponse.url ?? canonicalURL)
             let metaTags = Self.extractMetaTags(from: html)
-            let title = SharedContentFormatter.normalizedTitle(
-                Self.extractPreferredTitle(fromHTML: html, metaTags: metaTags) ?? fallbackTitle,
-                urlString: responseURL.absoluteString
-            )
+            let extractedTitle = Self.extractPreferredTitle(fromHTML: html, metaTags: metaTags)
+            let title = extractedTitle.map {
+                SharedContentFormatter.normalizedTitle($0, urlString: responseURL.absoluteString)
+            }
             let rawExcerpt = Self.extractExcerpt(fromMetaTags: metaTags)
             let excerpt = Self.isMeaninglessTweetExcerpt(rawExcerpt, for: responseURL) ? nil : rawExcerpt
             let summary: String?
             if Self.shouldSkipSummary(for: responseURL) {
                 summary = nil
             } else {
-                summary = await Self.generateSummary(fromHTML: html, title: title, excerpt: excerpt)
+                let summaryTitle = title ?? SharedContentFormatter.normalizedTitle(
+                    responseURL.host ?? "Shared Item",
+                    urlString: responseURL.absoluteString
+                )
+                summary = await Self.generateSummary(fromHTML: html, title: summaryTitle, excerpt: excerpt)
             }
             let imageURLString = Self.extractPreferredImageURLString(fromHTML: html, metaTags: metaTags, baseURL: responseURL)
-            let oEmbedMetadata: FetchedArticleMetadata?
+            let oEmbedMetadata: CachedArticleMetadata?
             if Self.isTweetHost(responseURL), (excerpt == nil || imageURLString == nil) {
-                oEmbedMetadata = await fetchXOEmbedMetadata(for: responseURL, fallbackTitle: fallbackTitle)
+                oEmbedMetadata = await fetchXOEmbedMetadata(for: responseURL)
             } else {
                 oEmbedMetadata = nil
             }
 
-            return FetchedArticleMetadata(
+            let metadata = CachedArticleMetadata(
                 title: title,
                 excerpt: excerpt ?? oEmbedMetadata?.excerpt,
                 summary: summary,
@@ -289,15 +309,17 @@ final class GmailDeliveryService {
                 ),
                 imageURLString: imageURLString ?? oEmbedMetadata?.imageURLString
             )
+            await Self.previewMetadataCache.store(metadata, for: canonicalURL.absoluteString)
+            return metadata
         } catch {
             if shouldTryXOEmbedFallback {
-                return await fetchXOEmbedMetadata(for: canonicalURL, fallbackTitle: fallbackTitle)
+                return await fetchXOEmbedMetadata(for: canonicalURL)
             }
             return nil
         }
     }
 
-    private func fetchXOEmbedMetadata(for url: URL, fallbackTitle: String) async -> FetchedArticleMetadata? {
+    private func fetchXOEmbedMetadata(for url: URL) async -> CachedArticleMetadata? {
         guard let endpoint = Self.makeXOEmbedEndpoint(for: url) else {
             return nil
         }
@@ -323,13 +345,15 @@ final class GmailDeliveryService {
                 return nil
             }
 
-            return FetchedArticleMetadata(
-                title: fallbackTitle,
+            let metadata = CachedArticleMetadata(
+                title: nil,
                 excerpt: excerpt,
                 summary: nil,
                 urlString: url.absoluteString,
                 imageURLString: imageURLString
             )
+            await Self.previewMetadataCache.store(metadata, for: url.absoluteString)
+            return metadata
         } catch {
             return nil
         }
@@ -590,21 +614,7 @@ final class GmailDeliveryService {
         if let inlineImage = content.inlineImage {
             return "cid:\(inlineImage.contentID)"
         }
-
-        if let urlString = content.urlString,
-           let url = URL(string: urlString),
-           Self.requiresInlineImageDisplay(for: url) {
-            return nil
-        }
-
-        guard let urlString = content.imageURLString,
-              let url = URL(string: urlString),
-              let scheme = url.scheme?.lowercased(),
-              scheme == "http" || scheme == "https" else {
-            return nil
-        }
-
-        return urlString
+        return nil
     }
 
     private static func makeTitleMarkup(content: EmailContent, fontFamily: String) -> String {
@@ -801,33 +811,6 @@ final class GmailDeliveryService {
             host == "www.x.com" ||
             host == "twitter.com" ||
             host == "www.twitter.com"
-    }
-
-    private static func isInstagramHost(_ url: URL) -> Bool {
-        guard let host = url.host?.lowercased() else {
-            return false
-        }
-
-        return host == "instagram.com" ||
-            host == "www.instagram.com" ||
-            host == "m.instagram.com"
-    }
-
-    private static func isThreadsHost(_ url: URL) -> Bool {
-        guard let host = url.host?.lowercased() else {
-            return false
-        }
-
-        return host == "threads.net" ||
-            host == "www.threads.net" ||
-            host == "m.threads.net" ||
-            host == "threads.com" ||
-            host == "www.threads.com" ||
-            host == "m.threads.com"
-    }
-
-    private static func requiresInlineImageDisplay(for url: URL) -> Bool {
-        isInstagramHost(url) || isThreadsHost(url)
     }
 
     private static func canonicalizedTweetURLString(_ urlString: String?) -> String? {
@@ -1879,6 +1862,30 @@ private struct FetchedArticleMetadata {
     let imageURLString: String?
 }
 
+private struct CachedArticleMetadata: Sendable {
+    let title: String?
+    let excerpt: String?
+    let summary: String?
+    let urlString: String?
+    let imageURLString: String?
+
+    func materialized(fallbackTitle: String, requestURLString: String) -> FetchedArticleMetadata {
+        let resolvedURLString = urlString ?? requestURLString
+        let resolvedTitle = title ?? SharedContentFormatter.normalizedTitle(
+            fallbackTitle,
+            urlString: resolvedURLString
+        )
+
+        return FetchedArticleMetadata(
+            title: resolvedTitle,
+            excerpt: excerpt,
+            summary: summary,
+            urlString: urlString,
+            imageURLString: imageURLString
+        )
+    }
+}
+
 private struct ImageCandidate {
     let urlString: String
     let score: Int
@@ -1903,13 +1910,43 @@ private struct XOEmbedResponse: Decodable {
     }
 }
 
+private actor PreviewMetadataCache {
+    private let maxEntries = 32
+    private var entries: [String: CachedArticleMetadata] = [:]
+    private var keysInAccessOrder: [String] = []
+
+    func metadata(for urlString: String) -> CachedArticleMetadata? {
+        guard let metadata = entries[urlString] else {
+            return nil
+        }
+
+        touch(urlString)
+        return metadata
+    }
+
+    func store(_ metadata: CachedArticleMetadata, for urlString: String) {
+        entries[urlString] = metadata
+        touch(urlString)
+
+        while keysInAccessOrder.count > maxEntries {
+            let evictedKey = keysInAccessOrder.removeFirst()
+            entries.removeValue(forKey: evictedKey)
+        }
+    }
+
+    private func touch(_ urlString: String) {
+        keysInAccessOrder.removeAll { $0 == urlString }
+        keysInAccessOrder.append(urlString)
+    }
+}
+
 private extension URLSession {
     static let mailMoiMetadata: URLSession = {
-        let configuration = URLSessionConfiguration.ephemeral
+        let configuration = URLSessionConfiguration.default
         configuration.timeoutIntervalForRequest = 6
         configuration.timeoutIntervalForResource = 8
         configuration.waitsForConnectivity = false
-        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+        configuration.httpShouldSetCookies = false
         return URLSession(configuration: configuration)
     }()
 }

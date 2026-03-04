@@ -4,8 +4,9 @@ import UniformTypeIdentifiers
 
 @MainActor
 final class ShareExtensionModel: ObservableObject {
-    private static let autoSendGracePeriodNanoseconds: UInt64 = 500_000_000
+    private static let autoSendGracePeriodNanoseconds: UInt64 = 1_000_000_000
     private static let manualSendPreviewWaitLimitNanoseconds: UInt64 = 750_000_000
+    static let missingRecipientMessage = "Enter a recipient in the To field, or set a default recipient in the MailMoi app."
 
     enum PresentationMode: Equatable {
         case processing
@@ -49,9 +50,7 @@ final class ShareExtensionModel: ObservableObject {
         Task {
             let content = await SharedItemExtractor.extract(from: inputItems)
             apply(content)
-            if !autoSendEnabled || presentationMode == .editing {
-                schedulePreviewRefresh()
-            }
+            schedulePreviewRefresh()
             autoSendIfPossible()
         }
     }
@@ -73,17 +72,17 @@ final class ShareExtensionModel: ObservableObject {
         guard !isSaving else { return }
 
         let draft = currentDraft()
-        let shouldDismissImmediately = presentationMode == .editing
+        let shouldAllowAutoSendEditWindow = presentationMode == .processing
 
-        guard draft.isValidForQueue else {
-            statusMessage = "Enter a recipient and some content before saving."
+        if let validationMessage = validationMessage(for: draft) {
+            statusMessage = validationMessage
             presentationMode = .editing
             return
         }
 
         let item = makeQueuedEmail(from: draft)
-        let shouldQueueWhilePreviewLoads = presentationMode == .editing && isRefreshingPreview && previewTask != nil
-        if shouldQueueWhilePreviewLoads {
+        let shouldQueueWhilePreviewLoads = isRefreshingPreview && previewTask != nil
+        if shouldQueueWhilePreviewLoads && presentationMode == .editing {
             statusMessage = "Finishing preview before send..."
         }
 
@@ -98,24 +97,15 @@ final class ShareExtensionModel: ObservableObject {
             }
 
             do {
-                let completedItem: QueuedEmail
-                if shouldDismissImmediately {
-                    completedItem = try await self.queueAndAttemptBackgroundDelivery(
-                        item,
-                        waitForPreview: shouldQueueWhilePreviewLoads
-                    )
-                } else {
-                    if self.presentationMode == .processing {
-                        try await Task.sleep(nanoseconds: Self.autoSendGracePeriodNanoseconds)
-                        try Task.checkCancellation()
-                    }
-                    try await self.sendImmediatelyOrQueue(item)
-                    completedItem = item
+                if shouldAllowAutoSendEditWindow {
+                    try await Task.sleep(nanoseconds: Self.autoSendGracePeriodNanoseconds)
+                    try Task.checkCancellation()
                 }
+                let completedItem = try await self.queueAndAttemptBackgroundDelivery(
+                    item,
+                    waitForPreview: shouldQueueWhilePreviewLoads
+                )
                 RecipientStore.record(completedItem.toEmail)
-                if !shouldDismissImmediately {
-                    self.extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
-                }
             } catch is CancellationError {
                 return
             } catch {
@@ -134,6 +124,15 @@ final class ShareExtensionModel: ObservableObject {
         statusMessage = "Review and tap Send when ready."
         presentationMode = .editing
         schedulePreviewRefresh()
+    }
+
+    var recipientValidationMessage: String? {
+        let trimmedRecipient = toEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedRecipient.isEmpty else {
+            return nil
+        }
+
+        return Self.missingRecipientMessage
     }
 
     private func currentDraft() -> ShareDraft {
@@ -186,8 +185,8 @@ final class ShareExtensionModel: ObservableObject {
         if title.isEmpty && excerpt.isEmpty && urlString.isEmpty && previewImageURLString == nil {
             statusMessage = "Nothing was extracted automatically. You can still fill it in manually."
             presentationMode = .editing
-        } else if toEmail.isEmpty {
-            statusMessage = "Set a default recipient in the MailMoi app, or enter one here."
+        } else if toEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            statusMessage = Self.missingRecipientMessage
             presentationMode = .editing
         } else if autoSendEnabled {
             statusMessage = "Auto-Sending..."
@@ -207,7 +206,13 @@ final class ShareExtensionModel: ObservableObject {
             previewImageURLString: previewImageURLString
         )
 
-        guard draft.isValidForQueue else {
+        if !draft.hasQueueContent || draft.queueTitle.isEmpty {
+            presentationMode = .editing
+            return
+        }
+
+        if draft.toEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            statusMessage = Self.missingRecipientMessage
             presentationMode = .editing
             return
         }
@@ -281,33 +286,6 @@ final class ShareExtensionModel: ObservableObject {
         }
     }
 
-    private func sendImmediatelyOrQueue(_ item: QueuedEmail) async throws {
-        try Task.checkCancellation()
-
-        do {
-            if let session = try SharedSessionStore.load() {
-                try Task.checkCancellation()
-                let validSession = try await deliveryService.ensureValidSession(session)
-                try Task.checkCancellation()
-                try await flushQueuedEmails(using: validSession)
-                try Task.checkCancellation()
-                try await deliveryService.sendEmail(using: validSession, item: item)
-                try SharedSessionStore.save(validSession)
-                SharedContainer.removeManagedMediaIfPresent(urlString: item.previewImageURLString)
-                statusMessage = "Sent."
-                return
-            }
-        } catch is CancellationError {
-            throw CancellationError()
-        } catch {
-            statusMessage = "Send failed. Saving offline instead."
-        }
-
-        try Task.checkCancellation()
-        try QueueStore.append(item)
-        statusMessage = "Saved offline."
-    }
-
     private func queueAndAttemptBackgroundDelivery(
         _ item: QueuedEmail,
         waitForPreview: Bool
@@ -329,6 +307,7 @@ final class ShareExtensionModel: ObservableObject {
                 try Task.checkCancellation()
                 let validSession = try await deliveryService.ensureValidSession(session)
                 try Task.checkCancellation()
+                _ = try await sendQueuedEmailIfPresent(refreshedItem, using: validSession)
                 try await flushQueuedEmails(using: validSession)
                 try SharedSessionStore.save(validSession)
                 return refreshedItem
@@ -410,7 +389,10 @@ final class ShareExtensionModel: ObservableObject {
             return
         }
 
-        if application.titleSnapshot.isEmpty,
+        if Self.shouldApplyPreviewTitle(
+            existingTitle: application.titleSnapshot,
+            urlString: application.normalizedURLString
+        ),
            let previewTitle = application.metadata?.title,
            !previewTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             title = previewTitle
@@ -423,7 +405,10 @@ final class ShareExtensionModel: ObservableObject {
         }
 
         summary = application.metadata?.summary ?? ""
-        previewImageURLString = application.metadata?.imageURLString
+        if !SharedContainer.isManagedMediaURLString(previewImageURLString),
+           let previewImageURLString = application.metadata?.imageURLString {
+            self.previewImageURLString = previewImageURLString
+        }
     }
 
     private func draftApplyingPendingPreview(to draft: ShareDraft) -> ShareDraft {
@@ -437,7 +422,10 @@ final class ShareExtensionModel: ObservableObject {
 
         var updatedDraft = draft
 
-        if pendingPreviewApplication.titleSnapshot.isEmpty,
+        if Self.shouldApplyPreviewTitle(
+            existingTitle: pendingPreviewApplication.titleSnapshot,
+            urlString: pendingPreviewApplication.normalizedURLString
+        ),
            let previewTitle = pendingPreviewApplication.metadata?.title,
            !previewTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             updatedDraft.title = previewTitle
@@ -450,7 +438,10 @@ final class ShareExtensionModel: ObservableObject {
         }
 
         updatedDraft.summary = pendingPreviewApplication.metadata?.summary ?? ""
-        updatedDraft.previewImageURLString = pendingPreviewApplication.metadata?.imageURLString
+        if !SharedContainer.isManagedMediaURLString(updatedDraft.previewImageURLString),
+           let previewImageURLString = pendingPreviewApplication.metadata?.imageURLString {
+            updatedDraft.previewImageURLString = previewImageURLString
+        }
         return updatedDraft
     }
 
@@ -488,6 +479,30 @@ final class ShareExtensionModel: ObservableObject {
         }
     }
 
+    @discardableResult
+    private func sendQueuedEmailIfPresent(_ item: QueuedEmail, using session: GmailSession) async throws -> Bool {
+        var queue = try QueueStore.load()
+        guard let index = queue.firstIndex(where: { $0.id == item.id }) else {
+            return false
+        }
+
+        let queuedItem = queue[index]
+
+        do {
+            try await deliveryService.sendEmail(using: session, item: queuedItem)
+            SharedContainer.removeManagedMediaIfPresent(urlString: queuedItem.previewImageURLString)
+            queue.remove(at: index)
+            try QueueStore.save(queue)
+            return true
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            queue[index].lastError = error.localizedDescription
+            try QueueStore.save(queue)
+            throw error
+        }
+    }
+
     private func flushQueuedEmails(using session: GmailSession) async throws {
         var queue = try QueueStore.load()
 
@@ -509,6 +524,41 @@ final class ShareExtensionModel: ObservableObject {
                 throw error
             }
         }
+    }
+
+    private func validationMessage(for draft: ShareDraft) -> String? {
+        if draft.toEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return Self.missingRecipientMessage
+        }
+
+        if !draft.hasQueueContent || draft.queueTitle.isEmpty {
+            return "Enter some content before sending."
+        }
+
+        return nil
+    }
+
+    private static func shouldApplyPreviewTitle(existingTitle: String, urlString: String) -> Bool {
+        let trimmedTitle = existingTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedTitle.isEmpty {
+            return true
+        }
+
+        if trimmedTitle.caseInsensitiveCompare("Shared Photo") == .orderedSame {
+            return true
+        }
+
+        if trimmedTitle.caseInsensitiveCompare(urlString) == .orderedSame {
+            return true
+        }
+
+        guard let host = URL(string: urlString)?.host?.lowercased() else {
+            return false
+        }
+
+        let loweredTitle = trimmedTitle.lowercased()
+        let condensedHost = host.replacingOccurrences(of: "www.", with: "")
+        return loweredTitle == host || loweredTitle == condensedHost
     }
 }
 

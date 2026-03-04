@@ -89,3 +89,177 @@ enum SharedContainer {
         return directoryURL
     }
 }
+
+enum SendRateLimiter {
+    private static let storageKey = "send-rate-ledger"
+    private static let elevatedSenderEmails: Set<String> = [
+        // Add your Gmail address here to use the elevated tester limits.
+    ]
+    private static let productionPolicy = SendRateLimitPolicy(
+        maxInFiveMinutes: 20,
+        maxInHour: 50,
+        maxInDay: 150
+    )
+    private static let elevatedPolicy = SendRateLimitPolicy(
+        maxInFiveMinutes: 100,
+        maxInHour: 250,
+        maxInDay: 1_000
+    )
+    private static let encoder = JSONEncoder()
+    private static let decoder = JSONDecoder()
+
+    static func validateSendAllowed(for session: GmailSession, now: Date = .now) throws {
+        let senderKey = normalizedSenderKey(for: session)
+        let policy = policy(for: senderKey)
+        let ledger = loadLedger(pruningBefore: now)
+        let events = ledger.eventsBySender[senderKey] ?? []
+        let nextAllowedAt = blockedUntil(for: events, policy: policy, now: now)
+
+        if let nextAllowedAt {
+            let waitDescription = waitTimeDescription(from: now, until: nextAllowedAt)
+            throw GmailAPIError.rateLimitExceeded(
+                "MailMoi send limit reached for this account. Try again in \(waitDescription)."
+            )
+        }
+    }
+
+    static func recordSuccessfulSend(for session: GmailSession, now: Date = .now) {
+        let senderKey = normalizedSenderKey(for: session)
+        var ledger = loadLedger(pruningBefore: now)
+        ledger.eventsBySender[senderKey, default: []].append(now)
+        saveLedger(ledger)
+    }
+
+    private static func policy(for senderKey: String) -> SendRateLimitPolicy {
+        elevatedSenderEmails.contains(senderKey) ? elevatedPolicy : productionPolicy
+    }
+
+    private static func normalizedSenderKey(for session: GmailSession) -> String {
+        guard let emailAddress = session.emailAddress?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased(),
+            !emailAddress.isEmpty else {
+            return "unknown-sender"
+        }
+        return emailAddress
+    }
+
+    private static func blockedUntil(
+        for events: [Date],
+        policy: SendRateLimitPolicy,
+        now: Date
+    ) -> Date? {
+        let candidates = [
+            nextAllowedAt(
+                for: events,
+                limit: policy.maxInFiveMinutes,
+                window: 300,
+                now: now
+            ),
+            nextAllowedAt(
+                for: events,
+                limit: policy.maxInHour,
+                window: 3_600,
+                now: now
+            ),
+            nextAllowedAt(
+                for: events,
+                limit: policy.maxInDay,
+                window: 86_400,
+                now: now
+            )
+        ].compactMap { $0 }
+
+        return candidates.max()
+    }
+
+    private static func nextAllowedAt(
+        for events: [Date],
+        limit: Int,
+        window: TimeInterval,
+        now: Date
+    ) -> Date? {
+        guard limit > 0 else {
+            return now
+        }
+
+        let windowStart = now.addingTimeInterval(-window)
+        let recentEvents = events
+            .filter { $0 >= windowStart }
+            .sorted()
+
+        guard recentEvents.count >= limit else {
+            return nil
+        }
+
+        let blockingIndex = recentEvents.count - limit
+        return recentEvents[blockingIndex].addingTimeInterval(window)
+    }
+
+    private static func waitTimeDescription(from now: Date, until nextAllowedAt: Date) -> String {
+        let seconds = max(60, Int(ceil(nextAllowedAt.timeIntervalSince(now))))
+
+        if seconds < 3_600 {
+            let minutes = Int(ceil(Double(seconds) / 60.0))
+            return minutes == 1 ? "1 minute" : "\(minutes) minutes"
+        }
+
+        let hours = seconds / 3_600
+        let remainingSeconds = seconds % 3_600
+        let remainingMinutes = Int(ceil(Double(remainingSeconds) / 60.0))
+
+        if remainingMinutes == 60 {
+            let roundedHours = hours + 1
+            return roundedHours == 1 ? "1 hour" : "\(roundedHours) hours"
+        }
+
+        if remainingMinutes == 0 {
+            return hours == 1 ? "1 hour" : "\(hours) hours"
+        }
+
+        let hourLabel = hours == 1 ? "1 hour" : "\(hours) hours"
+        let minuteLabel = remainingMinutes == 1 ? "1 minute" : "\(remainingMinutes) minutes"
+        return "\(hourLabel) \(minuteLabel)"
+    }
+
+    private static func loadLedger(pruningBefore now: Date) -> SendRateLedger {
+        let ledger: SendRateLedger
+        if let data = SharedContainer.sharedDefaults.data(forKey: storageKey),
+           let decoded = try? decoder.decode(SendRateLedger.self, from: data) {
+            ledger = decoded
+        } else {
+            ledger = SendRateLedger()
+        }
+
+        var prunedLedger = ledger
+        prunedLedger.prune(before: now.addingTimeInterval(-86_400))
+        return prunedLedger
+    }
+
+    private static func saveLedger(_ ledger: SendRateLedger) {
+        guard let data = try? encoder.encode(ledger) else {
+            return
+        }
+
+        SharedContainer.sharedDefaults.set(data, forKey: storageKey)
+    }
+}
+
+private struct SendRateLimitPolicy {
+    let maxInFiveMinutes: Int
+    let maxInHour: Int
+    let maxInDay: Int
+}
+
+private struct SendRateLedger: Codable {
+    var eventsBySender: [String: [Date]] = [:]
+
+    mutating func prune(before cutoff: Date) {
+        eventsBySender = eventsBySender.reduce(into: [:]) { partialResult, entry in
+            let recentEvents = entry.value.filter { $0 >= cutoff }
+            if !recentEvents.isEmpty {
+                partialResult[entry.key] = recentEvents
+            }
+        }
+    }
+}

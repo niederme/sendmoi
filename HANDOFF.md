@@ -5,7 +5,7 @@ Last updated: March 4, 2026
 ## Current State
 
 - Repo: `main`
-- Latest intended app version: `0.2`
+- Latest intended app version: `0.3`
 - Recent shipped commits:
   - `334a80e` `Separate recipient settings from account`
   - `ecf4b78` `Add handoff notes and launch screen fix`
@@ -16,6 +16,10 @@ Last updated: March 4, 2026
 - Share-sheet behavior is now controlled by a global `Auto-send` setting in the main app instead of living inside the compose form.
 - The default recipient is now a separate top-level `Recipient` section instead of being nested inside the collapsed `Account` view.
 - The default recipient field now saves via the keyboard submit action (`Done`) and via an explicit prominent `Save Default Recipient` button that dismisses focus before saving.
+- First-run now presents a branded 3-step setup guide as a modal instead of replacing the app shell, and setup can be reopened later from the dedicated bottom `Setup` actions.
+- The onboarding finish step now shows the connected Gmail account, allows `Switch Account`, uses an explicit recipient `Save` action, and only reveals auto-send when a saved recipient is active.
+- The onboarding action row was normalized so the primary action stays pinned and `View Settings` appears as a full-width secondary control on the final step.
+- The share-extension `Auto-Sending...` overlay card now uses a softer translucent material treatment.
 - If `Auto-send` is off, the share extension stays open and pre-fills the draft rather than sending immediately.
 - The desktop app includes a compose card again; the missing `desktopComposeCard` helper was restored so the macOS workspace compiles, but the card is informational only and points users back to the share sheet for actual drafting.
 - Email rendering was updated:
@@ -24,10 +28,12 @@ Last updated: March 4, 2026
   - preview image and summary handling were improved
 - Added:
   - `PRIVACY.md`
+  - `TERMS.md`
   - iOS launch screen asset and storyboard (`Splash.imageset`, `LaunchScreen.storyboard`)
 - `README.md` now reflects current behavior instead of hardcoding the old `0.1` release framing.
 - New in the current working tree:
-  - `CURRENT_PROJECT_VERSION` is now `3` for both targets so the next Xcode Cloud upload does not reuse the already-uploaded bundle version `2`
+  - added a first-pass `TERMS.md` so the Google OAuth consent screen can point at a public Terms of Service URL alongside the existing privacy policy
+  - `MARKETING_VERSION` is now `0.3` and `CURRENT_PROJECT_VERSION` is now `6` for both targets, set via `./scripts/prepare_release.sh --version 0.3`
   - the legacy `CFBundleIconFile` override was removed, and the main app now ships from the explicit `AppIcon.appiconset` while keeping `mail-moi.icon` as the editable design source
   - `scripts/prepare_release.sh` now bumps version/build across both targets and prints the signing + bundle settings before an archive
   - the macOS app now uses a desktop-style card layout instead of reusing the iPhone/iPad form
@@ -42,6 +48,7 @@ Last updated: March 4, 2026
   - iOS startup now includes a short branded splash overlay in addition to the launch storyboard
   - the share extension processing state now says `Auto-Sending...`, keeps `Edit` available for a 0.5-second grace period before auto-send starts, and uses a roomier bordered `Edit` action that still cancels auto-send and returns to the draft without changing the saved preference
   - manual sends now queue first and dismiss the sheet immediately, then continue best-effort preview enrichment and delivery in the background; if that work does not finish, the queued item remains for later retry
+  - if no default recipient is saved, the share extension now shows a specific inline `To` warning and keeps `Send` disabled until a recipient is entered instead of falling back to the generic validation error
 
 ## Things To Verify On The Next Machine
 
@@ -49,14 +56,15 @@ Last updated: March 4, 2026
 2. Confirm the new `Recipient` section placement feels right on iPhone, that `Account` now only handles Gmail sign-in state, that the recipient save action dismisses the keyboard cleanly, and that the macOS desktop compose card appears without trying to edit main-app draft state.
 3. Do a true cold launch on iPhone after reinstalling the app to verify the splash screen appears (Apple caches launch screens aggressively).
 4. Confirm App Store Connect metadata versions match the code version:
-   - project is now `0.2`
+   - project is now `0.3`
    - App Store Connect screenshot previously showed macOS app version `1.0`
-5. Share a photo directly from Photos (without a URL) and confirm it can be queued, sent, and removed without leaving orphaned files in the App Group container.
-6. Share an X/Twitter post and an Overcast episode and confirm the title / source URL / summary behavior looks intentional rather than noisy.
-7. Run the macOS target and confirm the desktop card layout feels right at common window sizes, especially queue deletion and account disclosure behavior.
-8. Run `./scripts/prepare_release.sh --version <next-version>` before the next archive, then verify App Store Connect accepts the `AppIcon` set for both iOS and macOS, shows the expected branded thumbnail, and no longer includes `mail-moi.icon` as an extra bundled resource.
-9. Confirm the next Xcode Cloud upload succeeds with build number `3`; the previous failure was `The bundle version must be higher than the previously uploaded version.`
-10. After the next icon refresh, run `./scripts/prune_app_icon_set.sh` and confirm Xcode no longer shows `AppIcon` asset warnings before archiving.
+5. Publish stable public URLs for both the privacy policy and terms page on `nieder.me`, then attach those URLs to the Google OAuth consent screen so the blue missing-policy banner disappears.
+6. Share a photo directly from Photos (without a URL) and confirm it can be queued, sent, and removed without leaving orphaned files in the App Group container.
+7. Share an X/Twitter post and an Overcast episode and confirm the title / source URL / summary behavior looks intentional rather than noisy.
+8. Run the macOS target and confirm the desktop card layout feels right at common window sizes, especially queue deletion and account disclosure behavior.
+9. Run `./scripts/prepare_release.sh --version <next-version>` before the next archive, then verify App Store Connect accepts the `AppIcon` set for both iOS and macOS, shows the expected branded thumbnail, and no longer includes `mail-moi.icon` as an extra bundled resource.
+10. Confirm the next Xcode Cloud upload succeeds with build number `3`; the previous failure was `The bundle version must be higher than the previously uploaded version.`
+11. After the next icon refresh, run `./scripts/prune_app_icon_set.sh` and confirm Xcode no longer shows `AppIcon` asset warnings before archiving.
 
 ## Local Setup
 

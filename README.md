@@ -2,6 +2,11 @@
 
 MailMoi is a native SwiftUI app for iPhone, iPad, and macOS that turns shared links, posts, and photos into polished, responsive emails. It uses Gmail OAuth, keeps a durable offline queue, and includes a native Share Extension so shares from the system sheet do not get dropped.
 
+Project legal docs:
+
+- Privacy Policy: [PRIVACY.md](/Users/niederme/~Repos/mail-moi/PRIVACY.md)
+- Terms of Service: [TERMS.md](/Users/niederme/~Repos/mail-moi/TERMS.md)
+
 ## Current Status
 
 MailMoi currently ships the full core workflow:
@@ -16,6 +21,8 @@ MailMoi currently ships the full core workflow:
 - Share queue state, saved recipients, and session data through the App Group `group.com.niederme.mailmoi`.
 - Let the share sheet either send immediately or stay open with a pre-filled draft, based on the global `Auto-send` setting in the app.
 - Use a settings-style form on iPhone and iPad, and a desktop card layout on macOS.
+- Show a branded first-run setup guide with step-by-step onboarding, Gmail connect/switch, and a final “ready” step that can save recipient defaults before entering settings.
+- Let users reopen setup from the app and run a destructive reset flow that disconnects Gmail and clears saved setup preferences.
 
 The app is built entirely with Apple-native frameworks, including `SwiftUI`, `AuthenticationServices`, `Network`, `Security`, and `FoundationModels` when available.
 
@@ -50,6 +57,7 @@ The `MailMoiShare` extension is included for iPhone, iPad, and macOS share sheet
 - While auto-send is in progress, the sheet shows an `Auto-Sending...` state with a secondary `Edit` action that stays available during that 0.5-second grace period and still cancels the in-flight auto-send attempt without changing the saved `Auto-send` preference.
 - If you tap `Send`, MailMoi first saves the draft to the queue, dismisses the sheet immediately, and then continues best-effort preview enrichment and delivery in the background. If that background work does not finish, the queued item is retried later.
 - If `Auto-send` is disabled, it stays open and pre-fills the draft so you can review before sending.
+- If no default recipient is saved, the share sheet keeps `Send` disabled, shows an inline `To`-field warning, and asks you to enter a recipient before it will queue or send anything.
 - If immediate delivery fails, it writes the message into the shared queue and exits cleanly.
 - If the host app only supplies a URL, the extension can still fetch metadata and allow manual editing before queueing.
 - Image-only shares from apps like Photos are stored in the shared App Group container, then cleaned up after send or deletion.
@@ -70,7 +78,7 @@ That means a merge into `main` should automatically enqueue a new TestFlight bui
 Before each archive, you can run:
 
 ```sh
-./scripts/prepare_release.sh --version 0.3
+./scripts/prepare_release.sh --version 0.4
 ```
 
 That command updates `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` across both targets, then prints the current signing team and bundle IDs so the release settings are easy to verify before uploading. If you only need the next build number, run `./scripts/prepare_release.sh` with no arguments.

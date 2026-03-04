@@ -4,6 +4,7 @@ enum RecipientStore {
     private static let historyKey = "savedRecipients"
     private static let defaultKey = "defaultRecipient"
     private static let shareSheetAutoSendKey = "shareSheetAutoSendEnabled"
+    private static let onboardingCompletedKey = "hasCompletedOnboarding"
     private static let maxCount = 12
 
     static func load() -> [String] {
@@ -27,13 +28,29 @@ enum RecipientStore {
     static func loadShareSheetAutoSendEnabled() -> Bool {
         let defaults = SharedContainer.sharedDefaults
         if defaults.object(forKey: shareSheetAutoSendKey) == nil {
-            return true
+            return false
         }
         return defaults.bool(forKey: shareSheetAutoSendKey)
     }
 
     static func setShareSheetAutoSendEnabled(_ isEnabled: Bool) {
         SharedContainer.sharedDefaults.set(isEnabled, forKey: shareSheetAutoSendKey)
+    }
+
+    static func loadHasCompletedOnboarding() -> Bool {
+        SharedContainer.sharedDefaults.bool(forKey: onboardingCompletedKey)
+    }
+
+    static func setHasCompletedOnboarding(_ hasCompleted: Bool) {
+        SharedContainer.sharedDefaults.set(hasCompleted, forKey: onboardingCompletedKey)
+    }
+
+    static func resetSetup() {
+        let defaults = SharedContainer.sharedDefaults
+        defaults.removeObject(forKey: historyKey)
+        defaults.removeObject(forKey: defaultKey)
+        defaults.removeObject(forKey: shareSheetAutoSendKey)
+        defaults.removeObject(forKey: onboardingCompletedKey)
     }
 
     static func record(_ recipient: String) {
