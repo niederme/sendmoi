@@ -38,6 +38,7 @@ Last updated: March 4, 2026
   - X/Twitter share text and Overcast links are normalized more aggressively before sending
   - shared X/Twitter links now prefer canonical tweet/content URLs, with an X oEmbed fallback for tweet previews when page metadata is weak
   - low-quality summaries are filtered more aggressively, and summaries are skipped for X/Twitter and Overcast sources
+  - `scripts/prune_app_icon_set.sh` now removes undeclared files from `AppIcon.appiconset` after icon refreshes so Xcode does not report `AppIcon` unassigned-child warnings from stray exported PNGs
   - iOS startup now includes a short branded splash overlay in addition to the launch storyboard
   - the share extension processing state now says `Auto-Sending...`, keeps `Edit` available for a 0.5-second grace period before auto-send starts, and uses a roomier bordered `Edit` action that still cancels auto-send and returns to the draft without changing the saved preference
   - manual sends now queue first and dismiss the sheet immediately, then continue best-effort preview enrichment and delivery in the background; if that work does not finish, the queued item remains for later retry
@@ -55,6 +56,7 @@ Last updated: March 4, 2026
 7. Run the macOS target and confirm the desktop card layout feels right at common window sizes, especially queue deletion and account disclosure behavior.
 8. Run `./scripts/prepare_release.sh --version <next-version>` before the next archive, then verify App Store Connect accepts the `AppIcon` set for both iOS and macOS, shows the expected branded thumbnail, and no longer includes `mail-moi.icon` as an extra bundled resource.
 9. Confirm the next Xcode Cloud upload succeeds with build number `3`; the previous failure was `The bundle version must be higher than the previously uploaded version.`
+10. After the next icon refresh, run `./scripts/prune_app_icon_set.sh` and confirm Xcode no longer shows `AppIcon` asset warnings before archiving.
 
 ## Local Setup
 

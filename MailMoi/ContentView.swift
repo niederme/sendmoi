@@ -69,9 +69,6 @@ struct ContentView: View {
             rootContent
                 .navigationTitle("MailMoi")
         }
-        .onChange(of: model.draft.urlString) { _, _ in
-            model.scheduleDraftPreviewRefresh()
-        }
     }
 
     @ViewBuilder
@@ -106,7 +103,6 @@ struct ContentView: View {
             accountSection
             defaultRecipientSection
             shareSheetSection
-            composeSection
             queueSection
             statusMessageView
             attributionSection
@@ -209,93 +205,6 @@ struct ContentView: View {
         }
     }
 
-    private var composeSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("To")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                #if os(iOS)
-                TextField("Email address", text: $model.draft.toEmail)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.emailAddress)
-                    .autocorrectionDisabled()
-                #else
-                TextField("Email address", text: $model.draft.toEmail)
-                #endif
-                if !recentRecipientSuggestions.isEmpty {
-                    recentRecipientsView
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Title")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                HStack(alignment: .top, spacing: 10) {
-                    if previewImageURL != nil || model.isRefreshingDraftPreview {
-                        previewThumbnail
-                    }
-
-                    ZStack(alignment: .topLeading) {
-                        TextField(titleIsLoading ? "" : "Title", text: $model.draft.title, axis: .vertical)
-                            .lineLimit(3, reservesSpace: true)
-
-                        if titleIsLoading {
-                            fieldLoadingIndicator(topPadding: 8)
-                        }
-                    }
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Description")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                ZStack(alignment: .topLeading) {
-                    TextEditor(text: $model.draft.excerpt)
-                        .frame(minHeight: 80)
-
-                    if descriptionIsLoading {
-                        fieldLoadingIndicator(topPadding: 8)
-                    }
-                }
-            }
-
-            if shouldShowSummarySection {
-                previewMetadataSection
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Link (Optional)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                #if os(iOS)
-                TextField("https://example.com", text: $model.draft.urlString)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.URL)
-                    .autocorrectionDisabled()
-                #else
-                TextField("https://example.com", text: $model.draft.urlString)
-                #endif
-            }
-
-            Button {
-                Task {
-                    await model.queueCurrentDraft()
-                }
-            } label: {
-                Text(model.isBusy ? "Working..." : "Queue And Send")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .disabled(model.isBusy)
-        } header: {
-            Text("Compose")
-        }
-    }
-
     private var shareSheetSection: some View {
         Section {
             Toggle(
@@ -310,100 +219,6 @@ struct ContentView: View {
         } footer: {
             Text(shareSheetFooterText)
         }
-    }
-
-    private var previewThumbnail: some View {
-        Group {
-            if let previewURL = previewImageURL {
-                AsyncImage(url: previewURL) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    default:
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.secondary.opacity(0.12))
-                    }
-                }
-            } else {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.secondary.opacity(0.12))
-                    ProgressView()
-                        .controlSize(.small)
-                }
-            }
-        }
-        .frame(width: 56, height: 56)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-    }
-
-    private var previewMetadataContent: some View {
-        Group {
-            if model.isRefreshingDraftPreview && model.draft.summary.isEmpty {
-                ProgressView()
-                    .controlSize(.small)
-            } else {
-                Text(model.draft.summary)
-                    .font(.footnote)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var previewMetadataSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("AI Summary")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            previewMetadataContent
-        }
-    }
-
-    private var recentRecipientsView: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Recent")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(recentRecipientSuggestions, id: \.self) { recipient in
-                        Button(recipient) {
-                            model.useSavedRecipient(recipient)
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                    }
-                }
-            }
-            .scrollClipDisabled()
-        }
-    }
-
-    private var desktopRecentRecipientsChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(recentRecipientSuggestions, id: \.self) { recipient in
-                    Button(recipient) {
-                        model.useSavedRecipient(recipient)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                }
-            }
-        }
-        .scrollClipDisabled()
-    }
-
-    private var previewImageURL: URL? {
-        guard let urlString = model.draft.previewImageURLString else {
-            return nil
-        }
-
-        return URL(string: urlString)
     }
 
     private var shareSheetFooterText: String {
@@ -426,38 +241,9 @@ struct ContentView: View {
         model.isOnline ? "Network looks available. The app retries automatically." : "Offline or unreachable. Items remain queued."
     }
 
-    private var recentRecipientSuggestions: [String] {
-        let currentRecipient = model.draft.toEmail
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-
-        return model.savedRecipients
-            .filter { $0.lowercased() != currentRecipient }
-            .prefix(4)
-            .map { $0 }
-    }
-
-    private var titleIsLoading: Bool {
-        model.isRefreshingDraftPreview && model.draft.trimmedTitle.isEmpty
-    }
-
-    private var descriptionIsLoading: Bool {
-        model.isRefreshingDraftPreview && model.draft.trimmedExcerpt.isEmpty
-    }
-
-    private var shouldShowSummarySection: Bool {
-        model.isRefreshingDraftPreview || !model.draft.summary.isEmpty
-    }
-
     private func saveDefaultRecipient() {
         focusedField = nil
         model.setDefaultRecipient(model.defaultRecipient)
-    }
-
-    private func fieldLoadingIndicator(topPadding: CGFloat) -> some View {
-        ProgressView()
-            .controlSize(.small)
-            .padding(.top, topPadding)
     }
 
     private var queueSection: some View {
@@ -524,7 +310,6 @@ extension ContentView {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 desktopTopRow
-                desktopComposeCard
                 desktopQueueCard
                 desktopStatusCard
                 desktopAttribution
@@ -687,7 +472,6 @@ extension ContentView {
                 desktopHeroCard
                 desktopStatsCard
                 desktopTopRow
-                desktopComposeCard
                 desktopQueueCard
                 desktopStatusCard
                 desktopAttribution
@@ -1060,160 +844,6 @@ extension ContentView {
         }
     }
 
-    private var desktopComposeCard: some View {
-        desktopSectionCard(title: "Compose") {
-            VStack(alignment: .leading, spacing: 16) {
-                desktopComposeMainColumn
-
-                HStack {
-                    Text("Drafts queue locally and retry automatically when the network is available.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-
-                    Spacer()
-
-                    Button {
-                        Task {
-                            await model.queueCurrentDraft()
-                        }
-                    } label: {
-                        Text(model.isBusy ? "Working..." : "Queue And Send")
-                            .frame(minWidth: 180)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .disabled(model.isBusy)
-                }
-            }
-        }
-    }
-
-    private var desktopComposeMainColumn: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 12) {
-                desktopInputGroup("To") {
-                    TextField("Email address", text: $model.draft.toEmail)
-                        .textFieldStyle(.roundedBorder)
-
-                    if !recentRecipientSuggestions.isEmpty {
-                        desktopRecentRecipientsChips
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                desktopInputGroup("Link") {
-                    TextField("https://example.com", text: $model.draft.urlString)
-                        .textFieldStyle(.roundedBorder)
-                }
-                .frame(width: 250, alignment: .leading)
-            }
-
-            if shouldShowDesktopPreviewPanel {
-                desktopPreviewPanel
-            }
-
-            desktopInputGroup("Title") {
-                ZStack(alignment: .topLeading) {
-                    TextField(titleIsLoading ? "" : "Title", text: $model.draft.title, axis: .vertical)
-                        .textFieldStyle(.plain)
-                        .font(.title3.weight(.medium))
-                        .lineLimit(3, reservesSpace: true)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(desktopEditorSurface)
-
-                    if titleIsLoading {
-                        fieldLoadingIndicator(topPadding: 12)
-                            .padding(.leading, 14)
-                    }
-                }
-            }
-
-            desktopInputGroup("Description") {
-                ZStack(alignment: .topLeading) {
-                    TextEditor(text: $model.draft.excerpt)
-                        .scrollContentBackground(.hidden)
-                        .font(.body)
-                        .frame(minHeight: 220)
-                        .padding(10)
-                        .background(desktopEditorSurface)
-
-                    if descriptionIsLoading {
-                        fieldLoadingIndicator(topPadding: 18)
-                            .padding(.leading, 18)
-                    }
-                }
-            }
-        }
-    }
-
-    private var shouldShowDesktopPreviewPanel: Bool {
-        (previewImageURL != nil) || model.isRefreshingDraftPreview || shouldShowSummarySection
-    }
-
-    private var desktopPreviewPanel: some View {
-        HStack(alignment: .top, spacing: 14) {
-            if previewImageURL != nil || model.isRefreshingDraftPreview {
-                Group {
-                    if let previewURL = previewImageURL {
-                        AsyncImage(url: previewURL) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .scaledToFill()
-                            default:
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.primary.opacity(0.03))
-                                    ProgressView()
-                                        .controlSize(.small)
-                                }
-                            }
-                        }
-                    } else {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.primary.opacity(0.03))
-                            ProgressView()
-                                .controlSize(.small)
-                        }
-                    }
-                }
-                .frame(width: 120, height: 88)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Preview")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-
-                if shouldShowSummarySection {
-                    Text("AI Summary")
-                        .font(.footnote.weight(.semibold))
-                    previewMetadataContent
-                } else if model.isRefreshingDraftPreview {
-                    Text("Fetching page details...")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.primary.opacity(0.03))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
-        )
-    }
-
     private var desktopQueueCard: some View {
         desktopSectionCard(
             title: "Offline Queue",
@@ -1332,15 +962,6 @@ extension ContentView {
         250
     }
 
-    private var desktopEditorSurface: some View {
-        RoundedRectangle(cornerRadius: 14)
-            .fill(Color.primary.opacity(0.03))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-            )
-    }
-
     private func desktopSectionCard<Content: View>(
         title: String,
         subtitle: String? = nil,
@@ -1376,16 +997,6 @@ extension ContentView {
             RoundedRectangle(cornerRadius: 20)
                 .stroke(Color.primary.opacity(0.08), lineWidth: 1)
         )
-    }
-
-    private func desktopInputGroup<Content: View>(
-        _ label: String,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            desktopFieldLabel(label)
-            content()
-        }
     }
 
     private func desktopFieldLabel(_ label: String) -> some View {

@@ -3,22 +3,17 @@ import SwiftUI
 
 @MainActor
 final class AppModel: ObservableObject {
-    @Published var draft = ShareDraft()
     @Published var queuedEmails: [QueuedEmail] = []
-    @Published var savedRecipients: [String] = []
     @Published var defaultRecipient = ""
     @Published var shareSheetAutoSendEnabled = true
     @Published var session: GmailSession?
     @Published var statusMessage = "Configure Google OAuth, sign in, then queue or send shared items."
     @Published var isBusy = false
-    @Published var isRefreshingDraftPreview = false
     @Published var isOnline = false
     @Published var isAccountSectionExpanded = true
 
     private let client = GmailAPIClient()
-    private let deliveryService = GmailDeliveryService()
     private let monitor = NetworkMonitor()
-    private var draftPreviewTask: Task<Void, Never>?
 
     init() {
         monitor.onStatusChange = { [weak self] online in
@@ -29,12 +24,8 @@ final class AppModel: ObservableObject {
     }
 
     func startup() async {
-        savedRecipients = RecipientStore.load()
         defaultRecipient = RecipientStore.loadDefault()
         shareSheetAutoSendEnabled = RecipientStore.loadShareSheetAutoSendEnabled()
-        if draft.toEmail.isEmpty {
-            draft.toEmail = defaultRecipient
-        }
         reloadQueueFromDisk()
 
         do {
@@ -92,31 +83,6 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func queueCurrentDraft() async {
-        let normalized = normalizeDraft(draft)
-        guard normalized.isValidForQueue else {
-            statusMessage = "Enter a recipient and some content before queuing."
-            return
-        }
-
-        let item = QueuedEmail(
-            toEmail: normalized.toEmail,
-            title: normalized.queueTitle,
-            excerpt: normalized.trimmedExcerpt,
-            summary: normalized.trimmedSummary.isEmpty ? nil : normalized.trimmedSummary,
-            urlString: normalized.trimmedURLString,
-            previewImageURLString: normalized.previewImageURLString
-        )
-
-        queuedEmails.insert(item, at: 0)
-        persistQueue()
-        draftPreviewTask?.cancel()
-        draft = ShareDraft(toEmail: defaultRecipient)
-        isRefreshingDraftPreview = false
-        statusMessage = "Saved offline. The app will keep retrying until Gmail accepts it."
-        await processQueue()
-    }
-
     func processQueue() async {
         guard !isBusy else { return }
         reloadQueueFromDisk()
@@ -143,7 +109,6 @@ final class AppModel: ObservableObject {
                     SharedContainer.removeManagedMediaIfPresent(urlString: next.previewImageURLString)
                     removeQueuedEmail(id: next.id)
                     RecipientStore.record(next.toEmail)
-                    savedRecipients = RecipientStore.load()
                     statusMessage = "Sent \"\(next.title)\" to \(next.toEmail)."
                 } catch {
                     markFailure(for: next.id, message: error.localizedDescription)
@@ -167,15 +132,9 @@ final class AppModel: ObservableObject {
         removeQueuedEmails(ids: [id])
     }
 
-    func useSavedRecipient(_ recipient: String) {
-        draft.toEmail = recipient
-    }
-
     func setDefaultRecipient(_ recipient: String) {
         RecipientStore.setDefault(recipient)
         defaultRecipient = RecipientStore.loadDefault()
-        savedRecipients = RecipientStore.load()
-        draft.toEmail = defaultRecipient
     }
 
     func setShareSheetAutoSendEnabled(_ isEnabled: Bool) {
@@ -183,67 +142,8 @@ final class AppModel: ObservableObject {
         shareSheetAutoSendEnabled = RecipientStore.loadShareSheetAutoSendEnabled()
     }
 
-    func scheduleDraftPreviewRefresh() {
-        draftPreviewTask?.cancel()
-
-        let snapshot = normalizeDraft(draft)
-        guard let url = URL(string: snapshot.trimmedURLString),
-              let scheme = url.scheme?.lowercased(),
-              scheme == "http" || scheme == "https" else {
-            isRefreshingDraftPreview = false
-            draft.summary = ""
-            if !SharedContainer.isManagedMediaURLString(draft.previewImageURLString) {
-                draft.previewImageURLString = nil
-            }
-            return
-        }
-
-        isRefreshingDraftPreview = true
-
-        draftPreviewTask = Task { [weak self] in
-            do {
-                try await Task.sleep(nanoseconds: 350_000_000)
-            } catch {
-                return
-            }
-
-            guard let self else { return }
-            let metadata = await self.deliveryService.fetchDraftPreview(
-                urlString: snapshot.trimmedURLString,
-                fallbackTitle: snapshot.trimmedTitle
-            )
-
-            await MainActor.run {
-                guard self.draft.trimmedURLString == snapshot.trimmedURLString else {
-                    return
-                }
-
-                self.isRefreshingDraftPreview = false
-
-                if self.draft.trimmedTitle.isEmpty,
-                   let title = metadata?.title,
-                   !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    self.draft.title = title
-                }
-
-                if self.draft.trimmedExcerpt.isEmpty,
-                   let description = metadata?.description,
-                   !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    self.draft.excerpt = description
-                }
-
-                self.draft.summary = metadata?.summary ?? ""
-                self.draft.previewImageURLString = metadata?.imageURLString
-            }
-        }
-    }
-
     func retryNow() async {
-        savedRecipients = RecipientStore.load()
         defaultRecipient = RecipientStore.loadDefault()
-        if draft.toEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            draft.toEmail = defaultRecipient
-        }
         reloadQueueFromDisk()
         await processQueue()
     }
@@ -254,16 +154,6 @@ final class AppModel: ObservableObject {
         } catch {
             statusMessage = "Could not load the offline queue: \(error.localizedDescription)"
         }
-    }
-
-    private func normalizeDraft(_ draft: ShareDraft) -> ShareDraft {
-        var copy = draft
-        copy.toEmail = draft.toEmail.trimmingCharacters(in: .whitespacesAndNewlines)
-        copy.title = draft.trimmedTitle
-        copy.excerpt = draft.trimmedExcerpt
-        copy.summary = draft.trimmedSummary
-        copy.urlString = draft.trimmedURLString
-        return copy
     }
 
     private func removeQueuedEmail(id: UUID) {
