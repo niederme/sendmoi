@@ -53,7 +53,7 @@ Last updated: March 4, 2026
 5. Share a photo directly from Photos (without a URL) and confirm it can be queued, sent, and removed without leaving orphaned files in the App Group container.
 6. Share an X/Twitter post and an Overcast episode and confirm the title / source URL / summary behavior looks intentional rather than noisy.
 7. Run the macOS target and confirm the desktop card layout feels right at common window sizes, especially queue deletion and account disclosure behavior.
-8. Run `./scripts/prepare_release.sh --version <next-version>` before the next archive, then verify App Store Connect shows the expected branded icon thumbnail for iOS and macOS.
+8. Run `./scripts/prepare_release.sh --version <next-version>` before the next archive, then verify App Store Connect accepts the `AppIcon` set for both iOS and macOS, shows the expected branded thumbnail, and no longer includes `mail-moi.icon` as an extra bundled resource.
 9. Confirm the next Xcode Cloud upload succeeds with build number `3`; the previous failure was `The bundle version must be higher than the previously uploaded version.`
 
 ## Local Setup
