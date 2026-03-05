@@ -46,7 +46,7 @@ final class GmailDeliveryService {
     func sendEmail(using session: GmailSession, item: QueuedEmail) async throws {
         try SendRateLimiter.validateSendAllowed(for: session)
         let content = await buildEmailContent(from: item)
-        let subject = "\(content.title) (Sent via MailMoi)"
+        let subject = "\(content.title) (Sent via SendMoi)"
         let raw = try Self.makeRawMimeMessage(
             from: session.emailAddress ?? "me",
             to: item.toEmail,
@@ -431,15 +431,15 @@ final class GmailDeliveryService {
     }
 
     private static func makeRawMimeMessage(from: String, to: String, subject: String, content: EmailContent) throws -> String {
-        let boundary = "MailMoi-\(UUID().uuidString)"
+        let boundary = "SendMoi-\(UUID().uuidString)"
         let subjectHeader = "=?UTF-8?B?\(Data(subject.utf8).base64EncodedString())?="
-        let footer = "Sent with MailMoi"
+        let footer = "Sent with SendMoi"
         let textBody = makePlainTextBody(content: content, footer: footer)
         let htmlBody = makeHTMLBody(content: content, footer: footer)
         let message: String
 
         if let inlineImage = content.inlineImage {
-            let alternativeBoundary = "MailMoiAlt-\(UUID().uuidString)"
+            let alternativeBoundary = "SendMoiAlt-\(UUID().uuidString)"
             let imageData = wrappedBase64(inlineImage.data.base64EncodedString())
 
             message = """

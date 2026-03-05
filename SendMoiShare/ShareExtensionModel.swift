@@ -6,7 +6,7 @@ import UniformTypeIdentifiers
 final class ShareExtensionModel: ObservableObject {
     private static let autoSendGracePeriodNanoseconds: UInt64 = 1_000_000_000
     private static let manualSendPreviewWaitLimitNanoseconds: UInt64 = 750_000_000
-    static let missingRecipientMessage = "Enter a recipient in the To field, or set a default recipient in the MailMoi app."
+    static let missingRecipientMessage = "Enter a recipient in the To field, or set a default recipient in the SendMoi app."
 
     enum PresentationMode: Equatable {
         case processing

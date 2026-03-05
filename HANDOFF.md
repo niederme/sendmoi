@@ -1,6 +1,6 @@
-# MailMoi Handoff
+# SendMoi Handoff
 
-Last updated: March 4, 2026
+Last updated: March 5, 2026
 
 ## Current State
 
@@ -32,9 +32,11 @@ Last updated: March 4, 2026
   - iOS launch screen asset and storyboard (`Splash.imageset`, `LaunchScreen.storyboard`)
 - `README.md` now reflects current behavior instead of hardcoding the old `0.1` release framing.
 - New in the current working tree:
+  - repo-wide rename from MailMoi to SendMoi: project, targets, schemes, folders, and user-facing copy
+  - bundle identifiers, App Group ID, and shared container/keychain storage identifiers intentionally remain on the existing MailMoi values for upgrade continuity
   - added a first-pass `TERMS.md` so the Google OAuth consent screen can point at a public Terms of Service URL alongside the existing privacy policy
   - `MARKETING_VERSION` is now `0.3` and `CURRENT_PROJECT_VERSION` is now `6` for both targets, set via `./scripts/prepare_release.sh --version 0.3`
-  - the legacy `CFBundleIconFile` override was removed, and the main app now ships from the explicit `AppIcon.appiconset` while keeping `mail-moi.icon` as the editable design source
+  - the legacy `CFBundleIconFile` override was removed, and the main app now ships from the explicit `AppIcon.appiconset` while keeping `send-moi.icon` as the editable design source
   - `scripts/prepare_release.sh` now bumps version/build across both targets and prints the signing + bundle settings before an archive
   - the macOS app now uses a desktop-style card layout instead of reusing the iPhone/iPad form
   - image-only shares are first-class queue items, with fallback titles like `Shared Photo`
@@ -62,16 +64,16 @@ Last updated: March 4, 2026
 6. Share a photo directly from Photos (without a URL) and confirm it can be queued, sent, and removed without leaving orphaned files in the App Group container.
 7. Share an X/Twitter post and an Overcast episode and confirm the title / source URL / summary behavior looks intentional rather than noisy.
 8. Run the macOS target and confirm the desktop card layout feels right at common window sizes, especially queue deletion and account disclosure behavior.
-9. Run `./scripts/prepare_release.sh --version <next-version>` before the next archive, then verify App Store Connect accepts the `AppIcon` set for both iOS and macOS, shows the expected branded thumbnail, and no longer includes `mail-moi.icon` as an extra bundled resource.
+9. Run `./scripts/prepare_release.sh --version <next-version>` before the next archive, then verify App Store Connect accepts the `AppIcon` set for both iOS and macOS, shows the expected branded thumbnail, and no longer includes `send-moi.icon` as an extra bundled resource.
 10. Confirm the next Xcode Cloud upload succeeds with build number `3`; the previous failure was `The bundle version must be higher than the previously uploaded version.`
 11. After the next icon refresh, run `./scripts/prune_app_icon_set.sh` and confirm Xcode no longer shows `AppIcon` asset warnings before archiving.
 
 ## Local Setup
 
-1. Open `MailMoi.xcodeproj` in Xcode.
-2. Enable automatic signing for both `MailMoi` and `MailMoiShare`.
+1. Open `SendMoi.xcodeproj` in Xcode.
+2. Enable automatic signing for both `SendMoi` and `SendMoiShare`.
 3. Confirm the App Group is `group.com.niederme.mailmoi`.
-4. If moving to a different Google Cloud project, update `MailMoi/Services/GoogleOAuthConfig.swift`.
+4. If moving to a different Google Cloud project, update `SendMoi/Services/GoogleOAuthConfig.swift`.
 
 ## Notes
 

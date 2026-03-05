@@ -1,6 +1,6 @@
-var MailMoiSafariPreprocessor = function() {};
+var SendMoiSafariPreprocessor = function() {};
 
-MailMoiSafariPreprocessor.prototype = {
+SendMoiSafariPreprocessor.prototype = {
     run: function(arguments) {
         arguments.completionFunction({
             title: document.title || "",
@@ -9,4 +9,4 @@ MailMoiSafariPreprocessor.prototype = {
     }
 };
 
-var ExtensionPreprocessingJS = new MailMoiSafariPreprocessor();
+var ExtensionPreprocessingJS = new SendMoiSafariPreprocessor();

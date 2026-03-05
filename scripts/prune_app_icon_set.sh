@@ -4,7 +4,7 @@ set -eu
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
-APP_ICON_DIR=${1:-"$REPO_ROOT/MailMoi/Assets.xcassets/AppIcon.appiconset"}
+APP_ICON_DIR=${1:-"$REPO_ROOT/SendMoi/Assets.xcassets/AppIcon.appiconset"}
 CONTENTS_JSON="$APP_ICON_DIR/Contents.json"
 
 if [ ! -f "$CONTENTS_JSON" ]; then
@@ -17,7 +17,7 @@ if ! command -v /usr/bin/ruby >/dev/null 2>&1; then
   exit 1
 fi
 
-ALLOWED_FILES=$(mktemp "${TMPDIR:-/tmp}/mailmoi-appicon.XXXXXX")
+ALLOWED_FILES=$(mktemp "${TMPDIR:-/tmp}/sendmoi-appicon.XXXXXX")
 trap 'rm -f "$ALLOWED_FILES"' EXIT HUP INT TERM
 
 /usr/bin/ruby -rjson -e '

@@ -1,12 +1,12 @@
-# MailMoi Privacy Policy
+# SendMoi Privacy Policy
 
 Last updated: March 1, 2026
 
-MailMoi is a local-first app that helps you send shared links as emails through your own Gmail account. This policy explains what MailMoi handles, where that data goes, and what stays on your device.
+SendMoi is a local-first app that helps you send shared links as emails through your own Gmail account. This policy explains what SendMoi handles, where that data goes, and what stays on your device.
 
-## What MailMoi Accesses
+## What SendMoi Accesses
 
-MailMoi may access the following information when you use the app:
+SendMoi may access the following information when you use the app:
 
 - Your Gmail account email address.
 - OAuth tokens used to keep you signed in to Gmail.
@@ -14,7 +14,7 @@ MailMoi may access the following information when you use the app:
 - The title, excerpt, and URL of content you share into the app.
 - Queued email content that has not been sent yet.
 
-If you share a web link, MailMoi may also fetch the linked page and its preview image to improve the outgoing email with:
+If you share a web link, SendMoi may also fetch the linked page and its preview image to improve the outgoing email with:
 
 - A better title.
 - Excerpt text.
@@ -23,7 +23,7 @@ If you share a web link, MailMoi may also fetch the linked page and its preview 
 
 ## How Your Data Is Used
 
-MailMoi uses this information only to provide its core features:
+SendMoi uses this information only to provide its core features:
 
 - Sign you in with Google.
 - Send email through the Gmail API on your behalf.
@@ -31,31 +31,31 @@ MailMoi uses this information only to provide its core features:
 - Queue emails offline and retry them later.
 - Enrich shared links before sending when metadata is available.
 
-MailMoi does not use your data for advertising, analytics, profiling, or sale to third parties.
+SendMoi does not use your data for advertising, analytics, profiling, or sale to third parties.
 
 ## Where Data Is Stored
 
-MailMoi stores data locally on your device, including:
+SendMoi stores data locally on your device, including:
 
 - Gmail session information used to keep you signed in.
 - Your saved default and recent recipients.
 - Any queued emails waiting to be sent.
 
-This local storage may be kept in standard app storage, the system keychain, and shared app container storage used by the MailMoi Share Extension.
+This local storage may be kept in standard app storage, the system keychain, and shared app container storage used by the SendMoi Share Extension.
 
 ## What Is Sent Off Your Device
 
-MailMoi does not run its own backend service. When network requests happen, they are sent directly from your device to the services needed for the feature you are using:
+SendMoi does not run its own backend service. When network requests happen, they are sent directly from your device to the services needed for the feature you are using:
 
 - Google authentication endpoints, to sign you in and refresh your Gmail session.
 - Gmail API endpoints, to send email through your Gmail account.
-- The websites you share, when MailMoi fetches page metadata or preview images to improve the outgoing email.
+- The websites you share, when SendMoi fetches page metadata or preview images to improve the outgoing email.
 
-If summary generation is available on your device through Apple system frameworks, MailMoi may use those on-device capabilities to create a short article summary before sending. MailMoi does not send article text to a MailMoi-operated server for summarization.
+If summary generation is available on your device through Apple system frameworks, SendMoi may use those on-device capabilities to create a short article summary before sending. SendMoi does not send article text to a SendMoi-operated server for summarization.
 
 ## Third Parties
 
-MailMoi relies on third-party services only where necessary to provide the app:
+SendMoi relies on third-party services only where necessary to provide the app:
 
 - Google, for authentication and Gmail delivery.
 - The websites whose links you choose to share, for metadata and preview retrieval.
@@ -67,21 +67,21 @@ Those services operate under their own privacy terms and policies.
 
 You can control your data in several ways:
 
-- Sign out of Gmail from within MailMoi to remove the saved Gmail session used by the app.
+- Sign out of Gmail from within SendMoi to remove the saved Gmail session used by the app.
 - Delete queued emails from the app before they are sent.
 - Change or clear the default recipient at any time.
-- Stop sharing links into MailMoi if you do not want page metadata to be fetched.
+- Stop sharing links into SendMoi if you do not want page metadata to be fetched.
 
 ## Children’s Privacy
 
-MailMoi is not directed to children under 13 and is not designed to knowingly collect personal information from children.
+SendMoi is not directed to children under 13 and is not designed to knowingly collect personal information from children.
 
 ## Changes To This Policy
 
-This policy may be updated as MailMoi changes. The "Last updated" date at the top of this document reflects the latest revision.
+This policy may be updated as SendMoi changes. The "Last updated" date at the top of this document reflects the latest revision.
 
 ## Contact
 
-For questions about MailMoi or this policy, use the project repository:
+For questions about SendMoi or this policy, use the project repository:
 
-[https://github.com/niederme/mail-moi](https://github.com/niederme/mail-moi)
+[https://github.com/niederme/sendmoi](https://github.com/niederme/sendmoi)

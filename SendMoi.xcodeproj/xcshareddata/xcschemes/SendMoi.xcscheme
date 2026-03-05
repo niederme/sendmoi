@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "A50000010000000000000001"
-               BuildableName = "MailMoi.app"
-               BlueprintName = "MailMoi"
-               ReferencedContainer = "container:MailMoi.xcodeproj">
+               BuildableName = "SendMoi.app"
+               BlueprintName = "SendMoi"
+               ReferencedContainer = "container:SendMoi.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -45,9 +45,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "A50000010000000000000001"
-            BuildableName = "MailMoi.app"
-            BlueprintName = "MailMoi"
-            ReferencedContainer = "container:MailMoi.xcodeproj">
+            BuildableName = "SendMoi.app"
+            BlueprintName = "SendMoi"
+            ReferencedContainer = "container:SendMoi.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -62,9 +62,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "A50000010000000000000001"
-            BuildableName = "MailMoi.app"
-            BlueprintName = "MailMoi"
-            ReferencedContainer = "container:MailMoi.xcodeproj">
+            BuildableName = "SendMoi.app"
+            BlueprintName = "SendMoi"
+            ReferencedContainer = "container:SendMoi.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

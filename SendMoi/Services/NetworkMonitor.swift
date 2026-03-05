@@ -3,7 +3,7 @@ import Network
 
 final class NetworkMonitor {
     private let monitor = NWPathMonitor()
-    private let queue = DispatchQueue(label: "MailMoi.NetworkMonitor")
+    private let queue = DispatchQueue(label: "SendMoi.NetworkMonitor")
 
     var onStatusChange: (@Sendable (Bool) -> Void)?
 

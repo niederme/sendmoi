@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct MailMoiApp: App {
+struct SendMoiApp: App {
     @StateObject private var model = AppModel()
     @Environment(\.scenePhase) private var scenePhase
     @State private var showsSplashOverlay = true

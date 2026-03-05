@@ -118,7 +118,7 @@ enum SendRateLimiter {
         if let nextAllowedAt {
             let waitDescription = waitTimeDescription(from: now, until: nextAllowedAt)
             throw GmailAPIError.rateLimitExceeded(
-                "MailMoi send limit reached for this account. Try again in \(waitDescription)."
+                "SendMoi send limit reached for this account. Try again in \(waitDescription)."
             )
         }
     }

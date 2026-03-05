@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A10000010000000000000001 /* MailMoiApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000001 /* MailMoiApp.swift */; };
+		A10000010000000000000001 /* SendMoiApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000001 /* SendMoiApp.swift */; };
 		A10000010000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000002 /* ContentView.swift */; };
 		A10000010000000000000003 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000003 /* AppModel.swift */; };
 		A10000010000000000000004 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000004 /* Models.swift */; };
@@ -18,7 +18,7 @@
 		A10000010000000000000009 /* RecipientStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000009 /* RecipientStore.swift */; };
 		A1000001000000000000000A /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000A /* NetworkMonitor.swift */; };
 		A1000001000000000000000B /* SharedContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000C /* SharedContainer.swift */; };
-		A1000001000000000000000C /* MailMoiShare.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000D /* MailMoiShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A1000001000000000000000C /* SendMoiShare.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000D /* SendMoiShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A1000001000000000000000D /* GmailShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000F /* GmailShared.swift */; };
 		A1000001000000000000000E /* SharedSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000010 /* SharedSessionStore.swift */; };
 		A1000001000000000000000F /* GmailDeliveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000011 /* GmailDeliveryService.swift */; };
@@ -44,7 +44,7 @@
 			containerPortal = A60000010000000000000001 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = B50000010000000000000001;
-			remoteInfo = MailMoiShare;
+			remoteInfo = SendMoiShare;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -55,7 +55,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				A1000001000000000000000C /* MailMoiShare.appex in Embed App Extensions */,
+				A1000001000000000000000C /* SendMoiShare.appex in Embed App Extensions */,
 			);
 			name = "Embed App Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -63,8 +63,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		A20000010000000000000000 /* MailMoi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MailMoi.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		A20000010000000000000001 /* MailMoiApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailMoiApp.swift; sourceTree = "<group>"; };
+		A20000010000000000000000 /* SendMoi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SendMoi.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000010000000000000001 /* SendMoiApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SendMoiApp.swift; sourceTree = "<group>"; };
 		A20000010000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A20000010000000000000003 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		A20000010000000000000004 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
@@ -76,22 +76,22 @@
 		A2000001000000000000000A /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		A2000001000000000000000B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A2000001000000000000000C /* SharedContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedContainer.swift; sourceTree = "<group>"; };
-		A2000001000000000000000D /* MailMoiShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MailMoiShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		A2000001000000000000000E /* MailMoi.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MailMoi.entitlements; sourceTree = "<group>"; };
+		A2000001000000000000000D /* SendMoiShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SendMoiShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A2000001000000000000000E /* SendMoi.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SendMoi.entitlements; sourceTree = "<group>"; };
 		A2000001000000000000000F /* GmailShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GmailShared.swift; sourceTree = "<group>"; };
 		A20000010000000000000010 /* SharedSessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedSessionStore.swift; sourceTree = "<group>"; };
 		A20000010000000000000011 /* GmailDeliveryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GmailDeliveryService.swift; sourceTree = "<group>"; };
-		A20000010000000000000012 /* MailMoi-macOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "MailMoi-macOS.entitlements"; sourceTree = "<group>"; };
+		A20000010000000000000012 /* SendMoi-macOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "SendMoi-macOS.entitlements"; sourceTree = "<group>"; };
 		A20000010000000000000013 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A20000010000000000000014 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		B20000010000000000000001 /* ShareExtensionModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareExtensionModel.swift; sourceTree = "<group>"; };
 		B20000010000000000000002 /* ShareView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareView.swift; sourceTree = "<group>"; };
 		B20000010000000000000003 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		B20000010000000000000004 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		B20000010000000000000005 /* MailMoiShare.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MailMoiShare.entitlements; sourceTree = "<group>"; };
+		B20000010000000000000005 /* SendMoiShare.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SendMoiShare.entitlements; sourceTree = "<group>"; };
 		B20000010000000000000006 /* SafariPreprocessor.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = SafariPreprocessor.js; sourceTree = "<group>"; };
-		B20000010000000000000007 /* MailMoiShare-macOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "MailMoiShare-macOS.entitlements"; sourceTree = "<group>"; };
-		DC6FF07A2F55D5CB00415EAC /* mail-moi.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "mail-moi.icon"; sourceTree = "<group>"; };
+		B20000010000000000000007 /* SendMoiShare-macOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "SendMoiShare-macOS.entitlements"; sourceTree = "<group>"; };
+		DC6FF07A2F55D5CB00415EAC /* send-moi.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "send-moi.icon"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -115,35 +115,35 @@
 		A40000010000000000000001 = {
 			isa = PBXGroup;
 			children = (
-				A40000010000000000000002 /* MailMoi */,
-				B40000010000000000000002 /* MailMoiShare */,
+				A40000010000000000000002 /* SendMoi */,
+				B40000010000000000000002 /* SendMoiShare */,
 				A40000010000000000000003 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		A40000010000000000000002 /* MailMoi */ = {
+		A40000010000000000000002 /* SendMoi */ = {
 			isa = PBXGroup;
 			children = (
 				A2000001000000000000000B /* Info.plist */,
-				A2000001000000000000000E /* MailMoi.entitlements */,
-				A20000010000000000000012 /* MailMoi-macOS.entitlements */,
+				A2000001000000000000000E /* SendMoi.entitlements */,
+				A20000010000000000000012 /* SendMoi-macOS.entitlements */,
 				A20000010000000000000013 /* Assets.xcassets */,
 				A20000010000000000000014 /* LaunchScreen.storyboard */,
-				A20000010000000000000001 /* MailMoiApp.swift */,
+				A20000010000000000000001 /* SendMoiApp.swift */,
 				A20000010000000000000002 /* ContentView.swift */,
 				A20000010000000000000003 /* AppModel.swift */,
 				A20000010000000000000004 /* Models.swift */,
-				DC6FF07A2F55D5CB00415EAC /* mail-moi.icon */,
+				DC6FF07A2F55D5CB00415EAC /* send-moi.icon */,
 				A40000010000000000000004 /* Services */,
 			);
-			path = MailMoi;
+			path = SendMoi;
 			sourceTree = "<group>";
 		};
 		A40000010000000000000003 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A20000010000000000000000 /* MailMoi.app */,
-				A2000001000000000000000D /* MailMoiShare.appex */,
+				A20000010000000000000000 /* SendMoi.app */,
+				A2000001000000000000000D /* SendMoiShare.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -165,26 +165,26 @@
 			path = Services;
 			sourceTree = "<group>";
 		};
-		B40000010000000000000002 /* MailMoiShare */ = {
+		B40000010000000000000002 /* SendMoiShare */ = {
 			isa = PBXGroup;
 			children = (
 				B20000010000000000000004 /* Info.plist */,
-				B20000010000000000000005 /* MailMoiShare.entitlements */,
-				B20000010000000000000007 /* MailMoiShare-macOS.entitlements */,
+				B20000010000000000000005 /* SendMoiShare.entitlements */,
+				B20000010000000000000007 /* SendMoiShare-macOS.entitlements */,
 				B20000010000000000000006 /* SafariPreprocessor.js */,
 				B20000010000000000000001 /* ShareExtensionModel.swift */,
 				B20000010000000000000002 /* ShareView.swift */,
 				B20000010000000000000003 /* ShareViewController.swift */,
 			);
-			path = MailMoiShare;
+			path = SendMoiShare;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A50000010000000000000001 /* MailMoi */ = {
+		A50000010000000000000001 /* SendMoi */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A80000010000000000000003 /* Build configuration list for PBXNativeTarget "MailMoi" */;
+			buildConfigurationList = A80000010000000000000003 /* Build configuration list for PBXNativeTarget "SendMoi" */;
 			buildPhases = (
 				A30000010000000000000002 /* Sources */,
 				A30000010000000000000001 /* Frameworks */,
@@ -196,14 +196,14 @@
 			dependencies = (
 				B70000010000000000000001 /* PBXTargetDependency */,
 			);
-			name = MailMoi;
-			productName = MailMoi;
-			productReference = A20000010000000000000000 /* MailMoi.app */;
+			name = SendMoi;
+			productName = SendMoi;
+			productReference = A20000010000000000000000 /* SendMoi.app */;
 			productType = "com.apple.product-type.application";
 		};
-		B50000010000000000000001 /* MailMoiShare */ = {
+		B50000010000000000000001 /* SendMoiShare */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = B90000010000000000000001 /* Build configuration list for PBXNativeTarget "MailMoiShare" */;
+			buildConfigurationList = B90000010000000000000001 /* Build configuration list for PBXNativeTarget "SendMoiShare" */;
 			buildPhases = (
 				B80000010000000000000001 /* Sources */,
 				B60000010000000000000001 /* Frameworks */,
@@ -213,9 +213,9 @@
 			);
 			dependencies = (
 			);
-			name = MailMoiShare;
-			productName = MailMoiShare;
-			productReference = A2000001000000000000000D /* MailMoiShare.appex */;
+			name = SendMoiShare;
+			productName = SendMoiShare;
+			productReference = A2000001000000000000000D /* SendMoiShare.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
@@ -233,7 +233,7 @@
 					};
 				};
 			};
-			buildConfigurationList = A80000010000000000000001 /* Build configuration list for PBXProject "MailMoi" */;
+			buildConfigurationList = A80000010000000000000001 /* Build configuration list for PBXProject "SendMoi" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -246,8 +246,8 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				A50000010000000000000001 /* MailMoi */,
-				B50000010000000000000001 /* MailMoiShare */,
+				A50000010000000000000001 /* SendMoi */,
+				B50000010000000000000001 /* SendMoiShare */,
 			);
 		};
 /* End PBXProject section */
@@ -277,7 +277,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A10000010000000000000001 /* MailMoiApp.swift in Sources */,
+				A10000010000000000000001 /* SendMoiApp.swift in Sources */,
 				A10000010000000000000002 /* ContentView.swift in Sources */,
 				A10000010000000000000003 /* AppModel.swift in Sources */,
 				A10000010000000000000004 /* Models.swift in Sources */,
@@ -317,7 +317,7 @@
 /* Begin PBXTargetDependency section */
 		B70000010000000000000001 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = B50000010000000000000001 /* MailMoiShare */;
+			target = B50000010000000000000001 /* SendMoiShare */;
 			targetProxy = B30000010000000000000001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -422,14 +422,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_OBJC_WEAK = YES;
-				CODE_SIGN_ENTITLEMENTS = MailMoi/MailMoi.entitlements;
-				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "MailMoi/MailMoi-macOS.entitlements";
+				CODE_SIGN_ENTITLEMENTS = SendMoi/SendMoi.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "SendMoi/SendMoi-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 6;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 289GY9L343;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = MailMoi/Info.plist;
+				INFOPLIST_FILE = SendMoi/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -451,14 +451,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_OBJC_WEAK = YES;
-				CODE_SIGN_ENTITLEMENTS = MailMoi/MailMoi.entitlements;
-				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "MailMoi/MailMoi-macOS.entitlements";
+				CODE_SIGN_ENTITLEMENTS = SendMoi/SendMoi.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "SendMoi/SendMoi-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 6;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 289GY9L343;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = MailMoi/Info.plist;
+				INFOPLIST_FILE = SendMoi/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -480,13 +480,13 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CLANG_ENABLE_OBJC_WEAK = YES;
-				CODE_SIGN_ENTITLEMENTS = MailMoiShare/MailMoiShare.entitlements;
-				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "MailMoiShare/MailMoiShare-macOS.entitlements";
+				CODE_SIGN_ENTITLEMENTS = SendMoiShare/SendMoiShare.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "SendMoiShare/SendMoiShare-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = 289GY9L343;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = MailMoiShare/Info.plist;
+				INFOPLIST_FILE = SendMoiShare/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -510,13 +510,13 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CLANG_ENABLE_OBJC_WEAK = YES;
-				CODE_SIGN_ENTITLEMENTS = MailMoiShare/MailMoiShare.entitlements;
-				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "MailMoiShare/MailMoiShare-macOS.entitlements";
+				CODE_SIGN_ENTITLEMENTS = SendMoiShare/SendMoiShare.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "SendMoiShare/SendMoiShare-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = 289GY9L343;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = MailMoiShare/Info.plist;
+				INFOPLIST_FILE = SendMoiShare/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -538,7 +538,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A80000010000000000000001 /* Build configuration list for PBXProject "MailMoi" */ = {
+		A80000010000000000000001 /* Build configuration list for PBXProject "SendMoi" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A70000010000000000000001 /* Debug */,
@@ -547,7 +547,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A80000010000000000000003 /* Build configuration list for PBXNativeTarget "MailMoi" */ = {
+		A80000010000000000000003 /* Build configuration list for PBXNativeTarget "SendMoi" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A70000010000000000000003 /* Debug */,
@@ -556,7 +556,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		B90000010000000000000001 /* Build configuration list for PBXNativeTarget "MailMoiShare" */ = {
+		B90000010000000000000001 /* Build configuration list for PBXNativeTarget "SendMoiShare" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A70000010000000000000005 /* Debug */,

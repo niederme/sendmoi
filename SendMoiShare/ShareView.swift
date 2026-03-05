@@ -22,7 +22,7 @@ struct ShareView: View {
                     processingView
                 }
             }
-            .navigationTitle("MailMoi")
+            .navigationTitle("SendMoi")
             .onChange(of: model.urlString) { _, _ in
                 model.schedulePreviewRefresh()
             }
@@ -84,20 +84,22 @@ struct ShareView: View {
                     Text("Title")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                    #if os(iOS)
+                    titleInputField(lineLimit: 2)
+
+                    if previewImageURL != nil || model.isRefreshingPreview {
+                        previewThumbnail
+                            .padding(.top, 6)
+                    }
+                    #else
                     HStack(alignment: .top, spacing: 10) {
                         if previewImageURL != nil || model.isRefreshingPreview {
                             previewThumbnail
                         }
 
-                        ZStack(alignment: .topLeading) {
-                            TextField(titleIsLoading ? "" : "Title", text: $model.title, axis: .vertical)
-                                .lineLimit(3, reservesSpace: true)
-
-                            if titleIsLoading {
-                                fieldLoadingIndicator(topPadding: 8)
-                            }
-                        }
+                        titleInputField(lineLimit: 3)
                     }
+                    #endif
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
@@ -136,8 +138,8 @@ struct ShareView: View {
             } footer: {
                 Text(
                     model.autoSendEnabled
-                        ? "MailMoi sends immediately when it can. If you're offline or Gmail is unavailable, it saves to the offline queue."
-                        : "MailMoi pre-fills these fields from the shared item and waits for you to tap Send. If you're offline or Gmail is unavailable, it saves to the offline queue."
+                        ? "SendMoi sends immediately when it can. If you're offline or Gmail is unavailable, it saves to the offline queue."
+                        : "SendMoi pre-fills these fields from the shared item and waits for you to tap Send. If you're offline or Gmail is unavailable, it saves to the offline queue."
                 )
             }
 
@@ -244,6 +246,17 @@ struct ShareView: View {
 
     private var shouldShowSummarySection: Bool {
         model.isRefreshingPreview || !model.summary.isEmpty
+    }
+
+    private func titleInputField(lineLimit: Int) -> some View {
+        ZStack(alignment: .topLeading) {
+            TextField(titleIsLoading ? "" : "Title", text: $model.title, axis: .vertical)
+                .lineLimit(lineLimit, reservesSpace: true)
+
+            if titleIsLoading {
+                fieldLoadingIndicator(topPadding: 8)
+            }
+        }
     }
 
     private func fieldLoadingIndicator(topPadding: CGFloat) -> some View {

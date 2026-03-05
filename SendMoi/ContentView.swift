@@ -74,7 +74,7 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             rootContent
-                .navigationTitle("MailMoi")
+                .navigationTitle("SendMoi")
         }
         .sheet(isPresented: $model.shouldShowOnboarding, onDismiss: finalizeOnboardingSheetState) {
             onboardingContent
@@ -91,7 +91,7 @@ struct ContentView: View {
             }
         }
         .confirmationDialog(
-            "Reset MailMoi?",
+            "Reset SendMoi?",
             isPresented: $showsResetConfirmation,
             titleVisibility: .visible
         ) {
@@ -209,7 +209,7 @@ struct ContentView: View {
                 .frame(width: 74, height: 74)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("MailMoi")
+                    Text("SendMoi")
                         .font(.system(size: 30, weight: .semibold))
 
                     Text("Send Anything to Yourself")
@@ -315,7 +315,7 @@ struct ContentView: View {
         switch onboardingStep {
         case 0:
             VStack(alignment: .leading, spacing: 12) {
-                Text("Share to MailMoi. It arrives as a polished email to yourself.")
+                Text("Share to SendMoi. It arrives as a polished email to yourself.")
                     .font(.system(size: 24, weight: .semibold))
 
                 onboardingFlowPreview
@@ -323,7 +323,7 @@ struct ContentView: View {
                 onboardingFeatureRow(
                     iconName: "paperplane.circle.fill",
                     title: "Save it with context",
-                    detail: "MailMoi keeps the link, title, and any notes together for later."
+                    detail: "SendMoi keeps the link, title, and any notes together for later."
                 )
                 onboardingFeatureRow(
                     iconName: "tray.full.fill",
@@ -347,7 +347,7 @@ struct ContentView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 onboardingInstructionRow(number: 1, text: "Tap Share in any app.")
                                 onboardingInstructionRow(number: 2, text: "Open More.")
-                                onboardingInstructionRow(number: 3, text: "Drag MailMoi upward.")
+                                onboardingInstructionRow(number: 3, text: "Drag SendMoi upward.")
                             }
                         }
                         .padding(18)
@@ -918,7 +918,7 @@ struct ContentView: View {
         } header: {
             Text("Setup")
         } footer: {
-            Text("Open Setup Guide keeps your current account. Clear Settings disconnects Gmail and resets MailMoi to first launch.")
+            Text("Open Setup Guide keeps your current account. Clear Settings disconnects Gmail and resets SendMoi to first launch.")
         }
     }
 
@@ -926,7 +926,7 @@ struct ContentView: View {
         Section {
             EmptyView()
         } footer: {
-            Text("MailMoi by John Niedermeyer, with a little help from Codex, Claude Code and friends.")
+            Text("SendMoi by John Niedermeyer, with a little help from Codex, Claude Code and friends.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -991,7 +991,7 @@ extension ContentView {
     private var desktopSidebar: some View {
         VStack(alignment: .leading, spacing: 22) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("MailMoi")
+                Text("SendMoi")
                     .font(.title3.weight(.semibold))
 
                 Text("Desktop workspace")
@@ -1181,7 +1181,7 @@ extension ContentView {
             .frame(width: 110, height: 110)
 
             VStack(alignment: .leading, spacing: 10) {
-                Text("MailMoi")
+                Text("SendMoi")
                     .font(.system(size: 34, weight: .semibold))
 
                 Text("A macOS workspace for queueing shared links, refining drafts, and sending as soon as Gmail is available.")
@@ -1337,7 +1337,7 @@ extension ContentView {
     private var desktopHeader: some View {
         HStack(alignment: .top, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("MailMoi")
+                Text("SendMoi")
                     .font(.system(size: 28, weight: .semibold))
 
                 Text("Queue links, notes, and images in a layout that reads like a desktop app instead of a stretched settings pane.")
@@ -1486,7 +1486,7 @@ extension ContentView {
             subtitle: "Drafting and editing now happen in the share sheet."
         ) {
             VStack(alignment: .leading, spacing: 14) {
-                Text("MailMoi now treats the main app as a control center for account, defaults, and queue recovery. To create a new draft, share a link, note, or image from another app into MailMoi.")
+                Text("SendMoi now treats the main app as a control center for account, defaults, and queue recovery. To create a new draft, share a link, note, or image from another app into SendMoi.")
                     .font(.body)
 
                 VStack(alignment: .leading, spacing: 10) {
@@ -1511,13 +1511,13 @@ extension ContentView {
                 VStack(alignment: .leading, spacing: 8) {
                     desktopFieldLabel("How To Compose")
 
-                    Text("1. Share content into MailMoi from Safari, Photos, or another app.")
+                    Text("1. Share content into SendMoi from Safari, Photos, or another app.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                     Text("2. Edit the draft in the share sheet if Auto-send is off.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
-                    Text("3. If sending cannot finish immediately, MailMoi keeps the item in the offline queue and retries later.")
+                    Text("3. If sending cannot finish immediately, SendMoi keeps the item in the offline queue and retries later.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -1635,7 +1635,7 @@ extension ContentView {
     private var desktopSetupActionsCard: some View {
         desktopSectionCard(title: "Setup") {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Reopen the guide or reset MailMoi to first launch.")
+                Text("Reopen the guide or reset SendMoi to first launch.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
 
@@ -1675,7 +1675,7 @@ extension ContentView {
     }
 
     private var desktopAttribution: some View {
-        Text("MailMoi by John Niedermeyer, with a little help from Codex, Claude Code and friends.")
+        Text("SendMoi by John Niedermeyer, with a little help from Codex, Claude Code and friends.")
             .font(.footnote)
             .foregroundStyle(.secondary)
             .multilineTextAlignment(.center)
@@ -1851,7 +1851,7 @@ private struct OnboardingGmailSheet: View {
             .frame(width: 72, height: 72)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("MailMoi")
+                Text("SendMoi")
                     .font(.headline)
 
                 Text(phase == .success ? "Gmail connected" : "Secure Google sign-in")
@@ -1875,7 +1875,7 @@ private struct OnboardingGmailSheet: View {
     private var sheetDescription: String {
         switch phase {
         case .connecting:
-            return "Finish the Google sign-in flow in the system sheet. MailMoi will bring you right back."
+            return "Finish the Google sign-in flow in the system sheet. SendMoi will bring you right back."
         case .success:
             return model.session?.emailAddress.map { "Connected as \($0). The onboarding flow is complete, and the app is ready." }
                 ?? "Your Gmail account is connected and the onboarding flow is complete."
