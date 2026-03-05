@@ -51,7 +51,7 @@ Last updated: March 5, 2026
   - the share extension processing state now says `Auto-Sending...`, keeps `Edit` available for a 0.5-second grace period before auto-send starts, and uses a roomier bordered `Edit` action that still cancels auto-send and returns to the draft without changing the saved preference
   - manual sends now queue first and dismiss the sheet immediately, then continue best-effort preview enrichment and delivery in the background; if that work does not finish, the queued item remains for later retry
   - if no default recipient is saved, the share extension now shows a specific inline `To` warning and keeps `Send` disabled until a recipient is entered instead of falling back to the generic validation error
-  - refreshed the SendMoi icon source in `marketing/send-moi.icon` and `SendMoi/send-moi.icon`, regenerated every `AppIcon.appiconset` size from the updated 1024 master PNG, and synced the website icon export
+  - refreshed the SendMoi icon source in `marketing/send-moi.icon` and `SendMoi/send-moi.icon`, regenerated every `AppIcon.appiconset` size from the updated 1024 master PNG, and updated marketing icon exports in this repo
 
 ## Things To Verify On The Next Machine
 
