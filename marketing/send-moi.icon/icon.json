@@ -6,14 +6,13 @@
     {
       "layers" : [
         {
-          "image-name" : "3 – goggles 2.svg",
-          "name" : "3 – goggles 2"
+          "image-name" : "4 – goggles 2.svg",
+          "name" : "4 – goggles 2"
         },
         {
           "glass" : false,
-          "hidden" : false,
-          "image-name" : "4 – moi.svg",
-          "name" : "4 – moi"
+          "image-name" : "3 – goggles shadow 2.svg",
+          "name" : "3 – goggles shadow 2"
         }
       ],
       "shadow" : {

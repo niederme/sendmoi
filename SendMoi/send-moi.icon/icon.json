@@ -1,26 +1,18 @@
 {
   "fill" : {
-    "automatic-gradient" : "display-p3:0.16833,0.49707,0.99902,1.00000"
+    "automatic-gradient" : "display-p3:0.14510,0.32941,0.98431,1.00000"
   },
   "groups" : [
     {
       "layers" : [
         {
-          "glass" : false,
-          "image-name" : "4 – moi.svg",
-          "name" : "4 – moi"
-        },
-        {
-          "blend-mode" : "normal",
-          "glass" : false,
-          "hidden" : false,
-          "image-name" : "3 – paperplane.svg",
-          "name" : "3 – paperplane"
+          "image-name" : "4 – goggles 2.svg",
+          "name" : "4 – goggles 2"
         },
         {
           "glass" : false,
-          "image-name" : "1 – BG 4.svg",
-          "name" : "1 – BG 4"
+          "image-name" : "3 – goggles shadow 2.svg",
+          "name" : "3 – goggles shadow 2"
         }
       ],
       "shadow" : {
