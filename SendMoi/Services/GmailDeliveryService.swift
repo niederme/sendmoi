@@ -617,9 +617,10 @@ final class GmailDeliveryService {
                             </tr>
                             """
         let summaryBlock = makeSummaryBlock(content: content, fontFamily: fontFamily)
+        let footerMarkup = makeFooterMarkup(footer: footer, fontFamily: fontFamily)
 
         return """
-        <html>
+        <html style="background-color: #ffffff;">
           <head>
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -627,26 +628,27 @@ final class GmailDeliveryService {
               .mm-title-link, .mm-title-link:visited { color: #111111 !important; text-decoration: none !important; }
               .mm-title-link:hover { text-decoration: underline !important; }
               @media only screen and (max-width: 620px) {
-                .mm-shell { padding-top: 25px !important; padding-right: 0 !important; padding-bottom: 25px !important; padding-left: 0 !important; background-color: #ffffff !important; }
-                .mm-card { border-left: 0 !important; border-right: 0 !important; border-radius: 0 !important; }
+                .mm-shell { padding-top: 15px !important; padding-right: 0 !important; padding-bottom: 20px !important; padding-left: 0 !important; background-color: #ffffff !important; }
+                .mm-card { border: 0 !important; border-radius: 0 !important; }
                 .mm-card-pad { padding-left: 15px !important; padding-right: 15px !important; }
-                .mm-image-pad { padding-top: 15px !important; }
-                .mm-title-pad { padding-top: 15px !important; }
-                .mm-card-bottom { padding-bottom: 50px !important; }
+                .mm-image-pad { padding-top: 0 !important; }
+                .mm-title-pad { padding-top: 12px !important; }
+                .mm-card-bottom { padding-bottom: 40px !important; }
                 .mm-title { font-size: 26px !important; line-height: 31px !important; }
                 .mm-excerpt { font-size: 20px !important; line-height: 24px !important; padding-top: 15px !important; padding-bottom: 20px !important; }
                 .mm-summary-label { font-size: 14px !important; line-height: 20px !important; color: #111111 !important; }
                 .mm-summary-copy { font-size: 16px !important; line-height: 22px !important; }
-                .mm-attribution { padding-top: 25px !important; padding-bottom: 25px !important; background-color: #ffffff !important; }
+                .mm-footer-divider-pad { padding-left: 15px !important; padding-right: 15px !important; }
+                .mm-attribution { padding-top: 20px !important; padding-bottom: 25px !important; background-color: #ffffff !important; }
               }
             </style>
           </head>
-          <body style="margin: 0; padding: 0; background-color: #ffffff;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; width: 100%; background-color: #ffffff;">
+          <body bgcolor="#ffffff" style="margin: 0; padding: 0; background-color: #ffffff;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="border-collapse: collapse; width: 100%; background-color: #ffffff;">
               <tr>
-                <td class="mm-shell" align="center" style="padding: 50px 24px 24px 24px; background-color: #ffffff;">
+                <td class="mm-shell" align="center" bgcolor="#ffffff" style="padding: 50px 24px 24px 24px; background-color: #ffffff;">
                   <div style="margin: 0 auto; max-width: 850px;">
-                    <table class="mm-card" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: separate; width: 100%; background-color: #ffffff; border: 1px solid #eaeaea; border-radius: 25px;">
+                    <table class="mm-card" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="border-collapse: separate; width: 100%; background-color: #ffffff; border: 1px solid #eaeaea; border-radius: 25px;">
                       \(imageBlock)
                       <tr>
                         <td class="mm-card-pad mm-title-pad" style="padding: \(titleTopPadding) 50px 0 50px; font-family: \(fontFamily); font-size: 36px; line-height: 43px; font-weight: 700; color: #111111;">
@@ -656,10 +658,19 @@ final class GmailDeliveryService {
                       \(excerptBlock)
                       \(summaryBlock)
                     </table>
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; width: 100%; background-color: #ffffff;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="border-collapse: collapse; width: 100%; background-color: #ffffff;">
                       <tr>
-                        <td class="mm-attribution" align="center" style="padding: 52px 12px 0 12px; background-color: #ffffff; font-family: \(fontFamily); font-size: 14px; line-height: 17px; color: #111111;">
-                          \(escapeHTML(footer))
+                        <td class="mm-footer-divider-pad" style="padding: 0 50px 0 50px; background-color: #ffffff;">
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; width: 100%;">
+                            <tr>
+                              <td style="border-top: 1px solid #e6e6e6; font-size: 0; line-height: 0;">&nbsp;</td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td class="mm-attribution" align="center" bgcolor="#ffffff" style="padding: 52px 12px 0 12px; background-color: #ffffff; font-family: \(fontFamily); font-size: 14px; line-height: 17px; color: #111111;">
+                          \(footerMarkup)
                         </td>
                       </tr>
                     </table>
@@ -763,6 +774,18 @@ final class GmailDeliveryService {
                       </tr>
                       \(sourceBlock)
                       """
+    }
+
+    private static func makeFooterMarkup(footer: String, fontFamily: String) -> String {
+        let linkedBrand = """
+                          <a href="https://send.moi" style="font-family: \(fontFamily); color: #111111; text-decoration: underline;">SendMoi</a>
+                          """
+
+        guard footer == "Sent with SendMoi" else {
+            return escapeHTML(footer)
+        }
+
+        return "Sent with \(linkedBrand)"
     }
 
     private static func escapeHTML(_ string: String) -> String {
