@@ -85,11 +85,18 @@ struct ShareView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     #if os(iOS)
-                    titleInputField(lineLimit: 2)
+                    HStack(alignment: .top, spacing: 10) {
+                        if previewImageURL != nil || model.isRefreshingPreview {
+                            previewThumbnail
+                        }
 
-                    if previewImageURL != nil || model.isRefreshingPreview {
-                        previewThumbnail
-                            .padding(.top, 6)
+                        titleInputField(lineLimit: 2)
+                    }
+
+                    if previewImageCount > 1 {
+                        Text("\(previewImageCount) photos attached")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
                     }
                     #else
                     HStack(alignment: .top, spacing: 10) {
@@ -98,6 +105,12 @@ struct ShareView: View {
                         }
 
                         titleInputField(lineLimit: 3)
+                    }
+
+                    if previewImageCount > 1 {
+                        Text("\(previewImageCount) photos attached")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
                     }
                     #endif
                 }
@@ -175,6 +188,13 @@ struct ShareView: View {
         }
         .frame(width: 56, height: 56)
         .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(alignment: .bottomTrailing) {
+            #if os(iOS)
+            if previewImageCount > 1 {
+                imageCountBadge
+            }
+            #endif
+        }
     }
 
     private var previewMetadataSection: some View {
@@ -223,6 +243,22 @@ struct ShareView: View {
         }
 
         return URL(string: urlString)
+    }
+
+    private var previewImageCount: Int {
+        ([model.previewImageURLString].compactMap { $0 } + model.additionalImageURLStrings).count
+    }
+
+    private var imageCountBadge: some View {
+        Text("+\(max(previewImageCount - 1, 1))")
+            .font(.caption2)
+            .fontWeight(.semibold)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(.black.opacity(0.78))
+            .clipShape(Capsule())
+            .padding(4)
     }
 
     private var recentRecipientSuggestions: [String] {

@@ -8,17 +8,18 @@ struct ShareDraft: Codable, Identifiable, Equatable {
     var summary: String = ""
     var urlString: String = ""
     var previewImageURLString: String?
+    var additionalImageURLStrings: [String] = []
 
     var trimmedTitle: String { title.trimmingCharacters(in: .whitespacesAndNewlines) }
     var trimmedExcerpt: String { excerpt.trimmingCharacters(in: .whitespacesAndNewlines) }
     var trimmedSummary: String { summary.trimmingCharacters(in: .whitespacesAndNewlines) }
     var trimmedURLString: String { urlString.trimmingCharacters(in: .whitespacesAndNewlines) }
     var hasPreviewImage: Bool {
-        guard let previewImageURLString else {
-            return false
-        }
+        !allImageURLStrings.isEmpty
+    }
 
-        return URL(string: previewImageURLString) != nil
+    var allImageURLStrings: [String] {
+        combinedImageURLStrings(primary: previewImageURLString, additional: additionalImageURLStrings)
     }
 
     var queueTitle: String {
@@ -39,7 +40,7 @@ struct ShareDraft: Codable, Identifiable, Equatable {
         }
 
         if hasPreviewImage {
-            return "Shared Photo"
+            return allImageURLStrings.count > 1 ? "Shared Photos" : "Shared Photo"
         }
 
         if !trimmedSummary.isEmpty {
@@ -423,8 +424,13 @@ struct QueuedEmail: Codable, Identifiable, Equatable {
     let summary: String?
     let urlString: String
     let previewImageURLString: String?
+    let additionalImageURLStrings: [String]?
     let createdAt: Date
     var lastError: String?
+
+    var allImageURLStrings: [String] {
+        combinedImageURLStrings(primary: previewImageURLString, additional: additionalImageURLStrings ?? [])
+    }
 
     init(
         id: UUID = UUID(),
@@ -434,6 +440,7 @@ struct QueuedEmail: Codable, Identifiable, Equatable {
         summary: String? = nil,
         urlString: String,
         previewImageURLString: String? = nil,
+        additionalImageURLStrings: [String]? = nil,
         createdAt: Date = .now,
         lastError: String? = nil
     ) {
@@ -444,8 +451,28 @@ struct QueuedEmail: Codable, Identifiable, Equatable {
         self.summary = summary
         self.urlString = urlString
         self.previewImageURLString = previewImageURLString
+        self.additionalImageURLStrings = additionalImageURLStrings
         self.createdAt = createdAt
         self.lastError = lastError
+    }
+}
+
+private func combinedImageURLStrings(primary: String?, additional: [String]) -> [String] {
+    let candidates = [primary].compactMap { $0 } + additional
+    var seen = Set<String>()
+
+    return candidates.compactMap { candidate in
+        let trimmed = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return nil
+        }
+
+        let key = trimmed.lowercased()
+        guard seen.insert(key).inserted else {
+            return nil
+        }
+
+        return trimmed
     }
 }
 
