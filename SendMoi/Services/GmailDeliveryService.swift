@@ -5,12 +5,6 @@ import FoundationModels
 
 final class GmailDeliveryService {
     private static let previewMetadataCache = PreviewMetadataCache()
-    private static let instagramDateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .long
-        formatter.timeStyle = .none
-        return formatter
-    }()
     private let decoder = JSONDecoder()
 
     init() {
@@ -181,19 +175,18 @@ final class GmailDeliveryService {
                 ?? Self.renderMarkdownLinksAsPlainText(in: item.excerpt)
         )
         let fallbackSummary = item.summary?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let fallbackImageURLStrings = item.allImageURLStrings
+        let fallbackImageURLString = item.previewImageURLString
 
         let canonicalFallbackURLString = Self.canonicalizedTweetURLString(fallbackURLString) ?? fallbackURLString
         guard let canonicalFallbackURLString,
               let rawURL = URL(string: canonicalFallbackURLString) else {
-            let inlineImages = await fetchInlineImages(from: fallbackImageURLStrings)
             return EmailContent(
                 title: fallbackTitle,
                 excerpt: fallbackExcerpt,
                 summary: fallbackSummary,
                 urlString: canonicalFallbackURLString,
-                imageURLStrings: fallbackImageURLStrings,
-                inlineImages: inlineImages
+                imageURLString: fallbackImageURLString,
+                inlineImage: await fetchInlineImage(from: fallbackImageURLString)
             )
         }
 
@@ -202,44 +195,31 @@ final class GmailDeliveryService {
         guard
               let scheme = url.scheme?.lowercased(),
               scheme == "http" || scheme == "https" else {
-            let inlineImages = await fetchInlineImages(from: fallbackImageURLStrings)
             return EmailContent(
                 title: fallbackTitle,
                 excerpt: sanitizedFallbackExcerpt,
                 summary: fallbackSummary,
                 urlString: url.absoluteString,
-                imageURLStrings: fallbackImageURLStrings,
-                inlineImages: inlineImages
+                imageURLString: fallbackImageURLString,
+                inlineImage: await fetchInlineImage(from: fallbackImageURLString)
             )
         }
 
         guard let metadata = await fetchArticleMetadata(for: url, fallbackTitle: fallbackTitle) else {
-            let inlineImages = await fetchInlineImages(from: fallbackImageURLStrings)
             return EmailContent(
                 title: fallbackTitle,
                 excerpt: sanitizedFallbackExcerpt,
                 summary: fallbackSummary,
                 urlString: url.absoluteString,
-                imageURLStrings: fallbackImageURLStrings,
-                inlineImages: inlineImages
+                imageURLString: fallbackImageURLString,
+                inlineImage: await fetchInlineImage(from: fallbackImageURLString)
             )
         }
 
         let resolvedURLString = Self.canonicalizedTweetURLString(metadata.urlString ?? url.absoluteString) ?? (metadata.urlString ?? url.absoluteString)
-        let resolvedImageURLStrings = Self.preferredImageURLStrings(
-            from: metadata,
-            fallbackImageURLStrings: fallbackImageURLStrings,
-            for: url
-        )
-        let inlineImages = await fetchInlineImages(from: resolvedImageURLStrings)
-        let shouldPreferParsedSocialShare = parsedSocialShare != nil &&
-            Self.shouldSkipSummary(for: url) &&
-            !Self.shouldPreferFetchedSocialMetadata(
-                metadata,
-                fallbackExcerpt: sanitizedFallbackExcerpt,
-                fallbackImageURLStrings: fallbackImageURLStrings,
-                for: url
-            )
+        let resolvedImageURLString = metadata.imageURLString ?? fallbackImageURLString
+        let inlineImage = await fetchInlineImage(from: resolvedImageURLString)
+        let shouldPreferParsedSocialShare = parsedSocialShare != nil && Self.shouldSkipSummary(for: url)
         let resolvedExcerpt: String
         if shouldPreferParsedSocialShare, !sanitizedFallbackExcerpt.isEmpty {
             resolvedExcerpt = sanitizedFallbackExcerpt
@@ -252,8 +232,8 @@ final class GmailDeliveryService {
             excerpt: resolvedExcerpt,
             summary: metadata.summary ?? fallbackSummary,
             urlString: resolvedURLString,
-            imageURLStrings: resolvedImageURLStrings,
-            inlineImages: inlineImages
+            imageURLString: resolvedImageURLString,
+            inlineImage: inlineImage
         )
     }
 
@@ -281,7 +261,7 @@ final class GmailDeliveryService {
         request.timeoutInterval = 6
 
         do {
-            let (data, response) = try await URLSession.sendMoiMetadata.data(for: request)
+            let (data, response) = try await URLSession.mailMoiMetadata.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse,
                   (200..<300).contains(httpResponse.statusCode),
                   let html = decodeHTML(data: data) else {
@@ -293,16 +273,11 @@ final class GmailDeliveryService {
 
             let responseURL = Self.canonicalizedTweetURL(httpResponse.url ?? canonicalURL)
             let metaTags = Self.extractMetaTags(from: html)
-            var instagramMetadata = Self.extractInstagramPostMetadata(fromHTML: html, baseURL: responseURL)
-            if instagramMetadata == nil,
-               Self.isInstagramHost(responseURL) {
-                instagramMetadata = await fetchInstagramEmbedMetadata(for: responseURL)
-            }
-            let extractedTitle = instagramMetadata?.title ?? Self.extractPreferredTitle(fromHTML: html, metaTags: metaTags)
+            let extractedTitle = Self.extractPreferredTitle(fromHTML: html, metaTags: metaTags)
             let title = extractedTitle.map {
                 SharedContentFormatter.normalizedTitle($0, urlString: responseURL.absoluteString)
             }
-            let rawExcerpt = instagramMetadata?.excerpt ?? Self.extractExcerpt(fromMetaTags: metaTags)
+            let rawExcerpt = Self.extractExcerpt(fromMetaTags: metaTags)
             let excerpt = Self.isMeaninglessTweetExcerpt(rawExcerpt, for: responseURL) ? nil : rawExcerpt
             let summary: String?
             if Self.shouldSkipSummary(for: responseURL) {
@@ -314,9 +289,7 @@ final class GmailDeliveryService {
                 )
                 summary = await Self.generateSummary(fromHTML: html, title: summaryTitle, excerpt: excerpt)
             }
-            let instagramImageURLStrings = instagramMetadata?.imageURLStrings ?? []
-            let imageURLString = instagramImageURLStrings.first ?? Self.extractPreferredImageURLString(fromHTML: html, metaTags: metaTags, baseURL: responseURL)
-            let additionalImageURLStrings = instagramImageURLStrings.count > 1 ? Array(instagramImageURLStrings.dropFirst()) : nil
+            let imageURLString = Self.extractPreferredImageURLString(fromHTML: html, metaTags: metaTags, baseURL: responseURL)
             let oEmbedMetadata: CachedArticleMetadata?
             if Self.isTweetHost(responseURL), (excerpt == nil || imageURLString == nil) {
                 oEmbedMetadata = await fetchXOEmbedMetadata(for: responseURL)
@@ -334,8 +307,7 @@ final class GmailDeliveryService {
                     requestURL: canonicalURL,
                     responseURL: responseURL
                 ),
-                imageURLString: imageURLString ?? oEmbedMetadata?.imageURLString,
-                additionalImageURLStrings: additionalImageURLStrings
+                imageURLString: imageURLString ?? oEmbedMetadata?.imageURLString
             )
             await Self.previewMetadataCache.store(metadata, for: canonicalURL.absoluteString)
             return metadata
@@ -359,7 +331,7 @@ final class GmailDeliveryService {
         request.timeoutInterval = 5
 
         do {
-            let (data, response) = try await URLSession.sendMoiMetadata.data(for: request)
+            let (data, response) = try await URLSession.mailMoiMetadata.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse,
                   (200..<300).contains(httpResponse.statusCode) else {
                 return nil
@@ -378,36 +350,10 @@ final class GmailDeliveryService {
                 excerpt: excerpt,
                 summary: nil,
                 urlString: url.absoluteString,
-                imageURLString: imageURLString,
-                additionalImageURLStrings: nil
+                imageURLString: imageURLString
             )
             await Self.previewMetadataCache.store(metadata, for: url.absoluteString)
             return metadata
-        } catch {
-            return nil
-        }
-    }
-
-    private func fetchInstagramEmbedMetadata(for url: URL) async -> InstagramPostMetadata? {
-        guard let endpoint = Self.makeInstagramEmbedURL(for: url) else {
-            return nil
-        }
-
-        var request = URLRequest(url: endpoint)
-        request.httpMethod = "GET"
-        request.setValue("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", forHTTPHeaderField: "Accept")
-        request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15", forHTTPHeaderField: "User-Agent")
-        request.timeoutInterval = 6
-
-        do {
-            let (data, response) = try await URLSession.sendMoiMetadata.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse,
-                  (200..<300).contains(httpResponse.statusCode),
-                  let html = decodeHTML(data: data) else {
-                return nil
-            }
-
-            return Self.extractInstagramEmbedMetadata(fromHTML: html, baseURL: httpResponse.url ?? endpoint)
         } catch {
             return nil
         }
@@ -429,22 +375,9 @@ final class GmailDeliveryService {
         return nil
     }
 
-    private func fetchInlineImages(from urlStrings: [String]) async -> [InlineImage] {
-        var images: [InlineImage] = []
-
-        for (index, urlString) in urlStrings.enumerated() {
-            guard let image = await fetchInlineImage(from: urlString, index: index) else {
-                continue
-            }
-
-            images.append(image)
-        }
-
-        return images
-    }
-
-    private func fetchInlineImage(from urlString: String, index: Int) async -> InlineImage? {
-        guard let url = URL(string: urlString) else {
+    private func fetchInlineImage(from urlString: String?) async -> InlineImage? {
+        guard let urlString,
+              let url = URL(string: urlString) else {
             return nil
         }
 
@@ -456,9 +389,9 @@ final class GmailDeliveryService {
             }
 
             return InlineImage(
-                contentID: "sendmoi-inline-image-\(UUID().uuidString)",
+                contentID: "mailmoi-inline-image-\(UUID().uuidString)",
                 mimeType: mimeType,
-                filename: "sendmoi-image-\(index + 1).\(Self.fileExtension(forMimeType: mimeType))",
+                filename: "mailmoi-image.\(Self.fileExtension(forMimeType: mimeType))",
                 data: data
             )
         }
@@ -475,7 +408,7 @@ final class GmailDeliveryService {
         request.timeoutInterval = 8
 
         do {
-            let (data, response) = try await URLSession.sendMoiMetadata.data(for: request)
+            let (data, response) = try await URLSession.mailMoiMetadata.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse,
                   (200..<300).contains(httpResponse.statusCode),
                   !data.isEmpty,
@@ -487,9 +420,9 @@ final class GmailDeliveryService {
             }
 
             return InlineImage(
-                contentID: "sendmoi-inline-image-\(UUID().uuidString)",
+                contentID: "mailmoi-inline-image-\(UUID().uuidString)",
                 mimeType: mimeType,
-                filename: "sendmoi-image-\(index + 1).\(Self.fileExtension(forMimeType: mimeType))",
+                filename: "mailmoi-image.\(Self.fileExtension(forMimeType: mimeType))",
                 data: data
             )
         } catch {
@@ -505,26 +438,9 @@ final class GmailDeliveryService {
         let htmlBody = makeHTMLBody(content: content, footer: footer)
         let message: String
 
-        if !content.inlineImages.isEmpty {
+        if let inlineImage = content.inlineImage {
             let alternativeBoundary = "SendMoiAlt-\(UUID().uuidString)"
-            let relatedParts = content.inlineImages.enumerated().map { index, inlineImage in
-                let imageData = wrappedBase64(inlineImage.data.base64EncodedString())
-                let sourceURLString = content.imageURLStrings.indices.contains(index)
-                    ? content.imageURLStrings[index]
-                    : inlineImage.filename
-
-                return """
-                --\(boundary)
-                Content-Type: \(inlineImage.mimeType); name="\(inlineImage.filename)"
-                Content-Transfer-Encoding: base64
-                Content-ID: <\(inlineImage.contentID)>
-                X-Attachment-Id: \(inlineImage.contentID)
-                Content-Location: \(sourceURLString)
-                Content-Disposition: inline; filename="\(inlineImage.filename)"
-
-                \(imageData)
-                """
-            }.joined(separator: "\r\n")
+            let imageData = wrappedBase64(inlineImage.data.base64EncodedString())
 
             message = """
             From: \(from)
@@ -547,7 +463,15 @@ final class GmailDeliveryService {
 
             \(htmlBody)
             --\(alternativeBoundary)--
-            \(relatedParts)
+            --\(boundary)
+            Content-Type: \(inlineImage.mimeType); name="\(inlineImage.filename)"
+            Content-Transfer-Encoding: base64
+            Content-ID: <\(inlineImage.contentID)>
+            X-Attachment-Id: \(inlineImage.contentID)
+            Content-Location: \(content.imageURLString ?? inlineImage.filename)
+            Content-Disposition: inline; filename="\(inlineImage.filename)"
+
+            \(imageData)
             --\(boundary)--
             """
         } else {
@@ -605,7 +529,7 @@ final class GmailDeliveryService {
 
     private static func makeHTMLBody(content: EmailContent, footer: String) -> String {
         let fontFamily = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Helvetica, Arial, sans-serif"
-        let hasImage = !preferredDisplayImageSources(for: content).isEmpty
+        let hasImage = preferredDisplayImageSource(for: content) != nil
         let titleTopPadding = hasImage ? "20px" : "50px"
         let imageBlock = makeImageBlock(content: content)
         let titleMarkup = makeTitleMarkup(content: content, fontFamily: fontFamily)
@@ -673,38 +597,38 @@ final class GmailDeliveryService {
     }
 
     private static func makeImageBlock(content: EmailContent) -> String {
-        let imageSources = preferredDisplayImageSources(for: content)
-        guard !imageSources.isEmpty else {
+        guard let imageSource = preferredDisplayImageSource(for: content) else {
             return ""
         }
 
-        return imageSources.enumerated().map { index, imageSource in
-            let topPadding = index == 0 ? "50px" : "12px"
-            let imageMarkup = """
-                              <img src="\(escapeHTMLAttribute(imageSource))" alt="\(escapeHTMLAttribute(content.title))" width="750" style="display: block; width: 100%; height: auto; border: 0; outline: none; text-decoration: none;">
-                              """
-            let linkedImageMarkup: String
-            if let urlString = content.urlString, !urlString.isEmpty {
-                linkedImageMarkup = """
-                                    <a href="\(escapeHTMLAttribute(urlString))" style="display: block; text-decoration: none;">
-                                      \(imageMarkup)
-                                    </a>
-                                    """
-            } else {
-                linkedImageMarkup = imageMarkup
-            }
-            return """
-                          <tr>
-                            <td class="mm-card-pad mm-image-pad" style="padding: \(topPadding) 50px 0 50px;">
-                              \(linkedImageMarkup)
-                            </td>
-                          </tr>
+        let imageMarkup = """
+                          <img src="\(escapeHTMLAttribute(imageSource))" alt="\(escapeHTMLAttribute(content.title))" width="750" style="display: block; width: 100%; height: auto; border: 0; outline: none; text-decoration: none;">
                           """
-        }.joined(separator: "\n")
+        let linkedImageMarkup: String
+        if let urlString = content.urlString, !urlString.isEmpty {
+            linkedImageMarkup = """
+                                <a href="\(escapeHTMLAttribute(urlString))" style="display: block; text-decoration: none;">
+                                  \(imageMarkup)
+                                </a>
+                                """
+        } else {
+            linkedImageMarkup = imageMarkup
+        }
+
+        return """
+                      <tr>
+                        <td class="mm-card-pad mm-image-pad" style="padding: 50px 50px 0 50px;">
+                          \(linkedImageMarkup)
+                        </td>
+                      </tr>
+                      """
     }
 
-    private static func preferredDisplayImageSources(for content: EmailContent) -> [String] {
-        content.inlineImages.map { "cid:\($0.contentID)" }
+    private static func preferredDisplayImageSource(for content: EmailContent) -> String? {
+        if let inlineImage = content.inlineImage {
+            return "cid:\(inlineImage.contentID)"
+        }
+        return nil
     }
 
     private static func makeTitleMarkup(content: EmailContent, fontFamily: String) -> String {
@@ -888,8 +812,6 @@ final class GmailDeliveryService {
             host == "www.x.com" ||
             host == "twitter.com" ||
             host == "www.twitter.com" ||
-            host == "instagram.com" ||
-            host == "www.instagram.com" ||
             host == "overcast.fm" ||
             host == "www.overcast.fm"
     }
@@ -961,24 +883,6 @@ final class GmailDeliveryService {
             URLQueryItem(name: "align", value: "center")
         ]
         return components?.url
-    }
-
-    private static func makeInstagramEmbedURL(for url: URL) -> URL? {
-        let canonicalURL = canonicalizedTweetURL(url)
-        guard isInstagramHost(canonicalURL),
-              var components = URLComponents(url: canonicalURL, resolvingAgainstBaseURL: false) else {
-            return nil
-        }
-
-        let normalizedPath = components.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        guard !normalizedPath.isEmpty else {
-            return nil
-        }
-
-        components.path = "/\(normalizedPath)/embed/captioned/"
-        components.query = nil
-        components.fragment = nil
-        return components.url
     }
 
     private static func extractPreferredTitle(fromHTML html: String, metaTags: [[String: String]]) -> String? {
@@ -1068,53 +972,6 @@ final class GmailDeliveryService {
         return bestImage?.urlString
     }
 
-    private static func extractInstagramPostMetadata(fromHTML html: String, baseURL: URL) -> InstagramPostMetadata? {
-        guard isInstagramHost(baseURL) else {
-            return nil
-        }
-
-        for scriptContent in extractScriptContents(from: html, type: "application/json") {
-            guard scriptContent.contains("xdt_api__v1__media__shortcode__web_info"),
-                  let data = scriptContent.data(using: .utf8),
-                  let json = try? JSONSerialization.jsonObject(with: data),
-                  let item = findInstagramMediaItem(in: json)
-            else {
-                continue
-            }
-
-            let imageURLStrings = extractInstagramImageURLStrings(from: item, baseURL: baseURL)
-            let excerpt = buildInstagramExcerpt(from: item)
-
-            return InstagramPostMetadata(
-                title: nil,
-                excerpt: excerpt,
-                imageURLStrings: imageURLStrings
-            )
-        }
-
-        return nil
-    }
-
-    private static func extractInstagramEmbedMetadata(fromHTML html: String, baseURL: URL) -> InstagramPostMetadata? {
-        guard isInstagramHost(baseURL),
-              let contextJSONString = extractInstagramEmbedContextJSONString(from: html),
-              let data = contextJSONString.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let context = json["context"] as? [String: Any],
-              let media = context["media"] as? [String: Any] else {
-            return nil
-        }
-
-        let imageURLStrings = extractInstagramEmbedImageURLStrings(from: media, baseURL: baseURL)
-        let excerpt = buildInstagramEmbedExcerpt(from: media)
-
-        return InstagramPostMetadata(
-            title: nil,
-            excerpt: excerpt,
-            imageURLStrings: imageURLStrings
-        )
-    }
-
     private static func extractMetaTags(from html: String) -> [[String: String]] {
         let pattern = "<meta\\b[^>]*>"
         guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
@@ -1127,53 +984,6 @@ final class GmailDeliveryService {
             let attributes = parseAttributes(from: tag)
             return attributes.isEmpty ? nil : attributes
         }
-    }
-
-    private static func extractScriptContents(from html: String, type: String) -> [String] {
-        let pattern = #"<script\b([^>]*)>(.*?)</script>"#
-        guard let regex = try? NSRegularExpression(
-            pattern: pattern,
-            options: [.caseInsensitive, .dotMatchesLineSeparators]
-        ) else {
-            return []
-        }
-
-        let nsHTML = html as NSString
-        return regex.matches(in: html, range: NSRange(location: 0, length: nsHTML.length)).compactMap { match in
-            guard match.numberOfRanges >= 3 else {
-                return nil
-            }
-
-            let attributesString = nsHTML.substring(with: match.range(at: 1))
-            let attributes = parseAttributes(from: "<script\(attributesString)>")
-            guard attributes["type"]?.caseInsensitiveCompare(type) == .orderedSame else {
-                return nil
-            }
-
-            return nsHTML.substring(with: match.range(at: 2))
-        }
-    }
-
-    private static func extractInstagramEmbedContextJSONString(from html: String) -> String? {
-        let pattern = #""contextJSON":"((?:\\.|[^"])*)""#
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
-            return nil
-        }
-
-        let nsHTML = html as NSString
-        guard let match = regex.firstMatch(in: html, range: NSRange(location: 0, length: nsHTML.length)),
-              match.numberOfRanges >= 2 else {
-            return nil
-        }
-
-        let escapedJSON = nsHTML.substring(with: match.range(at: 1))
-        let wrapped = "\"\(escapedJSON)\""
-        guard let data = wrapped.data(using: .utf8),
-              let decoded = try? JSONDecoder().decode(String.self, from: data) else {
-            return nil
-        }
-
-        return decoded
     }
 
     private static func extractTags(named tagName: String, from html: String) -> [[String: String]] {
@@ -1288,7 +1098,7 @@ final class GmailDeliveryService {
     }
 
     private static func normalizedMetaContent(_ content: String) -> String? {
-        let normalized = normalizedDisplayText(htmlEntityDecodedString(content))
+        let normalized = normalizedDisplayText(content)
         guard !normalized.isEmpty else {
             return nil
         }
@@ -1296,7 +1106,7 @@ final class GmailDeliveryService {
     }
 
     private static func resolvedURLString(_ rawValue: String, relativeTo baseURL: URL) -> String? {
-        let trimmed = htmlEntityDecodedString(rawValue).trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             return nil
         }
@@ -1312,112 +1122,6 @@ final class GmailDeliveryService {
         }
 
         return nil
-    }
-
-    private static func preferredImageURLStrings(
-        from metadata: FetchedArticleMetadata,
-        fallbackImageURLStrings: [String],
-        for url: URL
-    ) -> [String] {
-        let normalizedFallback = deduplicatedURLStrings(fallbackImageURLStrings)
-        let normalizedMetadata = deduplicatedURLStrings(metadata.allImageURLStrings)
-
-        guard !normalizedMetadata.isEmpty else {
-            return normalizedFallback
-        }
-
-        guard !normalizedFallback.isEmpty else {
-            return normalizedMetadata
-        }
-
-        if normalizedMetadata.count > normalizedFallback.count {
-            return normalizedMetadata
-        }
-
-        if isInstagramHost(url),
-           Set(normalizedMetadata.map { $0.lowercased() }) != Set(normalizedFallback.map { $0.lowercased() }) {
-            return normalizedMetadata
-        }
-
-        return normalizedFallback
-    }
-
-    private static func shouldPreferFetchedSocialMetadata(
-        _ metadata: FetchedArticleMetadata,
-        fallbackExcerpt: String,
-        fallbackImageURLStrings: [String],
-        for url: URL
-    ) -> Bool {
-        let resolvedImageURLStrings = preferredImageURLStrings(
-            from: metadata,
-            fallbackImageURLStrings: fallbackImageURLStrings,
-            for: url
-        )
-
-        if resolvedImageURLStrings.count > deduplicatedURLStrings(fallbackImageURLStrings).count {
-            return true
-        }
-
-        return isRicherSocialExcerpt(metadata.excerpt, than: fallbackExcerpt, for: url)
-    }
-
-    private static func isRicherSocialExcerpt(_ metadataExcerpt: String?, than fallbackExcerpt: String, for url: URL) -> Bool {
-        guard let metadataExcerpt = normalizedMetaContent(metadataExcerpt ?? "") else {
-            return false
-        }
-
-        let normalizedFallback = normalizedMetaContent(fallbackExcerpt) ?? ""
-        if normalizedFallback.isEmpty {
-            return true
-        }
-
-        if metadataExcerpt.caseInsensitiveCompare(normalizedFallback) == .orderedSame {
-            return false
-        }
-
-        if isInstagramHost(url) {
-            let metadataLower = metadataExcerpt.lowercased()
-            let fallbackLower = normalizedFallback.lowercased()
-
-            if metadataLower.contains("comment by @") && !fallbackLower.contains("comment by @") {
-                return true
-            }
-
-            if metadataLower.contains(" comment: ") && !fallbackLower.contains(" comment: ") {
-                return true
-            }
-        }
-
-        return metadataExcerpt.count > normalizedFallback.count + 12
-    }
-
-    private static func deduplicatedURLStrings(_ urlStrings: [String]) -> [String] {
-        var seen = Set<String>()
-
-        return urlStrings.compactMap { urlString in
-            guard let resolved = resolvedURLString(urlString, relativeTo: URL(string: "https://example.com")!) else {
-                return nil
-            }
-
-            let key = resolved.lowercased()
-            guard seen.insert(key).inserted else {
-                return nil
-            }
-
-            return resolved
-        }
-    }
-
-    private static func htmlEntityDecodedString(_ value: String) -> String {
-        value
-            .replacingOccurrences(of: "&amp;", with: "&")
-            .replacingOccurrences(of: "&#38;", with: "&")
-            .replacingOccurrences(of: "&quot;", with: "\"")
-            .replacingOccurrences(of: "&#34;", with: "\"")
-            .replacingOccurrences(of: "&#39;", with: "'")
-            .replacingOccurrences(of: "&apos;", with: "'")
-            .replacingOccurrences(of: "&lt;", with: "<")
-            .replacingOccurrences(of: "&gt;", with: ">")
     }
 
     private static func isShareableWebURL(_ url: URL) -> Bool {
@@ -1443,198 +1147,6 @@ final class GmailDeliveryService {
         let score = max(width * height, 1)
 
         return ImageCandidate(urlString: resolved, score: score)
-    }
-
-    private static func findInstagramMediaItem(in value: Any) -> [String: Any]? {
-        if let dictionary = value as? [String: Any] {
-            if let info = dictionary["xdt_api__v1__media__shortcode__web_info"] as? [String: Any],
-               let items = info["items"] as? [[String: Any]],
-               let item = items.first {
-                return item
-            }
-
-            for child in dictionary.values {
-                if let found = findInstagramMediaItem(in: child) {
-                    return found
-                }
-            }
-        }
-
-        if let array = value as? [Any] {
-            for child in array {
-                if let found = findInstagramMediaItem(in: child) {
-                    return found
-                }
-            }
-        }
-
-        return nil
-    }
-
-    private static func extractInstagramImageURLStrings(from item: [String: Any], baseURL: URL) -> [String] {
-        let carouselMedia = item["carousel_media"] as? [[String: Any]]
-        let mediaItems = (carouselMedia?.isEmpty == false ? carouselMedia : nil) ?? [item]
-        var seen = Set<String>()
-
-        return mediaItems.compactMap { mediaItem in
-            preferredInstagramImageURL(from: mediaItem, baseURL: baseURL)
-        }.filter { urlString in
-            seen.insert(urlString.lowercased()).inserted
-        }
-    }
-
-    private static func extractInstagramEmbedImageURLStrings(from media: [String: Any], baseURL: URL) -> [String] {
-        let sidecarEdges = ((media["edge_sidecar_to_children"] as? [String: Any])?["edges"] as? [[String: Any]]) ?? []
-        let mediaItems = sidecarEdges.compactMap { $0["node"] as? [String: Any] }
-        let resolvedMediaItems = mediaItems.isEmpty ? [media] : mediaItems
-        var seen = Set<String>()
-
-        return resolvedMediaItems.compactMap { mediaItem in
-            preferredInstagramEmbedImageURL(from: mediaItem, baseURL: baseURL)
-        }.filter { urlString in
-            seen.insert(urlString.lowercased()).inserted
-        }
-    }
-
-    private static func preferredInstagramImageURL(from item: [String: Any], baseURL: URL) -> String? {
-        if let imageVersions = item["image_versions2"] as? [String: Any],
-           let candidates = imageVersions["candidates"] as? [[String: Any]] {
-            let bestCandidate = candidates
-                .compactMap { candidate -> (urlString: String, score: Int)? in
-                    guard let rawURL = candidate["url"] as? String,
-                          let resolved = resolvedURLString(rawURL, relativeTo: baseURL) else {
-                        return nil
-                    }
-
-                    let width = intValue(candidate["width"]) ?? 0
-                    let height = intValue(candidate["height"]) ?? 0
-                    return (resolved, max(width * height, 1))
-                }
-                .sorted { $0.score > $1.score }
-                .first
-
-            if let bestCandidate {
-                return bestCandidate.urlString
-            }
-        }
-
-        if let displayURI = item["display_uri"] as? String {
-            return resolvedURLString(displayURI, relativeTo: baseURL)
-        }
-
-        return nil
-    }
-
-    private static func preferredInstagramEmbedImageURL(from item: [String: Any], baseURL: URL) -> String? {
-        if let resources = item["display_resources"] as? [[String: Any]] {
-            let bestResource = resources
-                .compactMap { resource -> (urlString: String, score: Int)? in
-                    guard let rawURL = resource["src"] as? String,
-                          let resolved = resolvedURLString(rawURL, relativeTo: baseURL) else {
-                        return nil
-                    }
-
-                    let width = intValue(resource["config_width"]) ?? 0
-                    let height = intValue(resource["config_height"]) ?? 0
-                    return (resolved, max(width * height, 1))
-                }
-                .sorted { $0.score > $1.score }
-                .first
-
-            if let bestResource {
-                return bestResource.urlString
-            }
-        }
-
-        if let displayURL = item["display_url"] as? String {
-            return resolvedURLString(displayURL, relativeTo: baseURL)
-        }
-
-        return nil
-    }
-
-    private static func buildInstagramExcerpt(from item: [String: Any]) -> String? {
-        let likeCount = intValue(item["like_count"])
-        let commentCount = intValue(item["comment_count"])
-        let username = normalizedDisplayText((item["user"] as? [String: Any])?["username"] as? String ?? "")
-        let caption = normalizedDisplayText((item["caption"] as? [String: Any])?["text"] as? String ?? "")
-        let timestamp = intValue(item["taken_at"])
-        let previewComments = item["preview_comments"] as? [[String: Any]] ?? []
-
-        var header = [String]()
-        if let likeCount {
-            header.append("\(likeCount) likes")
-        }
-        if let commentCount {
-            header.append("\(commentCount) \(commentCount == 1 ? "comment" : "comments")")
-        }
-
-        var excerpt = header.joined(separator: ", ")
-        if !username.isEmpty, let timestamp {
-            let date = instagramDateFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(timestamp)))
-            if excerpt.isEmpty {
-                excerpt = "\(username) on \(date)"
-            } else {
-                excerpt += " - \(username) on \(date)"
-            }
-        }
-
-        if !caption.isEmpty {
-            if excerpt.isEmpty {
-                excerpt = "\"\(caption)\"."
-            } else {
-                excerpt += ": \"\(caption)\"."
-            }
-        }
-
-        if let firstComment = previewComments.first,
-           let commentText = normalizedString(firstComment["text"]),
-           !commentText.isEmpty {
-            let commentAuthor = normalizedString((firstComment["user"] as? [String: Any])?["username"])
-            let prefix = commentAuthor.map { " Comment by @\($0): " } ?? " Comment: "
-            excerpt += "\(prefix)\"\(commentText)\"."
-        }
-
-        let normalizedExcerpt = normalizedDisplayText(excerpt)
-        return normalizedExcerpt.isEmpty ? nil : normalizedExcerpt
-    }
-
-    private static func buildInstagramEmbedExcerpt(from media: [String: Any]) -> String? {
-        let likeCount = intValue((media["edge_liked_by"] as? [String: Any])?["count"])
-        let commentCount = intValue((media["edge_media_to_comment"] as? [String: Any])?["count"]) ?? intValue(media["commenter_count"])
-        let username = normalizedDisplayText((media["owner"] as? [String: Any])?["username"] as? String ?? "")
-        let captionEdges = ((media["edge_media_to_caption"] as? [String: Any])?["edges"] as? [[String: Any]]) ?? []
-        let caption = normalizedDisplayText(((captionEdges.first?["node"] as? [String: Any])?["text"] as? String) ?? "")
-        let timestamp = intValue(media["taken_at_timestamp"])
-
-        var header = [String]()
-        if let likeCount {
-            header.append("\(likeCount) likes")
-        }
-        if let commentCount {
-            header.append("\(commentCount) \(commentCount == 1 ? "comment" : "comments")")
-        }
-
-        var excerpt = header.joined(separator: ", ")
-        if !username.isEmpty, let timestamp {
-            let date = instagramDateFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(timestamp)))
-            if excerpt.isEmpty {
-                excerpt = "\(username) on \(date)"
-            } else {
-                excerpt += " - \(username) on \(date)"
-            }
-        }
-
-        if !caption.isEmpty {
-            if excerpt.isEmpty {
-                excerpt = "\"\(caption)\"."
-            } else {
-                excerpt += ": \"\(caption)\"."
-            }
-        }
-
-        let normalizedExcerpt = normalizedDisplayText(excerpt)
-        return normalizedExcerpt.isEmpty ? nil : normalizedExcerpt
     }
 
     private static func generateExcerpt(fromHTML html: String, title: String) async -> String? {
@@ -2338,35 +1850,6 @@ final class GmailDeliveryService {
 
         return normalized
     }
-
-    private static func intValue(_ value: Any?) -> Int? {
-        if let number = value as? NSNumber {
-            return number.intValue
-        }
-
-        if let string = value as? String {
-            return Int(string)
-        }
-
-        return nil
-    }
-
-    private static func normalizedString(_ value: Any?) -> String? {
-        guard let string = value as? String else {
-            return nil
-        }
-
-        let normalized = normalizedDisplayText(string)
-        return normalized.isEmpty ? nil : normalized
-    }
-
-    private static func isInstagramHost(_ url: URL) -> Bool {
-        guard let host = url.host?.lowercased() else {
-            return false
-        }
-
-        return host == "instagram.com" || host == "www.instagram.com"
-    }
 }
 
 private struct EmailContent {
@@ -2374,8 +1857,8 @@ private struct EmailContent {
     let excerpt: String
     let summary: String?
     let urlString: String?
-    let imageURLStrings: [String]
-    let inlineImages: [InlineImage]
+    let imageURLString: String?
+    let inlineImage: InlineImage?
 }
 
 struct DraftPreviewMetadata {
@@ -2391,11 +1874,6 @@ private struct FetchedArticleMetadata {
     let summary: String?
     let urlString: String?
     let imageURLString: String?
-    let additionalImageURLStrings: [String]?
-
-    var allImageURLStrings: [String] {
-        [imageURLString].compactMap { $0 } + (additionalImageURLStrings ?? [])
-    }
 }
 
 private struct CachedArticleMetadata: Sendable {
@@ -2404,7 +1882,6 @@ private struct CachedArticleMetadata: Sendable {
     let summary: String?
     let urlString: String?
     let imageURLString: String?
-    let additionalImageURLStrings: [String]?
 
     func materialized(fallbackTitle: String, requestURLString: String) -> FetchedArticleMetadata {
         let resolvedURLString = urlString ?? requestURLString
@@ -2418,16 +1895,9 @@ private struct CachedArticleMetadata: Sendable {
             excerpt: excerpt,
             summary: summary,
             urlString: urlString,
-            imageURLString: imageURLString,
-            additionalImageURLStrings: additionalImageURLStrings
+            imageURLString: imageURLString
         )
     }
-}
-
-private struct InstagramPostMetadata {
-    let title: String?
-    let excerpt: String?
-    let imageURLStrings: [String]
 }
 
 private struct ImageCandidate {
@@ -2485,7 +1955,7 @@ private actor PreviewMetadataCache {
 }
 
 private extension URLSession {
-    static let sendMoiMetadata: URLSession = {
+    static let mailMoiMetadata: URLSession = {
         let configuration = URLSessionConfiguration.default
         configuration.timeoutIntervalForRequest = 6
         configuration.timeoutIntervalForResource = 8
