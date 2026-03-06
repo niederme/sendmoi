@@ -112,7 +112,7 @@ final class AppModel: ObservableObject {
             while let next = queuedEmails.last {
                 do {
                     try await client.sendEmail(using: validSession, item: next)
-                    SharedContainer.removeManagedMediaIfPresent(urlString: next.previewImageURLString)
+                    removeManagedMedia(for: next)
                     removeQueuedEmail(id: next.id)
                     RecipientStore.record(next.toEmail)
                     statusMessage = "Sent \"\(next.title)\" to \(next.toEmail)."
@@ -197,7 +197,7 @@ final class AppModel: ObservableObject {
 
         let removedItems = queuedEmails.filter { ids.contains($0.id) }
         removedItems.forEach { item in
-            SharedContainer.removeManagedMediaIfPresent(urlString: item.previewImageURLString)
+            removeManagedMedia(for: item)
         }
         queuedEmails.removeAll { ids.contains($0.id) }
         persistQueue()
@@ -225,5 +225,9 @@ final class AppModel: ObservableObject {
                 await processQueue()
             }
         }
+    }
+
+    private func removeManagedMedia(for item: QueuedEmail) {
+        item.allImageURLStrings.forEach { SharedContainer.removeManagedMediaIfPresent(urlString: $0) }
     }
 }

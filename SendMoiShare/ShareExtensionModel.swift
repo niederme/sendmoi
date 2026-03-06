@@ -19,6 +19,7 @@ final class ShareExtensionModel: ObservableObject {
     @Published var summary = ""
     @Published var urlString = ""
     @Published var previewImageURLString: String?
+    @Published var additionalImageURLStrings: [String] = []
     @Published var statusMessage = "Preparing your email..."
     @Published private(set) var autoSendEnabled = true
     @Published var isSaving = false
@@ -142,7 +143,8 @@ final class ShareExtensionModel: ObservableObject {
             excerpt: excerpt,
             summary: summary,
             urlString: urlString,
-            previewImageURLString: previewImageURLString
+            previewImageURLString: previewImageURLString,
+            additionalImageURLStrings: additionalImageURLStrings
         )
     }
 
@@ -160,6 +162,7 @@ final class ShareExtensionModel: ObservableObject {
             summary: draft.trimmedSummary.isEmpty ? nil : draft.trimmedSummary,
             urlString: draft.trimmedURLString,
             previewImageURLString: draft.previewImageURLString,
+            additionalImageURLStrings: draft.additionalImageURLStrings.isEmpty ? nil : draft.additionalImageURLStrings,
             createdAt: createdAt,
             lastError: lastError
         )
@@ -182,7 +185,11 @@ final class ShareExtensionModel: ObservableObject {
             previewImageURLString = content.previewImageURLString
         }
 
-        if title.isEmpty && excerpt.isEmpty && urlString.isEmpty && previewImageURLString == nil {
+        if additionalImageURLStrings.isEmpty {
+            additionalImageURLStrings = content.additionalImageURLStrings
+        }
+
+        if title.isEmpty && excerpt.isEmpty && urlString.isEmpty && allImageURLStrings.isEmpty {
             statusMessage = "Nothing was extracted automatically. You can still fill it in manually."
             presentationMode = .editing
         } else if toEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -203,7 +210,8 @@ final class ShareExtensionModel: ObservableObject {
             excerpt: excerpt,
             summary: summary,
             urlString: urlString,
-            previewImageURLString: previewImageURLString
+            previewImageURLString: previewImageURLString,
+            additionalImageURLStrings: additionalImageURLStrings
         )
 
         if !draft.hasQueueContent || draft.queueTitle.isEmpty {
@@ -242,6 +250,7 @@ final class ShareExtensionModel: ObservableObject {
             if !SharedContainer.isManagedMediaURLString(previewImageURLString) {
                 previewImageURLString = nil
             }
+            additionalImageURLStrings.removeAll { !SharedContainer.isManagedMediaURLString($0) }
             return
         }
 
@@ -347,8 +356,8 @@ final class ShareExtensionModel: ObservableObject {
 
         do {
             let didReplace = try QueueStore.replace(refreshedItem)
-            if didReplace && item.previewImageURLString != refreshedItem.previewImageURLString {
-                SharedContainer.removeManagedMediaIfPresent(urlString: item.previewImageURLString)
+            if didReplace {
+                removeManagedMediaRemoved(from: item, comparedTo: refreshedItem)
             }
             return didReplace ? refreshedItem : item
         } catch {
@@ -468,10 +477,8 @@ final class ShareExtensionModel: ObservableObject {
 
         do {
             let didReplace = try QueueStore.replace(refreshedItem)
-            if didReplace && queuedPreviewEnrichmentItem.previewImageURLString != refreshedItem.previewImageURLString {
-                SharedContainer.removeManagedMediaIfPresent(urlString: queuedPreviewEnrichmentItem.previewImageURLString)
-            }
             if didReplace {
+                removeManagedMediaRemoved(from: queuedPreviewEnrichmentItem, comparedTo: refreshedItem)
                 self.queuedPreviewEnrichmentItem = refreshedItem
             }
         } catch {
@@ -490,7 +497,7 @@ final class ShareExtensionModel: ObservableObject {
 
         do {
             try await deliveryService.sendEmail(using: session, item: queuedItem)
-            SharedContainer.removeManagedMediaIfPresent(urlString: queuedItem.previewImageURLString)
+            removeManagedMedia(for: queuedItem)
             queue.remove(at: index)
             try QueueStore.save(queue)
             return true
@@ -511,7 +518,7 @@ final class ShareExtensionModel: ObservableObject {
 
             do {
                 try await deliveryService.sendEmail(using: session, item: next)
-                SharedContainer.removeManagedMediaIfPresent(urlString: next.previewImageURLString)
+                removeManagedMedia(for: next)
                 queue.removeLast()
                 try QueueStore.save(queue)
             } catch is CancellationError {
@@ -544,7 +551,8 @@ final class ShareExtensionModel: ObservableObject {
             return true
         }
 
-        if trimmedTitle.caseInsensitiveCompare("Shared Photo") == .orderedSame {
+        if trimmedTitle.caseInsensitiveCompare("Shared Photo") == .orderedSame ||
+            trimmedTitle.caseInsensitiveCompare("Shared Photos") == .orderedSame {
             return true
         }
 
@@ -574,6 +582,7 @@ private struct SharedItemContent {
     var excerpt = ""
     var urlString = ""
     var previewImageURLString: String?
+    var additionalImageURLStrings: [String] = []
 }
 
 private enum SharedItemExtractor {
@@ -602,9 +611,8 @@ private enum SharedItemExtractor {
                     content.urlString = url.absoluteString
                 }
 
-                if content.previewImageURLString == nil,
-                   let imageURLString = await loadStoredImageURLString(from: provider) {
-                    content.previewImageURLString = imageURLString
+                if let imageURLString = await loadStoredImageURLString(from: provider) {
+                    content = appendImageURLString(imageURLString, to: content)
                 }
 
                 let textValues = await loadTexts(from: provider)
@@ -621,8 +629,9 @@ private enum SharedItemExtractor {
 
         content = normalize(content, using: textCandidates)
 
-        if content.title.isEmpty, content.previewImageURLString != nil {
-            content.title = "Shared Photo"
+        let imageCount = ([content.previewImageURLString].compactMap { $0 } + content.additionalImageURLStrings).count
+        if content.title.isEmpty, imageCount > 0 {
+            content.title = imageCount > 1 ? "Shared Photos" : "Shared Photo"
         }
 
         if content.title.isEmpty, let host = URL(string: content.urlString)?.host {
@@ -1297,5 +1306,55 @@ private enum SharedItemExtractor {
         }
 
         return scheme == "http" || scheme == "https"
+    }
+
+    private static func appendImageURLString(_ imageURLString: String, to content: SharedItemContent) -> SharedItemContent {
+        let normalized = imageURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else {
+            return content
+        }
+
+        var updatedContent = content
+        let existing = [updatedContent.previewImageURLString].compactMap { $0 } + updatedContent.additionalImageURLStrings
+        guard !existing.contains(where: { $0.caseInsensitiveCompare(normalized) == .orderedSame }) else {
+            return updatedContent
+        }
+
+        if updatedContent.previewImageURLString == nil {
+            updatedContent.previewImageURLString = normalized
+        } else {
+            updatedContent.additionalImageURLStrings.append(normalized)
+        }
+
+        return updatedContent
+    }
+}
+
+private extension ShareExtensionModel {
+    var allImageURLStrings: [String] {
+        ([previewImageURLString].compactMap { $0 } + additionalImageURLStrings)
+            .reduce(into: [String]()) { result, next in
+                guard !result.contains(where: { $0.caseInsensitiveCompare(next) == .orderedSame }) else {
+                    return
+                }
+
+                result.append(next)
+            }
+    }
+
+    func removeManagedMedia(for item: QueuedEmail) {
+        item.allImageURLStrings.forEach { SharedContainer.removeManagedMediaIfPresent(urlString: $0) }
+    }
+
+    func removeManagedMediaRemoved(from previous: QueuedEmail, comparedTo updated: QueuedEmail) {
+        let updatedImageKeys = Set(updated.allImageURLStrings.map { $0.lowercased() })
+
+        previous.allImageURLStrings.forEach { urlString in
+            guard !updatedImageKeys.contains(urlString.lowercased()) else {
+                return
+            }
+
+            SharedContainer.removeManagedMediaIfPresent(urlString: urlString)
+        }
     }
 }
