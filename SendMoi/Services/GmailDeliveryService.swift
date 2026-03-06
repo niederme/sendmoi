@@ -715,7 +715,18 @@ final class GmailDeliveryService {
     }
 
     private static func preferredDisplayImageSources(for content: EmailContent) -> [String] {
-        content.inlineImages.map { "cid:\($0.contentID)" }
+        guard !content.imageURLStrings.isEmpty else {
+            return content.inlineImages.map { "cid:\($0.contentID)" }
+        }
+
+        return content.imageURLStrings.enumerated().compactMap { index, imageURLString in
+            if content.inlineImages.indices.contains(index) {
+                return "cid:\(content.inlineImages[index].contentID)"
+            }
+
+            let trimmed = imageURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : trimmed
+        }
     }
 
     private static func makeTitleMarkup(content: EmailContent, fontFamily: String) -> String {
