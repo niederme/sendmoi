@@ -1694,7 +1694,9 @@ final class GmailDeliveryService {
         }
 
         let cleanedText = normalizeArticleText(plainText, title: title, excerpt: excerpt)
-        guard wordCount(in: cleanedText) > 100,
+        // Allow concise homepage/profile content to be summarized when it still has
+        // meaningful body text, while relying on existing quality gates to reject noise.
+        guard wordCount(in: cleanedText) >= 70,
               passesSummaryInputQualityGate(cleanedText, title: title) else {
             return nil
         }

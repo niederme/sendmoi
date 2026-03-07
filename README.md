@@ -38,7 +38,7 @@ For reachable web URLs, SendMoi attempts to enrich the message before sending:
 
 - Uses the page `<title>` when available, with sensible metadata fallbacks.
 - Pulls a page description when one is available.
-- Generates a short summary when enough high-quality body content is available, sizing the blurb to the amount of source text instead of always forcing an article-length recap.
+- Generates a short summary when enough high-quality body content is available (including shorter profile/home pages, not just long articles), sizing the blurb to the amount of source text instead of always forcing an article-length recap.
 - Inlines a preview image when the page exposes one and the image fetch succeeds.
 - Renders the HTML email as a responsive card layout for desktop and mobile clients.
 - Normalizes common shared-post formats, including X/Twitter share text and Overcast titles, before building the email.
