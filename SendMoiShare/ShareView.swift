@@ -50,6 +50,14 @@ struct ShareView: View {
                 }
             }
         }
+        .alert("Connect Gmail in SendMoi", isPresented: $model.showsGmailConnectAlert) {
+            Button("Sign In to Gmail") {
+                model.connectGmail()
+            }
+            Button("Not Now", role: .cancel) {}
+        } message: {
+            Text("SendMoi is not connected to Gmail on this device yet. Sign in now to send from this share sheet, or choose Not Now and this share will stay queued until you connect Gmail later.")
+        }
         #if os(macOS)
         .frame(minWidth: 480, idealWidth: 520, minHeight: 420, idealHeight: 460)
         #endif
@@ -160,7 +168,7 @@ struct ShareView: View {
                 statusMessageView
             }
         }
-        .disabled(model.isSaving)
+        .disabled(model.isSaving || model.isConnectingGmail)
     }
 
     private var previewThumbnail: some View {
@@ -418,7 +426,7 @@ struct ShareView: View {
     }
 
     private var sendButtonDisabled: Bool {
-        model.presentationMode != .editing || model.isSaving || model.recipientValidationMessage != nil
+        model.presentationMode != .editing || model.isSaving || model.isConnectingGmail || model.recipientValidationMessage != nil
     }
 
     private var overlayBorderColor: Color {
