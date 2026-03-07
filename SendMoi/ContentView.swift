@@ -280,24 +280,26 @@ struct ContentView: View {
                 .foregroundStyle(.primary)
                 .controlSize(.large)
 
-                if onboardingStep > 0 {
-                    Button("Back") {
-                        onboardingStep -= 1
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(onboardingSecondaryButtonTint)
-                    .foregroundStyle(.primary)
-                    .controlSize(.large)
-                }
-
                 Spacer(minLength: 0)
 
-                Button(onboardingPrimaryButtonTitle) {
-                    handleOnboardingPrimaryAction()
+                HStack(spacing: 12) {
+                    if onboardingStep > 0 {
+                        Button("Back") {
+                            onboardingStep -= 1
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(onboardingSecondaryButtonTint)
+                        .foregroundStyle(.primary)
+                        .controlSize(.large)
+                    }
+
+                    Button(onboardingPrimaryButtonTitle) {
+                        handleOnboardingPrimaryAction()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .disabled(onboardingStep == 2 && model.session == nil && !GoogleOAuthConfig.isConfigured)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .disabled(onboardingStep == 2 && model.session == nil && !GoogleOAuthConfig.isConfigured)
             }
         }
     }
