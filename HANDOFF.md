@@ -7,9 +7,20 @@ Last updated: March 7, 2026
 - Repo: `codex/fix-summary-promo-filter`
 - Latest intended app version: `0.3`
 - Recent shipped commits:
-  - `334a80e` `Separate recipient settings from account`
-  - `ecf4b78` `Add handoff notes and launch screen fix`
-  - `1f7086d` `Bump version to 0.2`
+  - `0488709` `Allow summaries for concise high-quality pages (#16)`
+  - `a7e22c8` `Remove in-app splash overlay to fix wrong startup paper plane (#14)`
+  - `09eb66a` `Refine missing recipient validation in share sheet (#12)`
+- Current branch-only commits (not on `main` yet):
+  - `9e519bf` `Fix summary promo filtering for concise homepage copy`
+  - `0be274f` `Ignore .claude workspace metadata`
+
+## Quick Resume On Another Mac
+
+1. `git clone https://github.com/niederme/sendmoi.git`
+2. `cd sendmoi`
+3. `git checkout codex/fix-summary-promo-filter`
+4. `git pull --rebase origin codex/fix-summary-promo-filter`
+5. Open `SendMoi.xcodeproj` in Xcode and continue from the branch.
 
 ## What Changed Recently
 
