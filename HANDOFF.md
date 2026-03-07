@@ -4,7 +4,7 @@ Last updated: March 7, 2026
 
 ## Current State
 
-- Repo: `codex/summary-for-short-pages`
+- Repo: `codex/fix-summary-promo-filter`
 - Latest intended app version: `0.3`
 - Recent shipped commits:
   - `334a80e` `Separate recipient settings from account`
@@ -29,6 +29,7 @@ Last updated: March 7, 2026
   - preview image and summary handling were improved
   - summary length now scales with extracted page text length so shorter pages get shorter blurbs instead of forcing article-sized summaries
   - summary generation now accepts concise but substantive pages (70+ cleaned words), so profile/home pages can still produce a 1-2 sentence recap
+  - summary promo filtering now treats newsletter mentions as promo only for short CTA-style lines, so substantive profile/homepage content is not dropped from summary input
 - Added:
   - `PRIVACY.md`
   - `TERMS.md`
@@ -76,7 +77,7 @@ Last updated: March 7, 2026
 11. After the next icon refresh, run `./scripts/prune_app_icon_set.sh` and confirm Xcode no longer shows `AppIcon` asset warnings before archiving.
 12. Launch the share sheet while signed out of Gmail and confirm the new connect alert appears, starts Google sign-in from the share sheet itself, and resumes sending without implying that auto-send already happened.
 13. Open the share sheet with no default recipient and confirm the initial helper text feels neutral, then tap `Send` and verify the red validation state appears and the `To` field becomes focused.
-14. Share `https://www.francescabond.com/` (or a similar profile/home page with limited body text) and confirm the preview keeps the OG image while now showing a short summary instead of omitting it.
+14. Share a concise profile/homepage URL that includes a newsletter mention in body copy and confirm SendMoi still generates a short summary when the page has meaningful text.
 
 ## Local Setup
 
