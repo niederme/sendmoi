@@ -1,10 +1,10 @@
 # SendMoi Handoff
 
-Last updated: March 5, 2026
+Last updated: March 7, 2026
 
 ## Current State
 
-- Repo: `main`
+- Repo: `codex/onboarding-actions-and-issue-prefix`
 - Latest intended app version: `0.3`
 - Recent shipped commits:
   - `334a80e` `Separate recipient settings from account`
@@ -31,6 +31,8 @@ Last updated: March 5, 2026
   - `TERMS.md`
   - iOS launch screen asset and storyboard (`Splash.imageset`, `LaunchScreen.storyboard`)
 - `README.md` now reflects current behavior instead of hardcoding the old `0.1` release framing.
+- `AGENTS.md` now treats `BUG:` and `ISSUE:` as the explicit GitHub issue creation prefixes.
+- The onboarding footer now leaves `Skip` on its own and groups `Back` with the trailing primary action.
 - New in the current working tree:
   - repo-wide rename from MailMoi to SendMoi: project, targets, schemes, folders, and user-facing copy
   - bundle identifiers, App Group ID, and shared container/keychain storage identifiers intentionally remain on the existing MailMoi values for upgrade continuity
