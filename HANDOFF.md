@@ -1,6 +1,6 @@
 # SendMoi Handoff
 
-Last updated: March 5, 2026
+Last updated: March 7, 2026
 
 ## Current State
 
@@ -26,6 +26,7 @@ Last updated: March 5, 2026
   - linked headline is no longer permanently underlined
   - summary preamble cleanup was added
   - preview image and summary handling were improved
+  - summary length now scales with extracted page text length so shorter pages get shorter blurbs instead of forcing article-sized summaries
 - Added:
   - `PRIVACY.md`
   - `TERMS.md`
