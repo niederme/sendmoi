@@ -4,7 +4,7 @@ Last updated: March 7, 2026
 
 ## Current State
 
-- Repo: `codex/share-sheet-gmail-signin`
+- Repo: `codex/recipient-helper-focus`
 - Latest intended app version: `0.3`
 - Recent shipped commits:
   - `334a80e` `Separate recipient settings from account`
@@ -54,8 +54,8 @@ Last updated: March 7, 2026
   - iOS startup now includes a short branded splash overlay in addition to the launch storyboard
   - the share extension processing state now says `Auto-Sending...`, keeps `Edit` available for a 0.5-second grace period before auto-send starts, and uses a roomier bordered `Edit` action that still cancels auto-send and returns to the draft without changing the saved preference
   - manual sends now queue first and dismiss the sheet immediately, then continue best-effort preview enrichment and delivery in the background; if that work does not finish, the queued item remains for later retry
-  - if no default recipient is saved, the share extension now shows a specific inline `To` warning and keeps `Send` disabled until a recipient is entered instead of falling back to the generic validation error
   - if Gmail is not connected, the share sheet now stops before auto-send, presents a `Connect Gmail in SendMoi` alert, and can start Google sign-in directly from the share sheet so queued items can resume sending with less ambiguity
+  - if no default recipient is saved, the share extension now starts with a neutral inline helper under `To`, only switches to the red validation copy after a failed send attempt, and refocuses the `To` field so the user can recover immediately
   - refreshed the SendMoi icon source in `marketing/send-moi.icon` and `SendMoi/send-moi.icon`, regenerated every `AppIcon.appiconset` size from the updated 1024 master PNG, and updated marketing icon exports in this repo
 
 ## Things To Verify On The Next Machine
@@ -74,6 +74,7 @@ Last updated: March 7, 2026
 10. Confirm the next Xcode Cloud upload succeeds with build number `3`; the previous failure was `The bundle version must be higher than the previously uploaded version.`
 11. After the next icon refresh, run `./scripts/prune_app_icon_set.sh` and confirm Xcode no longer shows `AppIcon` asset warnings before archiving.
 12. Launch the share sheet while signed out of Gmail and confirm the new connect alert appears, starts Google sign-in from the share sheet itself, and resumes sending without implying that auto-send already happened.
+13. Open the share sheet with no default recipient and confirm the initial helper text feels neutral, then tap `Send` and verify the red validation state appears and the `To` field becomes focused.
 
 ## Local Setup
 
