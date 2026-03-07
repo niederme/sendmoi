@@ -90,18 +90,18 @@ struct ContentView: View {
                     .environmentObject(model)
             }
         }
-        .confirmationDialog(
+        .alert(
             "Reset SendMoi?",
             isPresented: $showsResetConfirmation,
-            titleVisibility: .visible
-        ) {
+            actions: {
             Button("Clear Settings", role: .destructive) {
                 clearSettingsAndRestartSetup()
             }
             Button("Cancel", role: .cancel) { }
-        } message: {
+        },
+            message: {
             Text("This disconnects Gmail, clears saved defaults, and reopens setup. Queued items stay in place.")
-        }
+        })
     }
 
     @ViewBuilder

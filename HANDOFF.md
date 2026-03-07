@@ -19,6 +19,7 @@ Last updated: March 7, 2026
 - First-run now presents a branded 3-step setup guide as a modal instead of replacing the app shell, and setup can be reopened later from the dedicated bottom `Setup` actions.
 - The onboarding finish step now shows the connected Gmail account, allows `Switch Account`, uses an explicit recipient `Save` action, and only reveals auto-send when a saved recipient is active.
 - The onboarding action row was normalized so the primary action stays pinned and `View Settings` appears as a full-width secondary control on the final step.
+- The `Clear Settings` reset confirmation now uses a standard alert so iPhone shows a visible `Cancel` action alongside the destructive button.
 - The share-extension `Auto-Sending...` overlay card now uses a softer translucent material treatment.
 - If `Auto-send` is off, the share extension stays open and pre-fills the draft rather than sending immediately.
 - The desktop app includes a compose card again; the missing `desktopComposeCard` helper was restored so the macOS workspace compiles, but the card is informational only and points users back to the share sheet for actual drafting.
