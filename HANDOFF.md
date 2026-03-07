@@ -51,7 +51,7 @@ Last updated: March 7, 2026
   - low-quality summaries are filtered more aggressively, and summaries are skipped for X/Twitter and Overcast sources
   - `scripts/prune_app_icon_set.sh` now removes undeclared files from `AppIcon.appiconset` after icon refreshes so Xcode does not report `AppIcon` unassigned-child warnings from stray exported PNGs
   - the restored `desktopComposeCard` keeps the macOS compose panel buildable again after the helper was accidentally dropped from `ContentView.swift`, while preserving the current share-sheet-only drafting flow
-  - iOS startup now includes a short branded splash overlay in addition to the launch storyboard
+  - iOS startup now relies on `LaunchScreen.storyboard` only; the extra in-app splash overlay was removed so the startup mark matches the launch asset instead of rendering an SF Symbol paper plane
   - the share extension processing state now says `Auto-Sending...`, keeps `Edit` available for a 0.5-second grace period before auto-send starts, and uses a roomier bordered `Edit` action that still cancels auto-send and returns to the draft without changing the saved preference
   - manual sends now queue first and dismiss the sheet immediately, then continue best-effort preview enrichment and delivery in the background; if that work does not finish, the queued item remains for later retry
   - if Gmail is not connected, the share sheet now stops before auto-send, presents a `Connect Gmail in SendMoi` alert, and can start Google sign-in directly from the share sheet so queued items can resume sending with less ambiguity
