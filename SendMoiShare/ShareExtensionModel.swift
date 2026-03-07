@@ -7,6 +7,7 @@ final class ShareExtensionModel: ObservableObject {
     private static let autoSendGracePeriodNanoseconds: UInt64 = 1_000_000_000
     private static let manualSendPreviewWaitLimitNanoseconds: UInt64 = 750_000_000
     static let missingRecipientMessage = "Enter a recipient in the To field, or set a default recipient in the SendMoi app."
+    private static let connectGmailStatusMessage = "Connect Gmail to send from the share sheet. You can still queue this share and send it after sign-in."
 
     enum PresentationMode: Equatable {
         case processing
@@ -23,9 +24,11 @@ final class ShareExtensionModel: ObservableObject {
     @Published var statusMessage = "Preparing your email..."
     @Published private(set) var autoSendEnabled = true
     @Published var isSaving = false
+    @Published var isConnectingGmail = false
     @Published var isRefreshingPreview = false
     @Published var savedRecipients: [String] = []
     @Published var presentationMode: PresentationMode = .processing
+    @Published var showsGmailConnectAlert = false
 
     private weak var extensionContextRef: NSExtensionContext?
     private let deliveryService = GmailDeliveryService()
@@ -33,6 +36,8 @@ final class ShareExtensionModel: ObservableObject {
     private var sendTask: Task<Void, Never>?
     private var pendingPreviewApplication: PendingPreviewApplication?
     private var queuedPreviewEnrichmentItem: QueuedEmail?
+    private var hasPromptedForGmailConnection = false
+    var requestGmailConnection: (@MainActor () async throws -> GmailSession)?
 
     func attach(extensionContext: NSExtensionContext?) {
         extensionContextRef = extensionContext
@@ -53,6 +58,7 @@ final class ShareExtensionModel: ObservableObject {
             apply(content)
             schedulePreviewRefresh()
             autoSendIfPossible()
+            promptForGmailConnectionIfNeeded()
         }
     }
 
@@ -127,6 +133,34 @@ final class ShareExtensionModel: ObservableObject {
         schedulePreviewRefresh()
     }
 
+    func connectGmail() {
+        guard !isConnectingGmail else { return }
+
+        showsGmailConnectAlert = false
+        isConnectingGmail = true
+        statusMessage = "Connecting Gmail..."
+
+        Task { [weak self] in
+            guard let self else { return }
+            defer { self.isConnectingGmail = false }
+
+            do {
+                guard let requestGmailConnection else {
+                    throw GmailAPIError.authorizationFailed("Google sign-in is not available in this share sheet.")
+                }
+
+                let session = try await requestGmailConnection()
+                try SharedSessionStore.save(session)
+                statusMessage = "Connected as \(session.emailAddress ?? "your Gmail account")."
+                autoSendIfPossible()
+            } catch GmailAPIError.signInCanceled {
+                statusMessage = Self.connectGmailStatusMessage
+            } catch {
+                statusMessage = "Could not connect Gmail: \(error.localizedDescription)"
+            }
+        }
+    }
+
     var recipientValidationMessage: String? {
         let trimmedRecipient = toEmail.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmedRecipient.isEmpty else {
@@ -192,6 +226,9 @@ final class ShareExtensionModel: ObservableObject {
         if title.isEmpty && excerpt.isEmpty && urlString.isEmpty && allImageURLStrings.isEmpty {
             statusMessage = "Nothing was extracted automatically. You can still fill it in manually."
             presentationMode = .editing
+        } else if !hasSharedGmailSession {
+            statusMessage = Self.connectGmailStatusMessage
+            presentationMode = .editing
         } else if toEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             statusMessage = Self.missingRecipientMessage
             presentationMode = .editing
@@ -221,6 +258,18 @@ final class ShareExtensionModel: ObservableObject {
 
         if draft.toEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             statusMessage = Self.missingRecipientMessage
+            presentationMode = .editing
+            return
+        }
+
+        if isConnectingGmail {
+            statusMessage = "Connecting Gmail..."
+            presentationMode = .editing
+            return
+        }
+
+        guard hasSharedGmailSession else {
+            statusMessage = Self.connectGmailStatusMessage
             presentationMode = .editing
             return
         }
@@ -543,6 +592,23 @@ final class ShareExtensionModel: ObservableObject {
         }
 
         return nil
+    }
+
+    private var hasSharedGmailSession: Bool {
+        do {
+            return try SharedSessionStore.load() != nil
+        } catch {
+            return false
+        }
+    }
+
+    private func promptForGmailConnectionIfNeeded() {
+        guard !hasPromptedForGmailConnection, !hasSharedGmailSession else {
+            return
+        }
+
+        hasPromptedForGmailConnection = true
+        showsGmailConnectAlert = true
     }
 
     private static func shouldApplyPreviewTitle(existingTitle: String, urlString: String) -> Bool {
