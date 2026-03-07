@@ -1699,12 +1699,23 @@ final class GmailDeliveryService {
             return nil
         }
 
-        if let aiSummary = await summarizeWithFoundationModels(cleanedText, title: title, minWords: 75, maxWords: 100) {
+        let summaryWordRange = summaryWordRange(for: cleanedText)
+
+        if let aiSummary = await summarizeWithFoundationModels(
+            cleanedText,
+            title: title,
+            minWords: summaryWordRange.minWords,
+            maxWords: summaryWordRange.maxWords
+        ) {
             let normalized = stripSummaryPreamble(from: aiSummary, title: title)
             return passesSummaryOutputQualityGate(normalized) ? normalized : nil
         }
 
-        guard let fallbackSummary = summarize(cleanedText, minWords: 75, maxWords: 100) else {
+        guard let fallbackSummary = summarize(
+            cleanedText,
+            minWords: summaryWordRange.minWords,
+            maxWords: summaryWordRange.maxWords
+        ) else {
             return nil
         }
 
@@ -2131,6 +2142,19 @@ final class GmailDeliveryService {
         }
 
         return selectedSentences.joined(separator: " ")
+    }
+
+    private static func summaryWordRange(for text: String) -> (minWords: Int, maxWords: Int) {
+        let sourceWordCount = wordCount(in: text)
+
+        switch sourceWordCount {
+        case ..<300:
+            return (minWords: 20, maxWords: 40)
+        case ..<800:
+            return (minWords: 40, maxWords: 70)
+        default:
+            return (minWords: 75, maxWords: 100)
+        }
     }
 
     private static func splitIntoSentences(_ text: String) -> [String] {
