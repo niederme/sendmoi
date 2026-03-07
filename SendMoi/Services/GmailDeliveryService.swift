@@ -1946,7 +1946,6 @@ final class GmailDeliveryService {
         let directMarkers = [
             "sign up",
             "the latest",
-            "newsletter",
             "horoscope",
             "horoscopes",
             "podcast by",
@@ -1961,6 +1960,16 @@ final class GmailDeliveryService {
         }
 
         let headlineLikeWords = line.split(whereSeparator: \.isWhitespace)
+
+        // Treat newsletter mentions as promo only when they are short CTA-style copy.
+        if lowered.contains("newsletter"),
+           headlineLikeWords.count <= 18,
+           (lowered.contains("sign up") ||
+            lowered.contains("subscribe") ||
+            lowered.contains("join")) {
+            return true
+        }
+
         let hasDateToken = lowered.range(of: #"\b\d{1,2}/\d{1,2}/\d{2,4}\b"#, options: .regularExpression) != nil
         let hasTimeToken = lowered.range(of: #"\b\d{1,2}:\d{2}\s*[ap]\.m\.\b"#, options: .regularExpression) != nil
 
