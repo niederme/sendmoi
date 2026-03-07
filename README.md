@@ -59,7 +59,7 @@ The `SendMoiShare` extension is included for iPhone, iPad, and macOS share sheet
 - If Gmail is not connected yet, automatic sending is held back so the share sheet does not imply that delivery is already underway.
 - If you tap `Send`, SendMoi first saves the draft to the queue, dismisses the sheet immediately, and then continues best-effort preview enrichment and delivery in the background. If that background work does not finish, the queued item is retried later.
 - If `Auto-send` is disabled, it stays open and pre-fills the draft so you can review before sending.
-- If no default recipient is saved, the share sheet keeps `Send` disabled, shows an inline `To`-field warning, and asks you to enter a recipient before it will queue or send anything.
+- If no default recipient is saved, the share sheet shows a neutral inline helper under `To`, then promotes that guidance into a red validation message only after you tap `Send` without a recipient; on iPhone and iPad it also returns focus to the `To` field so you can fix it immediately.
 - If immediate delivery fails, it writes the message into the shared queue and exits cleanly.
 - If the host app only supplies a URL, the extension can still fetch metadata and allow manual editing before queueing.
 - Image-only shares from apps like Photos are stored in the shared App Group container, then cleaned up after send or deletion.

@@ -2,6 +2,11 @@ import SwiftUI
 
 struct ShareView: View {
     @ObservedObject var model: ShareExtensionModel
+    @FocusState private var focusedField: Field?
+
+    private enum Field: Hashable {
+        case recipient
+    }
 
     var body: some View {
         NavigationStack {
@@ -23,6 +28,10 @@ struct ShareView: View {
                 }
             }
             .navigationTitle("SendMoi")
+            .onChange(of: model.recipientFocusRequest) { _, request in
+                guard request > 0 else { return }
+                focusedField = .recipient
+            }
             .onChange(of: model.urlString) { _, _ in
                 model.schedulePreviewRefresh()
             }
@@ -72,16 +81,18 @@ struct ShareView: View {
                         .foregroundStyle(.secondary)
                     #if os(iOS)
                     TextField("Email address", text: $model.toEmail)
+                        .focused($focusedField, equals: .recipient)
                         .textInputAutocapitalization(.never)
                         .keyboardType(.emailAddress)
                         .autocorrectionDisabled()
                     #else
                     TextField("Email address", text: $model.toEmail)
+                        .focused($focusedField, equals: .recipient)
                     #endif
-                    if let recipientValidationMessage = model.recipientValidationMessage {
-                        Text(recipientValidationMessage)
+                    if let recipientInlineMessage = model.recipientInlineMessage {
+                        Text(recipientInlineMessage)
                             .font(.caption2)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(model.recipientInlineMessageIsError ? .red : .secondary)
                     }
                     if !recentRecipientSuggestions.isEmpty {
                         recentRecipientsView
@@ -400,7 +411,7 @@ struct ShareView: View {
             return false
         }
 
-        if model.statusMessage == model.recipientValidationMessage {
+        if model.statusMessage == model.recipientInlineMessage {
             return false
         }
 
@@ -426,7 +437,8 @@ struct ShareView: View {
     }
 
     private var sendButtonDisabled: Bool {
-        model.presentationMode != .editing || model.isSaving || model.isConnectingGmail || model.recipientValidationMessage != nil
+        model.presentationMode != .editing || model.isSaving
+            || model.isConnectingGmail
     }
 
     private var overlayBorderColor: Color {

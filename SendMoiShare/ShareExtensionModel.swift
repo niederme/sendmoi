@@ -7,6 +7,7 @@ final class ShareExtensionModel: ObservableObject {
     private static let autoSendGracePeriodNanoseconds: UInt64 = 1_000_000_000
     private static let manualSendPreviewWaitLimitNanoseconds: UInt64 = 750_000_000
     static let missingRecipientMessage = "Enter a recipient in the To field, or set a default recipient in the SendMoi app."
+    static let recipientHelperMessage = "Pro tip: add a recipient here, or save a default recipient in the SendMoi app."
     private static let connectGmailStatusMessage = "Connect Gmail to send from the share sheet. You can still queue this share and send it after sign-in."
 
     enum PresentationMode: Equatable {
@@ -14,7 +15,13 @@ final class ShareExtensionModel: ObservableObject {
         case editing
     }
 
-    @Published var toEmail = ""
+    @Published var toEmail = "" {
+        didSet {
+            if !toEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                showsMissingRecipientValidation = false
+            }
+        }
+    }
     @Published var title = ""
     @Published var excerpt = ""
     @Published var summary = ""
@@ -29,6 +36,8 @@ final class ShareExtensionModel: ObservableObject {
     @Published var savedRecipients: [String] = []
     @Published var presentationMode: PresentationMode = .processing
     @Published var showsGmailConnectAlert = false
+    @Published private(set) var showsMissingRecipientValidation = false
+    @Published private(set) var recipientFocusRequest = 0
 
     private weak var extensionContextRef: NSExtensionContext?
     private let deliveryService = GmailDeliveryService()
@@ -81,12 +90,18 @@ final class ShareExtensionModel: ObservableObject {
         let draft = currentDraft()
         let shouldAllowAutoSendEditWindow = presentationMode == .processing
 
+        if draft.toEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            showsMissingRecipientValidation = true
+            recipientFocusRequest &+= 1
+        }
+
         if let validationMessage = validationMessage(for: draft) {
             statusMessage = validationMessage
             presentationMode = .editing
             return
         }
 
+        showsMissingRecipientValidation = false
         let item = makeQueuedEmail(from: draft)
         let shouldQueueWhilePreviewLoads = isRefreshingPreview && previewTask != nil
         if shouldQueueWhilePreviewLoads && presentationMode == .editing {
@@ -161,13 +176,20 @@ final class ShareExtensionModel: ObservableObject {
         }
     }
 
-    var recipientValidationMessage: String? {
+    var recipientInlineMessage: String? {
         let trimmedRecipient = toEmail.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmedRecipient.isEmpty else {
             return nil
         }
 
-        return Self.missingRecipientMessage
+        return showsMissingRecipientValidation
+            ? Self.missingRecipientMessage
+            : Self.recipientHelperMessage
+    }
+
+    var recipientInlineMessageIsError: Bool {
+        showsMissingRecipientValidation &&
+        toEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private func currentDraft() -> ShareDraft {
@@ -230,7 +252,7 @@ final class ShareExtensionModel: ObservableObject {
             statusMessage = Self.connectGmailStatusMessage
             presentationMode = .editing
         } else if toEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            statusMessage = Self.missingRecipientMessage
+            statusMessage = "Review and tap Send when ready."
             presentationMode = .editing
         } else if autoSendEnabled {
             statusMessage = "Auto-Sending..."
@@ -257,7 +279,7 @@ final class ShareExtensionModel: ObservableObject {
         }
 
         if draft.toEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            statusMessage = Self.missingRecipientMessage
+            statusMessage = "Review and tap Send when ready."
             presentationMode = .editing
             return
         }
