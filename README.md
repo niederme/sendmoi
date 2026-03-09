@@ -27,6 +27,11 @@ SendMoi currently ships the full core workflow:
 
 The app is built entirely with Apple-native frameworks, including `SwiftUI`, `AuthenticationServices`, `Network`, `Security`, and `FoundationModels` when available.
 
+Deployment compatibility:
+
+- iOS minimum deployment target is `18.0` for both `SendMoi` and `SendMoiShare`.
+- Foundation Models summary generation is availability-gated and only runs on supported newer OS versions; older supported OS versions fall back to the built-in non-AI summarizer.
+
 ## What It Sends
 
 Each email is sent through the Gmail API with a subject in this format:

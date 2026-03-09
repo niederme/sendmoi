@@ -1,15 +1,17 @@
 # SendMoi Handoff
 
-Last updated: March 7, 2026
+Last updated: March 9, 2026
 
 ## Current State
 
-- Repo: `main`
+- Repo: `codex/ios18-compat`
 - Latest intended app version: `0.3`
 - Recent shipped commits:
   - `0e5a871` `Fix summary promo filtering for concise homepage copy (#18)`
   - `0488709` `Allow summaries for concise high-quality pages (#16)`
   - `a7e22c8` `Remove in-app splash overlay to fix wrong startup paper plane (#14)`
+- Current PR focus:
+  - Lower iOS deployment target from `26.0` to `18.0` for both app and share extension so the project supports the previous iOS major while keeping Foundation Models features availability-gated.
 
 ## Quick Resume On Another Mac
 
@@ -45,6 +47,7 @@ Last updated: March 7, 2026
 - `README.md` now reflects current behavior instead of hardcoding the old `0.1` release framing.
 - `AGENTS.md` now treats `BUG:` and `ISSUE:` as the explicit GitHub issue creation prefixes.
 - The onboarding footer now leaves `Skip` on its own and groups `Back` with the trailing primary action.
+- iOS deployment target is now `18.0` for both `SendMoi` and `SendMoiShare`; Foundation Models summary support remains optional at runtime and falls back on unsupported OS versions.
 - New in the current working tree:
   - repo-wide rename from MailMoi to SendMoi: project, targets, schemes, folders, and user-facing copy
   - bundle identifiers, App Group ID, and shared container/keychain storage identifiers intentionally remain on the existing MailMoi values for upgrade continuity
@@ -86,6 +89,7 @@ Last updated: March 7, 2026
 12. Launch the share sheet while signed out of Gmail and confirm the new connect alert appears, starts Google sign-in from the share sheet itself, and resumes sending without implying that auto-send already happened.
 13. Open the share sheet with no default recipient and confirm the initial helper text feels neutral, then tap `Send` and verify the red validation state appears and the `To` field becomes focused.
 14. Share a concise profile/homepage URL that includes a newsletter mention in body copy and confirm SendMoi still generates a short summary when the page has meaningful text.
+15. Confirm App Store Connect processing reports iOS compatibility as `iOS 18.0 or later` after uploading the next archive.
 
 ## Local Setup
 
