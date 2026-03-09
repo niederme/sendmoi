@@ -61,8 +61,8 @@ The `SendMoiShare` extension is included for iPhone, iPad, and macOS share sheet
 - It reads the title, description, URL, and first shared image from the shared item when the host app provides them.
 - For X/Twitter shares, it can rewrite noisy shared text into a cleaner draft and canonicalize tweet URLs before fetching preview metadata.
 - If Gmail is not connected, the share sheet shows a `Connect Gmail in SendMoi` alert and can start the Google sign-in flow directly from the share sheet.
-- If `Auto-send` is enabled and a default recipient is already saved, it waits 0.5 seconds after the draft is ready, then tries to send automatically.
-- While auto-send is in progress, the sheet shows an `Auto-Sending...` state with a secondary `Edit` action that stays available during that 0.5-second grace period and still cancels the in-flight auto-send attempt without changing the saved `Auto-send` preference.
+- If `Auto-send` is enabled and a default recipient is already saved, it waits 1 second after the draft is ready, then tries to send automatically.
+- While auto-send is in progress, the sheet shows an `Auto-Sending...` state with a secondary `Edit` action that stays available during that 1-second grace period and still cancels the in-flight auto-send attempt without changing the saved `Auto-send` preference.
 - If Gmail is not connected yet, automatic sending is held back so the share sheet does not imply that delivery is already underway.
 - If you tap `Send`, SendMoi first saves the draft to the queue, dismisses the sheet immediately, and then continues best-effort preview enrichment and delivery in the background. If that background work does not finish, the queued item is retried later.
 - If `Auto-send` is disabled, it stays open and pre-fills the draft so you can review before sending.
