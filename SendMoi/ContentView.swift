@@ -449,7 +449,10 @@ struct ContentView: View {
         if model.session == nil {
             VStack(alignment: .leading, spacing: 14) {
                 Text("Connect Gmail to finish setup.")
-                    .font(.system(size: 24, weight: .semibold))
+                    .font(.system(size: onboardingFirstStepHeadlineFontSize, weight: .bold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.86)
 
                 onboardingFeatureRow(
                     iconName: "lock.shield.fill",
@@ -474,11 +477,15 @@ struct ContentView: View {
         } else {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Ready to go.")
-                    .font(.system(size: 24, weight: .semibold))
+                    .font(.system(size: onboardingFirstStepHeadlineFontSize, weight: .bold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.86)
 
                 Text("Gmail is connected. Add a default recipient now, or leave it blank and choose in the share sheet each time.")
-                    .font(.footnote)
+                    .font(.system(size: onboardingFirstStepSubheadingFontSize, weight: .medium))
                     .foregroundStyle(.secondary)
+                    .lineSpacing(1.3)
 
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Connected Gmail")
@@ -679,11 +686,13 @@ struct ContentView: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.headline)
+                    .font(.system(size: onboardingFeatureTitleFontSize, weight: .semibold))
+                    .foregroundStyle(.primary)
 
                 Text(detail)
-                    .font(.footnote)
+                    .font(.system(size: onboardingFeatureDetailFontSize, weight: .medium))
                     .foregroundStyle(.secondary)
+                    .lineSpacing(1.2)
             }
 
             Spacer(minLength: 0)
@@ -843,26 +852,29 @@ struct ContentView: View {
 
     private var onboardingUsesSmallPhoneLayout: Bool {
         #if os(iOS)
-        onboardingUsesTightFirstStepLayout && UIScreen.main.bounds.height <= 812
+        !usesDesktopLayout && UIScreen.main.bounds.height <= 812
         #else
         false
         #endif
     }
 
     private var onboardingMainSpacing: CGFloat {
-        onboardingUsesTightFirstStepLayout ? 16 : 24
+        if onboardingUsesSmallPhoneLayout {
+            return 14
+        }
+        return onboardingUsesTightFirstStepLayout ? 16 : 24
     }
 
     private var onboardingVerticalPadding: CGFloat {
-        onboardingUsesTightFirstStepLayout ? 14 : 24
+        onboardingUsesSmallPhoneLayout ? 12 : (onboardingUsesTightFirstStepLayout ? 14 : 24)
     }
 
     private var onboardingStepCardPadding: CGFloat {
-        onboardingUsesTightFirstStepLayout ? 18 : 22
+        onboardingUsesSmallPhoneLayout ? 16 : (onboardingUsesTightFirstStepLayout ? 18 : 22)
     }
 
     private var onboardingStepCardCornerRadius: CGFloat {
-        onboardingUsesTightFirstStepLayout ? 24 : 28
+        onboardingUsesSmallPhoneLayout ? 22 : (onboardingUsesTightFirstStepLayout ? 24 : 28)
     }
 
     private var onboardingFirstStepSpacing: CGFloat {
@@ -921,7 +933,15 @@ struct ContentView: View {
     }
 
     private var onboardingPinnedActionsInset: CGFloat {
-        110
+        onboardingUsesSmallPhoneLayout ? 102 : 110
+    }
+
+    private var onboardingFeatureTitleFontSize: CGFloat {
+        onboardingUsesSmallPhoneLayout ? 16 : 18
+    }
+
+    private var onboardingFeatureDetailFontSize: CGFloat {
+        onboardingUsesSmallPhoneLayout ? 15 : 16
     }
 
     private var onboardingPinnedActions: some View {
