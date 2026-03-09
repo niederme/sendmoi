@@ -1,4 +1,8 @@
 import SwiftUI
+import AVFoundation
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct ContentView: View {
     @EnvironmentObject private var model: AppModel
@@ -9,6 +13,7 @@ struct ContentView: View {
     @State private var onboardingRecipientDraft = ""
     @State private var onboardingRecipientConfirmed = false
     @State private var onboardingPulse = false
+    @State private var onboardingPinSlide = 0
     @State private var showsResetConfirmation = false
     @State private var showsOnboardingAccountSheet = false
 
@@ -90,18 +95,18 @@ struct ContentView: View {
                     .environmentObject(model)
             }
         }
-        .alert(
+        .confirmationDialog(
             "Reset SendMoi?",
             isPresented: $showsResetConfirmation,
-            actions: {
+            titleVisibility: .visible
+        ) {
             Button("Clear Settings", role: .destructive) {
                 clearSettingsAndRestartSetup()
             }
             Button("Cancel", role: .cancel) { }
-        },
-            message: {
+        } message: {
             Text("This disconnects Gmail, clears saved defaults, and reopens setup. Queued items stay in place.")
-        })
+        }
     }
 
     @ViewBuilder
@@ -133,16 +138,18 @@ struct ContentView: View {
 
     private var onboardingContent: some View {
         GeometryReader { proxy in
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 24) {
-                    onboardingHero
-                    onboardingProgress
-                    onboardingStepCard
-                    onboardingActions
+            ZStack(alignment: .bottom) {
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: onboardingMainSpacing) {
+                        onboardingStepCard
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, onboardingVerticalPadding)
+                    .padding(.bottom, onboardingPinnedActionsInset)
+                    .frame(minHeight: proxy.size.height, alignment: .top)
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 24)
-                .frame(minHeight: proxy.size.height, alignment: .top)
+
+                onboardingPinnedActions
             }
             .background(onboardingBackground.ignoresSafeArea())
             .task {
@@ -165,213 +172,282 @@ struct ContentView: View {
                 endPoint: .bottomTrailing
             )
 
-            Circle()
-                .fill(onboardingOrbHighlight)
-                .frame(width: 220, height: 220)
-                .blur(radius: 6)
-                .offset(x: 140, y: -220)
+            RadialGradient(
+                colors: [onboardingAuroraHighlight, .clear],
+                center: .topTrailing,
+                startRadius: 24,
+                endRadius: 320
+            )
+            .offset(x: -34, y: -190)
 
-            Circle()
-                .fill(onboardingOrbAccent)
-                .frame(width: 260, height: 260)
-                .offset(x: -170, y: 260)
-        }
-    }
-
-    private var onboardingHero: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack(spacing: 14) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 24)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color(red: 0.14, green: 0.44, blue: 0.98),
-                                    Color(red: 0.11, green: 0.34, blue: 0.96),
-                                    Color(red: 0.58, green: 0.16, blue: 0.97)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-
-                    VStack(spacing: 4) {
-                        Image(systemName: "paperplane.fill")
-                            .font(.system(size: 26, weight: .semibold))
-                            .rotationEffect(.degrees(18))
-                            .foregroundStyle(.white)
-
-                        Text("moi")
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
-                    }
-                }
-                .frame(width: 74, height: 74)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("SendMoi")
-                        .font(.system(size: 30, weight: .semibold))
-
-                    Text("Send Anything to Yourself")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer(minLength: 0)
-            }
-        }
-    }
-
-    private var onboardingProgress: some View {
-        HStack(spacing: 10) {
-            ForEach(0..<3, id: \.self) { index in
-                Capsule()
-                    .fill(index == onboardingStep ? Color.accentColor : Color.primary.opacity(0.12))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 8)
-                    .overlay {
-                        if index == onboardingStep {
-                            Capsule()
-                                .stroke(Color.white.opacity(0.5), lineWidth: 1)
-                        }
-                    }
-            }
+            LinearGradient(
+                colors: [onboardingAuroraAccent, .clear],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .frame(width: 420, height: 320)
+            .blur(radius: 52)
+            .rotationEffect(.degrees(-16))
+            .offset(x: -168, y: 286)
         }
     }
 
     private var onboardingStepCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            onboardingStepDetail
+        Group {
+            if onboardingStep == 0 {
+                onboardingStepDetail
+                    .padding(.top, 4)
+            } else {
+                VStack(alignment: .leading, spacing: 16) {
+                    onboardingStepDetail
 
-            if onboardingStep == 2 && model.session == nil && !GoogleOAuthConfig.isConfigured {
-                Text("Google OAuth is not configured yet, so Gmail sign-in is disabled until `GoogleOAuthConfig.clientID` is set.")
-                    .font(.footnote)
-                    .foregroundStyle(.orange)
+                    if onboardingStep == 2 && model.session == nil && !GoogleOAuthConfig.isConfigured {
+                        Text("Google OAuth is not configured yet, so Gmail sign-in is disabled until `GoogleOAuthConfig.clientID` is set.")
+                            .font(.footnote)
+                            .foregroundStyle(.orange)
+                    }
+                }
+                .padding(onboardingStepCardPadding)
+                .background(
+                    RoundedRectangle(cornerRadius: onboardingStepCardCornerRadius)
+                        .fill(onboardingCardBackground)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: onboardingStepCardCornerRadius)
+                        .stroke(onboardingCardStroke, lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(colorScheme == .dark ? 0.24 : 0.09), radius: 18, y: 10)
             }
         }
-        .padding(22)
-        .background(
-            RoundedRectangle(cornerRadius: 28)
-                .fill(onboardingCardBackground)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 28)
-                .stroke(onboardingCardStroke, lineWidth: 1)
-        )
     }
 
     private var onboardingActions: some View {
         HStack(spacing: 12) {
             if onboardingStep == 2 && model.session != nil {
-                Button("View Settings") {
-                    finishOnboarding()
+                Button("Back") {
+                    onboardingStep -= 1
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(onboardingSecondaryButtonTint)
-                .foregroundStyle(.primary)
-                .controlSize(.large)
-                .frame(maxWidth: .infinity)
-            } else {
-                Button("Skip") {
-                    model.completeOnboarding()
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(onboardingSecondaryButtonTint)
-                .foregroundStyle(.primary)
+                .onboardingSecondaryButtonStyle()
+                .buttonBorderShape(.capsule)
                 .controlSize(.large)
 
                 Spacer(minLength: 0)
 
+                Button("Done") {
+                    finishOnboarding()
+                }
+                .onboardingPrimaryButtonStyle(tint: onboardingBrandAccent)
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
+            } else {
+                Button("Skip") {
+                    model.completeOnboarding()
+                }
+                .onboardingSecondaryButtonStyle()
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
+
+                Spacer(minLength: 10)
+
+                onboardingInlinePagination
+
+                Spacer(minLength: 10)
+
                 HStack(spacing: 12) {
                     if onboardingStep > 0 {
-                        Button("Back") {
+                        Button {
                             onboardingStep -= 1
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(onboardingSecondaryButtonTint)
-                        .foregroundStyle(.primary)
+                        label: {
+                            Image(systemName: "chevron.left")
+                        }
+                        .onboardingSecondaryButtonStyle()
+                        .buttonBorderShape(.circle)
                         .controlSize(.large)
+                        .frame(width: 46, height: 46)
                     }
 
-                    Button(onboardingPrimaryButtonTitle) {
-                        handleOnboardingPrimaryAction()
+                    if onboardingStep < 2 {
+                        Button {
+                            handleOnboardingPrimaryAction()
+                        } label: {
+                            Image(systemName: "chevron.right")
+                        }
+                        .onboardingPrimaryButtonStyle(tint: onboardingBrandAccent)
+                        .buttonBorderShape(.circle)
+                        .controlSize(.large)
+                        .frame(width: 46, height: 46)
+                    } else if onboardingStep == 2 && model.session == nil {
+                        Button {
+                        } label: {
+                            Image(systemName: "chevron.right")
+                        }
+                        .onboardingPrimaryButtonStyle(tint: onboardingBrandAccent)
+                        .buttonBorderShape(.circle)
+                        .controlSize(.large)
+                        .frame(width: 46, height: 46)
+                        .disabled(true)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .disabled(onboardingStep == 2 && model.session == nil && !GoogleOAuthConfig.isConfigured)
                 }
             }
         }
     }
 
-    private var onboardingPrimaryButtonTitle: String {
-        if onboardingStep < 2 {
-            return "Next"
+    private var onboardingInlinePagination: some View {
+        HStack(spacing: 5) {
+            ForEach(0..<3, id: \.self) { index in
+                Capsule()
+                    .fill(index == onboardingStep ? onboardingInlinePaginationActive : onboardingInlinePaginationInactive)
+                    .frame(width: index == onboardingStep ? 14 : 6, height: 4)
+            }
         }
-
-        return "Connect Gmail"
+        .animation(.easeInOut(duration: 0.2), value: onboardingStep)
     }
 
     @ViewBuilder
     private var onboardingStepDetail: some View {
         switch onboardingStep {
         case 0:
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Share to SendMoi. It arrives as a polished email to yourself.")
-                    .font(.system(size: 24, weight: .semibold))
-
+            VStack(alignment: .leading, spacing: 0) {
                 onboardingFlowPreview
+                    .padding(.top, onboardingFirstStepTopSpacing)
+                    .padding(.bottom, onboardingFirstStepMediaToCopySpacing)
 
-                onboardingFeatureRow(
-                    iconName: "paperplane.circle.fill",
-                    title: "Save it with context",
-                    detail: "SendMoi keeps the link, title, and any notes together for later."
-                )
-                onboardingFeatureRow(
-                    iconName: "tray.full.fill",
-                    title: "If it cannot send, it waits",
-                    detail: "When Gmail or the network is unavailable, it stays queued until it can go out."
-                )
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Send anything to your\nGmail inbox, with just two taps.")
+                        .font(.system(size: onboardingFirstStepHeadlineFontSize, weight: .bold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.82)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .multilineTextAlignment(.center)
+
+                    Text("SendMoi makes it easy to send links to your Gmail inbox without losing them in tabs, bookmarks, or chats.")
+                        .font(.system(size: onboardingFirstStepSubheadingFontSize, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .lineSpacing(1.5)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: onboardingFirstStepCopyMaxWidth)
+                .frame(maxWidth: .infinity)
             }
         case 1:
             VStack(alignment: .leading, spacing: 14) {
-                Text("Pin it once, then it is always close.")
-                    .font(.system(size: 24, weight: .semibold))
+                Text("Pin SendMoi in your Share Sheet")
+                    .font(.system(size: onboardingSecondStepHeadlineFontSize, weight: .bold))
+                    .foregroundStyle(.primary)
 
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(onboardingInsetCardFill)
-                    .frame(height: 190)
-                    .overlay(alignment: .topLeading) {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Share Sheet Order")
-                                .font(.headline)
-
-                            VStack(alignment: .leading, spacing: 8) {
-                                onboardingInstructionRow(number: 1, text: "Tap Share in any app.")
-                                onboardingInstructionRow(number: 2, text: "Open More.")
-                                onboardingInstructionRow(number: 3, text: "Drag SendMoi upward.")
-                            }
-                        }
-                        .padding(18)
-                    }
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 24)
-                            .stroke(onboardingCardStroke, lineWidth: 1)
-                    )
-
-                Text("Do this once. It saves a lot of friction.")
-                    .font(.footnote)
+                Text("Do this once and SendMoi stays one tap away.")
+                    .font(.system(size: onboardingSecondStepSubheadingFontSize, weight: .medium))
                     .foregroundStyle(.secondary)
+                    .lineSpacing(1.3)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                TabView(selection: $onboardingPinSlide) {
+                    ForEach(onboardingPinSlides) { slide in
+                        RoundedRectangle(cornerRadius: 24)
+                            .fill(onboardingInsetCardFill)
+                            .overlay {
+                                Image(slide.imageName)
+                                    .resizable()
+                                    .interpolation(.high)
+                                    .scaledToFit()
+                                    .padding(14)
+                            }
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 24)
+                                    .stroke(onboardingCardStroke, lineWidth: 1)
+                            )
+                            .tag(slide.id)
+                    }
+                }
+                .frame(height: onboardingPinCarouselHeight)
+                .tabViewStyle(.page(indexDisplayMode: .never))
+
+                HStack(spacing: 6) {
+                    Spacer(minLength: 0)
+                    ForEach(onboardingPinSlides) { slide in
+                        Capsule()
+                            .fill(slide.id == onboardingPinSlide ? onboardingBrandAccent : onboardingMutedTrack)
+                            .frame(width: slide.id == onboardingPinSlide ? 16 : 6, height: 5)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .animation(.easeInOut(duration: 0.2), value: onboardingPinSlide)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(onboardingPinSlides[onboardingPinSlide].title)
+                        .font(.system(size: onboardingSecondStepInstructionTitleFontSize, weight: .semibold))
+
+                    Text(onboardingPinSlides[onboardingPinSlide].detail)
+                        .font(.system(size: onboardingSecondStepInstructionBodyFontSize, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .lineSpacing(1.2)
+                }
+                .padding(.horizontal, 2)
+
             }
         default:
             onboardingFinishStep
         }
     }
 
+    private var onboardingPinSlides: [OnboardingPinSlide] {
+        [
+            OnboardingPinSlide(
+                id: 0,
+                imageName: "OnboardingPinStep1",
+                title: "1. Open Share and tap More",
+                detail: "From the first app row in the share sheet, open More to edit your app list."
+            ),
+            OnboardingPinSlide(
+                id: 1,
+                imageName: "OnboardingPinStep2",
+                title: "2. Add SendMoi to Favorites",
+                detail: "Tap the green plus next to SendMoi so it appears in Favorites."
+            ),
+            OnboardingPinSlide(
+                id: 2,
+                imageName: "OnboardingPinStep3",
+                title: "3. Keep SendMoi enabled",
+                detail: "Make sure SendMoi stays toggled on, then tap Done."
+            )
+        ]
+    }
+
+    private var onboardingPinCarouselHeight: CGFloat {
+        onboardingUsesTightFirstStepLayout ? 310 : 360
+    }
+
+    private var onboardingSecondStepHeadlineFontSize: CGFloat {
+        onboardingUsesSmallPhoneLayout ? 24 : 28
+    }
+
+    private var onboardingSecondStepSubheadingFontSize: CGFloat {
+        onboardingUsesSmallPhoneLayout ? 17 : 19
+    }
+
+    private var onboardingSecondStepInstructionTitleFontSize: CGFloat {
+        onboardingUsesSmallPhoneLayout ? 18 : 20
+    }
+
+    private var onboardingSecondStepInstructionBodyFontSize: CGFloat {
+        onboardingUsesSmallPhoneLayout ? 16 : 17
+    }
+
+    private struct OnboardingPinSlide: Identifiable {
+        let id: Int
+        let imageName: String
+        let title: String
+        let detail: String
+    }
+
     @ViewBuilder
     private var onboardingFinishStep: some View {
         if model.session == nil {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 14) {
                 Text("Connect Gmail to finish setup.")
                     .font(.system(size: 24, weight: .semibold))
 
@@ -385,6 +461,15 @@ struct ContentView: View {
                     title: "Skip if you want",
                     detail: "You can use the app now and connect Gmail later."
                 )
+
+                Button("Connect Gmail") {
+                    showsOnboardingAccountSheet = true
+                }
+                .onboardingPrimaryButtonStyle(tint: onboardingBrandAccent)
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
+                .disabled(!GoogleOAuthConfig.isConfigured)
+                .padding(.top, 4)
             }
         } else {
             VStack(alignment: .leading, spacing: 16) {
@@ -417,7 +502,7 @@ struct ContentView: View {
                             showsOnboardingAccountSheet = true
                         }
                         .buttonStyle(.plain)
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(onboardingBrandAccent)
                     }
                     .padding(.horizontal, 14)
                     .padding(.vertical, 12)
@@ -505,30 +590,92 @@ struct ContentView: View {
 
     private var onboardingFlowPreview: some View {
         VStack(alignment: .leading, spacing: 14) {
-            RoundedRectangle(cornerRadius: 22)
-                .fill(onboardingInsetCardFill)
-                .frame(height: 108)
-                .overlay {
-                    HStack(spacing: 14) {
-                        onboardingFlowNode(iconName: "square.and.arrow.up", title: "Share")
-                        onboardingFlowConnector
-                        onboardingFlowNode(iconName: "paperplane.fill", title: "Send")
-                    }
-                    .padding(.horizontal, 22)
+            if onboardingStep == 0 {
+                HStack {
+                    Spacer(minLength: 0)
+                    onboardingDemoPhoneFrame
+                    Spacer(minLength: 0)
                 }
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22)
-                        .stroke(onboardingCardStroke, lineWidth: 1)
-                )
+            } else {
+                RoundedRectangle(cornerRadius: 22)
+                    .fill(onboardingInsetCardFill)
+                    .frame(height: onboardingFlowPreviewHeight)
+                    .overlay {
+                        HStack(spacing: 14) {
+                            onboardingFlowNode(iconName: "square.and.arrow.up", title: "Share")
+                            onboardingFlowConnector
+                            onboardingFlowNode(iconName: "paperplane.fill", title: "Send")
+                        }
+                        .padding(.horizontal, 22)
+                    }
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22)
+                            .stroke(onboardingCardStroke, lineWidth: 1)
+                    )
+            }
         }
+    }
+
+    private var onboardingDemoPhoneFrame: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: onboardingDemoPhoneCornerRadius + 7, style: .continuous)
+                .fill(Color.black.opacity(colorScheme == .dark ? 0.52 : 0.24))
+                .overlay(
+                    RoundedRectangle(cornerRadius: onboardingDemoPhoneCornerRadius + 7, style: .continuous)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    onboardingBrandSecondary.opacity(colorScheme == .dark ? 0.95 : 0.7),
+                                    Color(red: 0.49804, green: 0.24706, blue: 0.97647).opacity(colorScheme == .dark ? 0.95 : 0.7)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 2
+                        )
+                )
+                .shadow(color: onboardingBrandSecondary.opacity(colorScheme == .dark ? 0.4 : 0.18), radius: 16, y: 8)
+
+            ZStack(alignment: .top) {
+                RoundedRectangle(cornerRadius: onboardingDemoPhoneCornerRadius, style: .continuous)
+                    .fill(Color.black.opacity(colorScheme == .dark ? 0.92 : 0.95))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: onboardingDemoPhoneCornerRadius, style: .continuous)
+                            .stroke(Color.white.opacity(colorScheme == .dark ? 0.14 : 0.24), lineWidth: 1)
+                    )
+
+                LoopingVideoPlayerView(resourceName: "sendmoi-demo-hero", resourceExtension: "mp4")
+                    .aspectRatio(onboardingDemoVideoAspectRatio, contentMode: .fit)
+                    .frame(width: onboardingDemoPhoneWidth - 14, height: onboardingDemoPhoneHeight - 18)
+                    .clipShape(RoundedRectangle(cornerRadius: onboardingDemoScreenCornerRadius, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: onboardingDemoScreenCornerRadius, style: .continuous)
+                            .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                    )
+                    .padding(.top, 9)
+
+                Capsule()
+                    .fill(Color.black.opacity(0.85))
+                    .frame(width: onboardingDemoPhoneWidth * 0.34, height: 8)
+                    .padding(.top, 7)
+            }
+            .padding(8)
+        }
+        .frame(width: onboardingDemoPhoneWidth + 16, height: onboardingDemoPhoneHeight + 16)
+        .shadow(color: .black.opacity(0.32), radius: 16, y: 9)
     }
 
     private func onboardingFeatureRow(iconName: String, title: String, detail: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: iconName)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(Color.accentColor)
-                .frame(width: 22)
+            ZStack {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(onboardingBrandAccentSoft)
+
+                Image(systemName: iconName)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(onboardingBrandAccent)
+            }
+            .frame(width: 28, height: 28)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
@@ -546,14 +693,14 @@ struct ContentView: View {
     private func onboardingFlowNode(iconName: String, title: String) -> some View {
         VStack(spacing: 8) {
             ZStack {
-                Circle()
-                    .fill(Color.accentColor.opacity(onboardingPulse ? 0.22 : 0.12))
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .fill(onboardingBrandAccent.opacity(onboardingPulse ? 0.26 : 0.14))
 
                 Image(systemName: iconName)
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(onboardingBrandAccent)
             }
-            .frame(width: 38, height: 38)
+            .frame(width: 42, height: 42)
 
             Text(title)
                 .font(.caption.weight(.semibold))
@@ -563,12 +710,12 @@ struct ContentView: View {
 
     private var onboardingFlowConnector: some View {
         Capsule()
-            .fill(Color.primary.opacity(0.10))
+            .fill(onboardingMutedTrack)
             .frame(maxWidth: .infinity)
             .frame(height: 4)
             .overlay(alignment: .leading) {
                 Capsule()
-                    .fill(Color.accentColor)
+                    .fill(onboardingBrandAccent)
                     .frame(width: 28, height: 4)
                     .offset(x: onboardingPulse ? 52 : 0)
             }
@@ -581,8 +728,8 @@ struct ContentView: View {
                 .foregroundStyle(.white)
                 .frame(width: 22, height: 22)
                 .background(
-                    Circle()
-                        .fill(Color.accentColor)
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(onboardingBrandAccent)
                 )
 
             Text(text)
@@ -596,50 +743,192 @@ struct ContentView: View {
     private var onboardingBackgroundColors: [Color] {
         if colorScheme == .dark {
             return [
-                Color(red: 0.08, green: 0.10, blue: 0.16),
-                Color(red: 0.09, green: 0.14, blue: 0.24),
-                Color(red: 0.15, green: 0.10, blue: 0.22)
+                Color(red: 0.02, green: 0.07, blue: 0.18),
+                Color(red: 0.04, green: 0.11, blue: 0.28),
+                Color(red: 0.06, green: 0.16, blue: 0.38)
             ]
         }
 
         return [
-            Color(red: 0.96, green: 0.98, blue: 1.0),
-            Color(red: 0.92, green: 0.96, blue: 1.0),
-            Color(red: 0.95, green: 0.93, blue: 1.0)
+            Color(red: 0.95, green: 0.98, blue: 1.0),
+            Color(red: 0.91, green: 0.96, blue: 1.0),
+            Color(red: 0.92, green: 0.95, blue: 1.0)
         ]
     }
 
-    private var onboardingOrbHighlight: Color {
-        colorScheme == .dark ? Color.white.opacity(0.06) : Color.white.opacity(0.85)
+    private var onboardingAuroraHighlight: Color {
+        colorScheme == .dark
+            ? onboardingBrandSecondary.opacity(0.26)
+            : Color.white.opacity(0.78)
     }
 
-    private var onboardingOrbAccent: Color {
-        let opacity = colorScheme == .dark ? 0.18 : 0.08
-        return Color(red: 0.17, green: 0.43, blue: 0.97).opacity(opacity)
+    private var onboardingAuroraAccent: Color {
+        colorScheme == .dark
+            ? onboardingBrandDeep.opacity(0.30)
+            : onboardingBrandSecondary.opacity(0.18)
     }
 
     private var onboardingCardBackground: Color {
         colorScheme == .dark
-            ? Color.white.opacity(0.08)
-            : Color.white.opacity(0.78)
+            ? Color.white.opacity(0.09)
+            : Color.white.opacity(0.8)
     }
 
     private var onboardingInsetCardFill: Color {
         colorScheme == .dark
-            ? Color.white.opacity(0.06)
-            : Color.white.opacity(0.82)
+            ? Color.white.opacity(0.07)
+            : Color.white.opacity(0.86)
     }
 
     private var onboardingCardStroke: Color {
         colorScheme == .dark
-            ? Color.white.opacity(0.12)
-            : Color.primary.opacity(0.08)
+            ? Color.white.opacity(0.16)
+            : Color.primary.opacity(0.1)
     }
 
-    private var onboardingSecondaryButtonTint: Color {
+    private var onboardingBrandAccent: Color {
+        Color(red: 0.16863, green: 0.49804, blue: 1.0)
+    }
+
+    private var onboardingBrandSecondary: Color {
+        Color(red: 0.21961, green: 0.44706, blue: 1.0)
+    }
+
+    private var onboardingBrandDeep: Color {
+        Color(red: 0.07059, green: 0.18824, blue: 0.47843)
+    }
+
+    private var onboardingBrandAccentSoft: Color {
+        onboardingBrandAccent.opacity(colorScheme == .dark ? 0.24 : 0.16)
+    }
+
+    private var onboardingMutedTrack: Color {
         colorScheme == .dark
-            ? Color.white.opacity(0.12)
-            : Color.primary.opacity(0.10)
+            ? Color.white.opacity(0.14)
+            : Color.primary.opacity(0.12)
+    }
+
+    private var onboardingInlinePaginationActive: Color {
+        colorScheme == .dark
+            ? Color.white.opacity(0.42)
+            : Color.primary.opacity(0.28)
+    }
+
+    private var onboardingInlinePaginationInactive: Color {
+        colorScheme == .dark
+            ? Color.white.opacity(0.18)
+            : Color.primary.opacity(0.14)
+    }
+
+    private var onboardingStepHeadlineGradient: LinearGradient {
+        LinearGradient(
+            colors: [
+                onboardingBrandSecondary.opacity(colorScheme == .dark ? 0.96 : 0.92),
+                Color(red: 0.49804, green: 0.24706, blue: 0.97647).opacity(colorScheme == .dark ? 0.97 : 0.92)
+            ],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+    }
+
+    private var onboardingStepSupportingText: Color {
+        colorScheme == .dark
+            ? onboardingBrandSecondary.opacity(0.76)
+            : onboardingBrandDeep.opacity(0.72)
+    }
+
+    private var onboardingUsesTightFirstStepLayout: Bool {
+        onboardingStep == 0 && !usesDesktopLayout
+    }
+
+    private var onboardingUsesSmallPhoneLayout: Bool {
+        #if os(iOS)
+        onboardingUsesTightFirstStepLayout && UIScreen.main.bounds.height <= 812
+        #else
+        false
+        #endif
+    }
+
+    private var onboardingMainSpacing: CGFloat {
+        onboardingUsesTightFirstStepLayout ? 16 : 24
+    }
+
+    private var onboardingVerticalPadding: CGFloat {
+        onboardingUsesTightFirstStepLayout ? 14 : 24
+    }
+
+    private var onboardingStepCardPadding: CGFloat {
+        onboardingUsesTightFirstStepLayout ? 18 : 22
+    }
+
+    private var onboardingStepCardCornerRadius: CGFloat {
+        onboardingUsesTightFirstStepLayout ? 24 : 28
+    }
+
+    private var onboardingFirstStepSpacing: CGFloat {
+        onboardingUsesTightFirstStepLayout ? 10 : 12
+    }
+
+    private var onboardingFirstStepHeadingSize: CGFloat {
+        onboardingUsesTightFirstStepLayout ? 22 : 24
+    }
+
+    private var onboardingFirstStepHeadlineFontSize: CGFloat {
+        onboardingUsesSmallPhoneLayout ? 24 : onboardingFirstStepHeadingSize + 4
+    }
+
+    private var onboardingFirstStepSubheadingFontSize: CGFloat {
+        onboardingUsesSmallPhoneLayout ? 17 : (onboardingUsesTightFirstStepLayout ? 18 : 19)
+    }
+
+    private var onboardingFirstStepMediaToCopySpacing: CGFloat {
+        onboardingUsesSmallPhoneLayout ? 18 : (onboardingUsesTightFirstStepLayout ? 22 : 26)
+    }
+
+    private var onboardingFirstStepTopSpacing: CGFloat {
+        onboardingUsesSmallPhoneLayout ? 6 : (onboardingUsesTightFirstStepLayout ? 10 : 14)
+    }
+
+    private var onboardingFirstStepCopyMaxWidth: CGFloat {
+        onboardingUsesSmallPhoneLayout ? 306 : (onboardingUsesTightFirstStepLayout ? 326 : 396)
+    }
+
+    private var onboardingFlowPreviewHeight: CGFloat {
+        118
+    }
+
+    private var onboardingDemoVideoAspectRatio: CGFloat {
+        1206.0 / 2622.0
+    }
+
+    private var onboardingDemoPhoneWidth: CGFloat {
+        if onboardingUsesSmallPhoneLayout {
+            return 202
+        }
+        return onboardingUsesTightFirstStepLayout ? 218 : 180
+    }
+
+    private var onboardingDemoPhoneHeight: CGFloat {
+        onboardingDemoPhoneWidth / onboardingDemoVideoAspectRatio
+    }
+
+    private var onboardingDemoPhoneCornerRadius: CGFloat {
+        onboardingUsesTightFirstStepLayout ? 24 : 22
+    }
+
+    private var onboardingDemoScreenCornerRadius: CGFloat {
+        onboardingUsesTightFirstStepLayout ? 19 : 17
+    }
+
+    private var onboardingPinnedActionsInset: CGFloat {
+        110
+    }
+
+    private var onboardingPinnedActions: some View {
+        onboardingActions
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 14)
     }
 
     private var onboardingRecipientDraftNormalized: String {
@@ -706,7 +995,6 @@ struct ContentView: View {
             defaultRecipientSection
             shareSheetSection
             queueSection
-            statusMessageView
             setupActionsSection
             attributionSection
         }
@@ -897,13 +1185,6 @@ struct ContentView: View {
         } footer: {
             Text(queueFooterText)
         }
-    }
-
-    private var statusMessageView: some View {
-        Text(model.statusMessage)
-            .font(.footnote)
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var setupActionsSection: some View {
@@ -1928,9 +2209,124 @@ private struct OnboardingGmailSheet: View {
     }
 }
 
+private extension View {
+    @ViewBuilder
+    func onboardingPrimaryButtonStyle(tint: Color) -> some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            self
+                .buttonStyle(.glassProminent)
+                .tint(tint)
+        } else {
+            self
+                .buttonStyle(.borderedProminent)
+                .tint(tint)
+        }
+    }
+
+    @ViewBuilder
+    func onboardingSecondaryButtonStyle() -> some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            self.buttonStyle(.glass)
+        } else {
+            self.buttonStyle(.bordered)
+        }
+    }
+}
+
 private struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
             .environmentObject(AppModel())
     }
 }
+
+@MainActor
+private final class LoopingVideoPlayerModel: ObservableObject {
+    let player: AVQueuePlayer
+    private var looper: AVPlayerLooper?
+
+    init(resource: String, ext: String) {
+        let queuePlayer = AVQueuePlayer()
+        queuePlayer.isMuted = true
+        queuePlayer.actionAtItemEnd = .none
+        self.player = queuePlayer
+
+        guard let url = Bundle.main.url(forResource: resource, withExtension: ext) else {
+            return
+        }
+
+        let item = AVPlayerItem(url: url)
+        looper = AVPlayerLooper(player: queuePlayer, templateItem: item)
+    }
+
+    func play() {
+        player.play()
+    }
+
+    func pause() {
+        player.pause()
+    }
+}
+
+private struct LoopingVideoPlayerView: View {
+    @StateObject private var model: LoopingVideoPlayerModel
+
+    init(resourceName: String, resourceExtension: String) {
+        _model = StateObject(
+            wrappedValue: LoopingVideoPlayerModel(resource: resourceName, ext: resourceExtension)
+        )
+    }
+
+    var body: some View {
+        LoopingVideoPlayerNativeView(player: model.player)
+            .clipped()
+            .allowsHitTesting(false)
+            .onAppear {
+                model.play()
+            }
+            .onDisappear {
+                model.pause()
+            }
+    }
+}
+
+#if canImport(UIKit)
+private final class LoopingVideoPlayerContainerView: UIView {
+    override class var layerClass: AnyClass {
+        AVPlayerLayer.self
+    }
+
+    var playerLayer: AVPlayerLayer {
+        layer as! AVPlayerLayer
+    }
+}
+
+private struct LoopingVideoPlayerNativeView: UIViewRepresentable {
+    let player: AVQueuePlayer
+
+    func makeUIView(context: Context) -> LoopingVideoPlayerContainerView {
+        let view = LoopingVideoPlayerContainerView()
+        view.backgroundColor = .black
+        view.clipsToBounds = true
+        view.playerLayer.videoGravity = .resizeAspectFill
+        view.playerLayer.player = player
+        return view
+    }
+
+    func updateUIView(_ uiView: LoopingVideoPlayerContainerView, context: Context) {
+        uiView.playerLayer.player = player
+    }
+
+    static func dismantleUIView(_ uiView: LoopingVideoPlayerContainerView, coordinator: ()) {
+        uiView.playerLayer.player = nil
+    }
+}
+#else
+private struct LoopingVideoPlayerNativeView: View {
+    let player: AVQueuePlayer
+
+    var body: some View {
+        Color.black
+    }
+}
+#endif

@@ -4,14 +4,14 @@ Last updated: March 9, 2026
 
 ## Current State
 
-- Repo: `codex/ios18-compat`
+- Repo: `codex/reel-visual-fallback`
 - Latest intended app version: `0.3`
 - Recent shipped commits:
   - `0e5a871` `Fix summary promo filtering for concise homepage copy (#18)`
   - `0488709` `Allow summaries for concise high-quality pages (#16)`
   - `a7e22c8` `Remove in-app splash overlay to fix wrong startup paper plane (#14)`
 - Current PR focus:
-  - Lower iOS deployment target from `26.0` to `18.0` for both app and share extension so the project supports the previous iOS major while keeping Foundation Models features availability-gated.
+  - `#23` onboarding polish: switch onboarding actions to native system glass controls (`.glass` / `.glassProminent`) with older-OS fallbacks, while preserving the updated step-3 CTA/nav behavior.
 
 ## Quick Resume On Another Mac
 
