@@ -9,9 +9,9 @@ struct SendMoiApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(model)
-                .task {
-                    await model.startup()
-                }
+            .task {
+                await model.startup()
+            }
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {

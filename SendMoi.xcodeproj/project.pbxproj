@@ -23,7 +23,7 @@
 		A1000001000000000000000E /* SharedSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000010 /* SharedSessionStore.swift */; };
 		A1000001000000000000000F /* GmailDeliveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000011 /* GmailDeliveryService.swift */; };
 		A10000010000000000000010 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000013 /* Assets.xcassets */; };
-		C10000010000000000000001 /* sendmoi-demo-hero.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = C20000010000000000000001 /* sendmoi-demo-hero.mp4 */; };
+		A10000010000000000000011 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000014 /* LaunchScreen.storyboard */; platformFilter = ios; };
 		B10000010000000000000001 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000004 /* Models.swift */; };
 		B10000010000000000000002 /* QueueStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000008 /* QueueStore.swift */; };
 		B10000010000000000000003 /* RecipientStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000009 /* RecipientStore.swift */; };
@@ -36,8 +36,6 @@
 		B1000001000000000000000A /* SharedSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000010 /* SharedSessionStore.swift */; };
 		B1000001000000000000000B /* GmailDeliveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000011 /* GmailDeliveryService.swift */; };
 		B1000001000000000000000C /* SafariPreprocessor.js in Resources */ = {isa = PBXBuildFile; fileRef = B20000010000000000000006 /* SafariPreprocessor.js */; };
-		DC9C772F2F5A0C92008EA76A /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = DC6FF07A2F55D5CB00415EAC /* AppIcon.icon */; };
-		DC9C77302F5A0C92008EA76A /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = DC6FF07A2F55D5CB00415EAC /* AppIcon.icon */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -85,7 +83,7 @@
 		A20000010000000000000011 /* GmailDeliveryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GmailDeliveryService.swift; sourceTree = "<group>"; };
 		A20000010000000000000012 /* SendMoi-macOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "SendMoi-macOS.entitlements"; sourceTree = "<group>"; };
 		A20000010000000000000013 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		C20000010000000000000001 /* sendmoi-demo-hero.mp4 */ = {isa = PBXFileReference; lastKnownFileType = video.mp4; path = "Resources/sendmoi-demo-hero.mp4"; sourceTree = "<group>"; };
+		A20000010000000000000014 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		B20000010000000000000001 /* ShareExtensionModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareExtensionModel.swift; sourceTree = "<group>"; };
 		B20000010000000000000002 /* ShareView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareView.swift; sourceTree = "<group>"; };
 		B20000010000000000000003 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
@@ -93,7 +91,7 @@
 		B20000010000000000000005 /* SendMoiShare.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SendMoiShare.entitlements; sourceTree = "<group>"; };
 		B20000010000000000000006 /* SafariPreprocessor.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = SafariPreprocessor.js; sourceTree = "<group>"; };
 		B20000010000000000000007 /* SendMoiShare-macOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "SendMoiShare-macOS.entitlements"; sourceTree = "<group>"; };
-		DC6FF07A2F55D5CB00415EAC /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
+		DC6FF07A2F55D5CB00415EAC /* send-moi.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "send-moi.icon"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -130,12 +128,12 @@
 				A2000001000000000000000E /* SendMoi.entitlements */,
 				A20000010000000000000012 /* SendMoi-macOS.entitlements */,
 				A20000010000000000000013 /* Assets.xcassets */,
-				C20000010000000000000001 /* sendmoi-demo-hero.mp4 */,
+				A20000010000000000000014 /* LaunchScreen.storyboard */,
 				A20000010000000000000001 /* SendMoiApp.swift */,
 				A20000010000000000000002 /* ContentView.swift */,
 				A20000010000000000000003 /* AppModel.swift */,
 				A20000010000000000000004 /* Models.swift */,
-				DC6FF07A2F55D5CB00415EAC /* AppIcon.icon */,
+				DC6FF07A2F55D5CB00415EAC /* send-moi.icon */,
 				A40000010000000000000004 /* Services */,
 			);
 			path = SendMoi;
@@ -259,9 +257,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DC9C772F2F5A0C92008EA76A /* AppIcon.icon in Resources */,
 				A10000010000000000000010 /* Assets.xcassets in Resources */,
-				C10000010000000000000001 /* sendmoi-demo-hero.mp4 in Resources */,
+				A10000010000000000000011 /* LaunchScreen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -269,7 +266,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DC9C77302F5A0C92008EA76A /* AppIcon.icon in Resources */,
 				B1000001000000000000000C /* SafariPreprocessor.js in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -425,7 +421,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_ENTITLEMENTS = SendMoi/SendMoi.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "SendMoi/SendMoi-macOS.entitlements";
@@ -435,22 +430,19 @@
 				DEVELOPMENT_TEAM = 289GY9L343;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SendMoi/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = SendMoi;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-					IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 0.3;
-				PRODUCT_BUNDLE_IDENTIFIER = com.niederme.SendMoi;
+				PRODUCT_BUNDLE_IDENTIFIER = com.niederme.MailMoi;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
-				SUPPORTS_MACCATALYST = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -458,7 +450,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_ENTITLEMENTS = SendMoi/SendMoi.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "SendMoi/SendMoi-macOS.entitlements";
@@ -468,22 +459,19 @@
 				DEVELOPMENT_TEAM = 289GY9L343;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SendMoi/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = SendMoi;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-					IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 0.3;
-				PRODUCT_BUNDLE_IDENTIFIER = com.niederme.SendMoi;
+				PRODUCT_BUNDLE_IDENTIFIER = com.niederme.MailMoi;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
-				SUPPORTS_MACCATALYST = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -499,7 +487,7 @@
 				DEVELOPMENT_TEAM = 289GY9L343;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SendMoiShare/Info.plist;
-					IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -507,7 +495,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 0.3;
-				PRODUCT_BUNDLE_IDENTIFIER = com.niederme.SendMoi.ShareExtension;
+				PRODUCT_BUNDLE_IDENTIFIER = com.niederme.MailMoi.ShareExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
@@ -529,7 +517,7 @@
 				DEVELOPMENT_TEAM = 289GY9L343;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SendMoiShare/Info.plist;
-					IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -537,7 +525,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 0.3;
-				PRODUCT_BUNDLE_IDENTIFIER = com.niederme.SendMoi.ShareExtension;
+				PRODUCT_BUNDLE_IDENTIFIER = com.niederme.MailMoi.ShareExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";

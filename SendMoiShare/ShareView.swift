@@ -20,13 +20,6 @@ struct ShareView: View {
                                 .ignoresSafeArea()
                         }
 
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .ignoresSafeArea()
-                        .onTapGesture {
-                            model.stopAutoSendAndEdit()
-                        }
-
                     autoSendOverlayCard
                 } else if model.presentationMode == .editing {
                     editorView
@@ -160,7 +153,7 @@ struct ShareView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Link")
+                    Text("Link (Optional)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     #if os(iOS)
@@ -444,7 +437,8 @@ struct ShareView: View {
     }
 
     private var sendButtonDisabled: Bool {
-        model.presentationMode != .editing || model.isSaving || model.isConnectingGmail
+        model.presentationMode != .editing || model.isSaving
+            || model.isConnectingGmail
     }
 
     private var overlayBorderColor: Color {

@@ -7,13 +7,19 @@ Last updated: March 9, 2026
 - Repo: `codex/reel-visual-fallback`
 - Latest intended app version: `0.3`
 - Recent shipped commits:
-  - `334a80e` `Separate recipient settings from account`
-  - `ecf4b78` `Add handoff notes and launch screen fix`
-  - `1f7086d` `Bump version to 0.2`
-- GitHub state:
-  - `main` includes `09eb66a` `Refine missing recipient validation in share sheet (#12)`
-  - PR `#10` `Start Gmail sign-in directly from the share sheet` is merged and issue `#9` is closed
-  - PR `#12` `Refine missing recipient validation in share sheet` is merged and issue `#11` is closed
+  - `0e5a871` `Fix summary promo filtering for concise homepage copy (#18)`
+  - `0488709` `Allow summaries for concise high-quality pages (#16)`
+  - `a7e22c8` `Remove in-app splash overlay to fix wrong startup paper plane (#14)`
+- Current PR focus:
+  - `#23` onboarding polish: switch onboarding actions to native system glass controls (`.glass` / `.glassProminent`) with older-OS fallbacks, while preserving the updated step-3 CTA/nav behavior.
+
+## Quick Resume On Another Mac
+
+1. `git clone https://github.com/niederme/sendmoi.git`
+2. `cd sendmoi`
+3. `git checkout main`
+4. `git pull --rebase origin main`
+5. Open `SendMoi.xcodeproj` in Xcode and continue from `main`.
 
 ## What Changed Recently
 
@@ -23,10 +29,8 @@ Last updated: March 9, 2026
 - First-run now presents a branded 3-step setup guide as a modal instead of replacing the app shell, and setup can be reopened later from the dedicated bottom `Setup` actions.
 - The onboarding finish step now shows the connected Gmail account, allows `Switch Account`, uses an explicit recipient `Save` action, and only reveals auto-send when a saved recipient is active.
 - The onboarding action row was normalized so the primary action stays pinned and `View Settings` appears as a full-width secondary control on the final step.
-- Onboarding actions now use native system glass button styles on supported OS versions (with fallback styles on older targets), and custom liquid-glass button drawing was removed.
-- Onboarding nav behavior was refined so signed-out step 3 keeps a disabled right-chevron in the bottom nav while the primary `Connect Gmail` action lives inside the card; signed-in step 3 uses `Back` + `Done`.
+- The `Clear Settings` reset confirmation now uses a standard alert so iPhone shows a visible `Cancel` action alongside the destructive button.
 - The share-extension `Auto-Sending...` overlay card now uses a softer translucent material treatment.
-- The share-extension `Auto-Sending...` overlay now treats any tap on the dimmed screen as `Edit`, matching the explicit `Edit` button.
 - If `Auto-send` is off, the share extension stays open and pre-fills the draft rather than sending immediately.
 - The desktop app includes a compose card again; the missing `desktopComposeCard` helper was restored so the macOS workspace compiles, but the card is informational only and points users back to the share sheet for actual drafting.
 - Email rendering was updated:
@@ -34,14 +38,19 @@ Last updated: March 9, 2026
   - summary preamble cleanup was added
   - preview image and summary handling were improved
   - summary length now scales with extracted page text length so shorter pages get shorter blurbs instead of forcing article-sized summaries
+  - summary generation now accepts concise but substantive pages (70+ cleaned words), so profile/home pages can still produce a 1-2 sentence recap
+  - summary promo filtering now treats newsletter mentions as promo only for short CTA-style lines, so substantive profile/homepage content is not dropped from summary input
 - Added:
   - `PRIVACY.md`
   - `TERMS.md`
-  - iOS launch screen asset (`Splash.imageset`)
+  - iOS launch screen asset and storyboard (`Splash.imageset`, `LaunchScreen.storyboard`)
 - `README.md` now reflects current behavior instead of hardcoding the old `0.1` release framing.
+- `AGENTS.md` now treats `BUG:` and `ISSUE:` as the explicit GitHub issue creation prefixes.
+- The onboarding footer now leaves `Skip` on its own and groups `Back` with the trailing primary action.
+- iOS deployment target is now `18.0` for both `SendMoi` and `SendMoiShare`; Foundation Models summary support remains optional at runtime and falls back on unsupported OS versions.
 - New in the current working tree:
   - repo-wide rename from MailMoi to SendMoi: project, targets, schemes, folders, and user-facing copy
-  - bundle identifiers, App Group ID, and shared container/keychain storage identifiers were migrated from the MailMoi namespace to SendMoi (`com.niederme.SendMoi*` and `group.com.niederme.sendmoi`), intentionally breaking in-place continuity with old installs
+  - bundle identifiers, App Group ID, and shared container/keychain storage identifiers intentionally remain on the existing MailMoi values for upgrade continuity
   - added a first-pass `TERMS.md` so the Google OAuth consent screen can point at a public Terms of Service URL alongside the existing privacy policy
   - `MARKETING_VERSION` is now `0.3` and `CURRENT_PROJECT_VERSION` is now `6` for both targets, set via `./scripts/prepare_release.sh --version 0.3`
   - the legacy `CFBundleIconFile` override was removed, and the main app now ships from the explicit `AppIcon.appiconset` while keeping `send-moi.icon` as the editable design source
@@ -55,20 +64,16 @@ Last updated: March 9, 2026
   - low-quality summaries are filtered more aggressively, and summaries are skipped for X/Twitter and Overcast sources
   - `scripts/prune_app_icon_set.sh` now removes undeclared files from `AppIcon.appiconset` after icon refreshes so Xcode does not report `AppIcon` unassigned-child warnings from stray exported PNGs
   - the restored `desktopComposeCard` keeps the macOS compose panel buildable again after the helper was accidentally dropped from `ContentView.swift`, while preserving the current share-sheet-only drafting flow
-  - iOS startup now uses `UILaunchScreen` (`AppIconBackground` + `Splash`) and no longer uses the old in-app `SplashOverlayView`
+  - iOS startup now relies on `LaunchScreen.storyboard` only; the extra in-app splash overlay was removed so the startup mark matches the launch asset instead of rendering an SF Symbol paper plane
   - the share extension processing state now says `Auto-Sending...`, keeps `Edit` available for a 1-second grace period before auto-send starts, and uses a roomier bordered `Edit` action that still cancels auto-send and returns to the draft without changing the saved preference
   - manual sends now queue first and dismiss the sheet immediately, then continue best-effort preview enrichment and delivery in the background; if that work does not finish, the queued item remains for later retry
-  - if no default recipient is saved, the share extension now starts with a neutral inline helper under `To`, only switches to the red validation copy after a failed send attempt, and refocuses the `To` field so the user can recover immediately
   - if Gmail is not connected, the share sheet now stops before auto-send, presents a `Connect Gmail in SendMoi` alert, and can start Google sign-in directly from the share sheet so queued items can resume sending with less ambiguity
-- refreshed the SendMoi icon source in `marketing/send-moi.icon` and `SendMoi/send-moi.icon`, regenerated every `AppIcon.appiconset` size from the updated 1024 master PNG, and updated marketing icon exports in this repo
-- share-sheet image handling now preserves multiple shared images, stores them in the queue schema, and renders them as multiple inline images in the outbound email instead of dropping everything after the first photo
-- URL-only Instagram shares now try the post page's embedded `application/json` first and then fall back to the `/embed/captioned/` payload so carousel images use Instagram's uncropped display variants instead of the Open Graph thumbnail; the send path also prefers that richer metadata over the earlier single-image/single-excerpt fallback
-- TikTok shares now parse poster/caption data from TikTok's structured page payload, and TikTok videos plus Instagram reels are clamped to a single poster image while Instagram photo galleries still render every shared image
-- `Splash.imageset` now uses the latest `marketing/app-splash/SendMoi Splash.svg` artwork as a vector asset (`preserves-vector-representation = true`) and removes the legacy raster `splash.png` file
+  - if no default recipient is saved, the share extension now starts with a neutral inline helper under `To`, only switches to the red validation copy after a failed send attempt, and refocuses the `To` field so the user can recover immediately
+  - refreshed the SendMoi icon source in `marketing/send-moi.icon` and `SendMoi/send-moi.icon`, regenerated every `AppIcon.appiconset` size from the updated 1024 master PNG, and updated marketing icon exports in this repo
 
 ## Things To Verify On The Next Machine
 
-1. Open the project in Xcode and confirm a cold launch shows the current `Splash` launch asset (not a stale cached launch snapshot).
+1. Open the project in Xcode and confirm the `LaunchScreen.storyboard` warning is gone after reloading the project / cleaning builds.
 2. Confirm the new `Recipient` section placement feels right on iPhone, that `Account` now only handles Gmail sign-in state, that the recipient save action dismisses the keyboard cleanly, and that the macOS desktop compose card appears without trying to edit main-app draft state.
 3. Do a true cold launch on iPhone after reinstalling the app to verify the splash screen appears (Apple caches launch screens aggressively).
 4. Confirm App Store Connect metadata versions match the code version:
@@ -81,25 +86,19 @@ Last updated: March 9, 2026
 9. Run `./scripts/prepare_release.sh --version <next-version>` before the next archive, then verify App Store Connect accepts the `AppIcon` set for both iOS and macOS, shows the expected branded thumbnail, and no longer includes `send-moi.icon` as an extra bundled resource.
 10. Confirm the next Xcode Cloud upload succeeds with build number `3`; the previous failure was `The bundle version must be higher than the previously uploaded version.`
 11. After the next icon refresh, run `./scripts/prune_app_icon_set.sh` and confirm Xcode no longer shows `AppIcon` asset warnings before archiving.
-12. Re-share an Instagram carousel post from a build with the latest Gmail metadata changes and confirm the outbound email now includes the inline images plus the preview comment instead of falling back to the Open Graph-only excerpt.
-13. Share a multi-photo Instagram or Photos gallery and confirm every attached image survives queueing, preview refresh, retry, and eventual cleanup.
-14. Share an Instagram post from the app when only the URL is passed and confirm SendMoi still renders the carousel images and first preview comment from the fetched page payload.
-15. Share a TikTok video and an Instagram reel and confirm the outbound email renders exactly one poster image instead of stacking alternate cover variants.
-16. Launch the share sheet while signed out of Gmail and confirm the new connect alert appears, starts Google sign-in directly from the share sheet, and resumes without implying that auto-send already happened.
-17. Open the share sheet with no default recipient and confirm the initial helper text feels neutral, then tap `Send` and verify the red validation state appears and the `To` field becomes focused.
-18. Re-run Google Auth Platform branding verification using `https://send.moi/` as homepage and `https://send.moi/privacy/` + `https://send.moi/terms/` as policy links. The current rejection cites two issues from the previous attempt: no privacy-policy link on `https://nieder.me` and `https://send.moi/privacy/` flagged as a non-qualified policy domain.
+12. Launch the share sheet while signed out of Gmail and confirm the new connect alert appears, starts Google sign-in from the share sheet itself, and resumes sending without implying that auto-send already happened.
+13. Open the share sheet with no default recipient and confirm the initial helper text feels neutral, then tap `Send` and verify the red validation state appears and the `To` field becomes focused.
+14. Share a concise profile/homepage URL that includes a newsletter mention in body copy and confirm SendMoi still generates a short summary when the page has meaningful text.
+15. Confirm App Store Connect processing reports iOS compatibility as `iOS 18.0 or later` after uploading the next archive.
 
 ## Local Setup
 
 1. Open `SendMoi.xcodeproj` in Xcode.
 2. Enable automatic signing for both `SendMoi` and `SendMoiShare`.
-3. Confirm the App Group is `group.com.niederme.sendmoi`.
+3. Confirm the App Group is `group.com.niederme.mailmoi`.
 4. If moving to a different Google Cloud project, update `SendMoi/Services/GoogleOAuthConfig.swift`.
 
 ## Notes
 
 - `build/` is intentionally ignored in `.gitignore` and should remain untracked build output only.
 - Command-line builds in this environment were limited by provisioning / simulator / Xcode sandbox issues, so final verification should be done in Xcode.
-- A full local build succeeded with: `xcodebuild -project SendMoi.xcodeproj -scheme SendMoi -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO`.
-- The mixed local tree has been checkpointed and pushed as commit `1584b4a` on branch `codex/reel-visual-fallback`, so another machine can pull this exact snapshot directly.
-- Relative to `origin/main`, this branch is currently `16` commits ahead and `2` commits behind; compare against `main` before carving follow-up PRs.

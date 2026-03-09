@@ -1,10 +1,10 @@
 # Repository Instructions
 
 ## Commit Workflow
-- Before every push, review `README.md` and `HANDOFF.md`.
+- Before every commit, review `README.md` and `HANDOFF.md`.
 - Update `README.md` whenever setup steps, commands, behavior, or other user-facing documentation changed.
 - Update `HANDOFF.md` whenever the working branch, current focus, recent changes, open items, or resume steps changed.
-- Before opening or updating a PR, ensure those files are either updated or explicitly confirmed to still be accurate.
+- Do not finalize a commit until those files are either updated or explicitly confirmed to still be accurate.
 
 ## Git Workflow
 - Work from `main` on short-lived branches named `codex/*`.
