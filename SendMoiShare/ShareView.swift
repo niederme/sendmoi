@@ -2,6 +2,11 @@ import SwiftUI
 
 struct ShareView: View {
     @ObservedObject var model: ShareExtensionModel
+    @FocusState private var focusedField: Field?
+
+    private enum Field: Hashable {
+        case recipient
+    }
 
     var body: some View {
         NavigationStack {
@@ -15,6 +20,13 @@ struct ShareView: View {
                                 .ignoresSafeArea()
                         }
 
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            model.stopAutoSendAndEdit()
+                        }
+
                     autoSendOverlayCard
                 } else if model.presentationMode == .editing {
                     editorView
@@ -23,6 +35,10 @@ struct ShareView: View {
                 }
             }
             .navigationTitle("SendMoi")
+            .onChange(of: model.recipientFocusRequest) { _, request in
+                guard request > 0 else { return }
+                focusedField = .recipient
+            }
             .onChange(of: model.urlString) { _, _ in
                 model.schedulePreviewRefresh()
             }
@@ -50,6 +66,14 @@ struct ShareView: View {
                 }
             }
         }
+        .alert("Connect Gmail in SendMoi", isPresented: $model.showsGmailConnectAlert) {
+            Button("Sign In to Gmail") {
+                model.connectGmail()
+            }
+            Button("Not Now", role: .cancel) {}
+        } message: {
+            Text("SendMoi is not connected to Gmail on this device yet. Sign in now to send from this share sheet, or choose Not Now and this share will stay queued until you connect Gmail later.")
+        }
         #if os(macOS)
         .frame(minWidth: 480, idealWidth: 520, minHeight: 420, idealHeight: 460)
         #endif
@@ -64,16 +88,18 @@ struct ShareView: View {
                         .foregroundStyle(.secondary)
                     #if os(iOS)
                     TextField("Email address", text: $model.toEmail)
+                        .focused($focusedField, equals: .recipient)
                         .textInputAutocapitalization(.never)
                         .keyboardType(.emailAddress)
                         .autocorrectionDisabled()
                     #else
                     TextField("Email address", text: $model.toEmail)
+                        .focused($focusedField, equals: .recipient)
                     #endif
-                    if let recipientValidationMessage = model.recipientValidationMessage {
-                        Text(recipientValidationMessage)
+                    if let recipientInlineMessage = model.recipientInlineMessage {
+                        Text(recipientInlineMessage)
                             .font(.caption2)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(model.recipientInlineMessageIsError ? .red : .secondary)
                     }
                     if !recentRecipientSuggestions.isEmpty {
                         recentRecipientsView
@@ -134,7 +160,7 @@ struct ShareView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Link (Optional)")
+                    Text("Link")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     #if os(iOS)
@@ -160,7 +186,7 @@ struct ShareView: View {
                 statusMessageView
             }
         }
-        .disabled(model.isSaving)
+        .disabled(model.isSaving || model.isConnectingGmail)
     }
 
     private var previewThumbnail: some View {
@@ -392,7 +418,7 @@ struct ShareView: View {
             return false
         }
 
-        if model.statusMessage == model.recipientValidationMessage {
+        if model.statusMessage == model.recipientInlineMessage {
             return false
         }
 
@@ -418,7 +444,7 @@ struct ShareView: View {
     }
 
     private var sendButtonDisabled: Bool {
-        model.presentationMode != .editing || model.isSaving || model.recipientValidationMessage != nil
+        model.presentationMode != .editing || model.isSaving || model.isConnectingGmail
     }
 
     private var overlayBorderColor: Color {

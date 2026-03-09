@@ -298,11 +298,12 @@ final class GmailDeliveryService {
                Self.isInstagramHost(responseURL) {
                 instagramMetadata = await fetchInstagramEmbedMetadata(for: responseURL)
             }
-            let extractedTitle = instagramMetadata?.title ?? Self.extractPreferredTitle(fromHTML: html, metaTags: metaTags)
+            let tikTokMetadata = Self.extractTikTokMetadata(fromHTML: html, baseURL: responseURL)
+            let extractedTitle = instagramMetadata?.title ?? tikTokMetadata?.title ?? Self.extractPreferredTitle(fromHTML: html, metaTags: metaTags)
             let title = extractedTitle.map {
                 SharedContentFormatter.normalizedTitle($0, urlString: responseURL.absoluteString)
             }
-            let rawExcerpt = instagramMetadata?.excerpt ?? Self.extractExcerpt(fromMetaTags: metaTags)
+            let rawExcerpt = instagramMetadata?.excerpt ?? tikTokMetadata?.excerpt ?? Self.extractExcerpt(fromMetaTags: metaTags)
             let excerpt = Self.isMeaninglessTweetExcerpt(rawExcerpt, for: responseURL) ? nil : rawExcerpt
             let summary: String?
             if Self.shouldSkipSummary(for: responseURL) {
@@ -314,9 +315,9 @@ final class GmailDeliveryService {
                 )
                 summary = await Self.generateSummary(fromHTML: html, title: summaryTitle, excerpt: excerpt)
             }
-            let instagramImageURLStrings = instagramMetadata?.imageURLStrings ?? []
-            let imageURLString = instagramImageURLStrings.first ?? Self.extractPreferredImageURLString(fromHTML: html, metaTags: metaTags, baseURL: responseURL)
-            let additionalImageURLStrings = instagramImageURLStrings.count > 1 ? Array(instagramImageURLStrings.dropFirst()) : nil
+            let socialImageURLStrings = instagramMetadata?.imageURLStrings ?? tikTokMetadata?.imageURLStrings ?? []
+            let imageURLString = socialImageURLStrings.first ?? Self.extractPreferredImageURLString(fromHTML: html, metaTags: metaTags, baseURL: responseURL)
+            let additionalImageURLStrings = socialImageURLStrings.count > 1 ? Array(socialImageURLStrings.dropFirst()) : nil
             let oEmbedMetadata: CachedArticleMetadata?
             if Self.isTweetHost(responseURL), (excerpt == nil || imageURLString == nil) {
                 oEmbedMetadata = await fetchXOEmbedMetadata(for: responseURL)
@@ -924,6 +925,10 @@ final class GmailDeliveryService {
             host == "www.twitter.com" ||
             host == "instagram.com" ||
             host == "www.instagram.com" ||
+            host == "tiktok.com" ||
+            host == "www.tiktok.com" ||
+            host == "m.tiktok.com" ||
+            host == "vm.tiktok.com" ||
             host == "overcast.fm" ||
             host == "www.overcast.fm"
     }
@@ -1100,6 +1105,39 @@ final class GmailDeliveryService {
             .first
 
         return bestImage?.urlString
+    }
+
+    private static func extractTikTokMetadata(fromHTML html: String, baseURL: URL) -> TikTokPostMetadata? {
+        guard isTikTokHost(baseURL) else {
+            return nil
+        }
+
+        for scriptContent in extractScriptContents(from: html, type: "application/json") {
+            guard scriptContent.contains("\"itemStruct\""),
+                  let data = scriptContent.data(using: .utf8),
+                  let json = try? JSONSerialization.jsonObject(with: data) else {
+                continue
+            }
+
+            guard let item = findTikTokItemStruct(in: json) else {
+                continue
+            }
+
+            let shareMeta = findTikTokShareMeta(in: json)
+            let imageURLStrings = extractTikTokImageURLStrings(from: item, baseURL: baseURL)
+            let excerpt = buildTikTokExcerpt(from: item, shareMeta: shareMeta)
+            let title = normalizedString(shareMeta?["title"])
+
+            if title != nil || excerpt != nil || !imageURLStrings.isEmpty {
+                return TikTokPostMetadata(
+                    title: title,
+                    excerpt: excerpt,
+                    imageURLStrings: imageURLStrings
+                )
+            }
+        }
+
+        return nil
     }
 
     private static func extractInstagramPostMetadata(fromHTML html: String, baseURL: URL) -> InstagramPostMetadata? {
@@ -1355,25 +1393,26 @@ final class GmailDeliveryService {
     ) -> [String] {
         let normalizedFallback = deduplicatedURLStrings(fallbackImageURLStrings)
         let normalizedMetadata = deduplicatedURLStrings(metadata.allImageURLStrings)
+        let prefersSinglePosterImage = isTikTokHost(url) || isInstagramReelURL(url)
 
         guard !normalizedMetadata.isEmpty else {
-            return normalizedFallback
+            return prefersSinglePosterImage ? Array(normalizedFallback.prefix(1)) : normalizedFallback
         }
 
         guard !normalizedFallback.isEmpty else {
-            return normalizedMetadata
+            return prefersSinglePosterImage ? Array(normalizedMetadata.prefix(1)) : normalizedMetadata
         }
 
         if normalizedMetadata.count > normalizedFallback.count {
-            return normalizedMetadata
+            return prefersSinglePosterImage ? Array(normalizedMetadata.prefix(1)) : normalizedMetadata
         }
 
-        if isInstagramHost(url),
+        if (isInstagramHost(url) || isTikTokHost(url)),
            Set(normalizedMetadata.map { $0.lowercased() }) != Set(normalizedFallback.map { $0.lowercased() }) {
-            return normalizedMetadata
+            return prefersSinglePosterImage ? Array(normalizedMetadata.prefix(1)) : normalizedMetadata
         }
 
-        return normalizedFallback
+        return prefersSinglePosterImage ? Array(normalizedFallback.prefix(1)) : normalizedFallback
     }
 
     private static func shouldPreferFetchedSocialMetadata(
@@ -1418,6 +1457,19 @@ final class GmailDeliveryService {
             }
 
             if metadataLower.contains(" comment: ") && !fallbackLower.contains(" comment: ") {
+                return true
+            }
+        }
+
+        if isTikTokHost(url) {
+            let metadataLower = metadataExcerpt.lowercased()
+            let fallbackLower = normalizedFallback.lowercased()
+
+            if metadataLower.contains(" likes") && !fallbackLower.contains(" likes") {
+                return true
+            }
+
+            if metadataLower.contains(" comments") && !fallbackLower.contains(" comments") {
                 return true
             }
         }
@@ -1505,6 +1557,54 @@ final class GmailDeliveryService {
         return nil
     }
 
+    private static func findTikTokItemStruct(in value: Any) -> [String: Any]? {
+        if let dictionary = value as? [String: Any] {
+            if let item = dictionary["itemStruct"] as? [String: Any] {
+                return item
+            }
+
+            for child in dictionary.values {
+                if let found = findTikTokItemStruct(in: child) {
+                    return found
+                }
+            }
+        }
+
+        if let array = value as? [Any] {
+            for child in array {
+                if let found = findTikTokItemStruct(in: child) {
+                    return found
+                }
+            }
+        }
+
+        return nil
+    }
+
+    private static func findTikTokShareMeta(in value: Any) -> [String: Any]? {
+        if let dictionary = value as? [String: Any] {
+            if let shareMeta = dictionary["shareMeta"] as? [String: Any] {
+                return shareMeta
+            }
+
+            for child in dictionary.values {
+                if let found = findTikTokShareMeta(in: child) {
+                    return found
+                }
+            }
+        }
+
+        if let array = value as? [Any] {
+            for child in array {
+                if let found = findTikTokShareMeta(in: child) {
+                    return found
+                }
+            }
+        }
+
+        return nil
+    }
+
     private static func extractInstagramImageURLStrings(from item: [String: Any], baseURL: URL) -> [String] {
         let carouselMedia = item["carousel_media"] as? [[String: Any]]
         let mediaItems = (carouselMedia?.isEmpty == false ? carouselMedia : nil) ?? [item]
@@ -1512,6 +1612,23 @@ final class GmailDeliveryService {
 
         return mediaItems.compactMap { mediaItem in
             preferredInstagramImageURL(from: mediaItem, baseURL: baseURL)
+        }.filter { urlString in
+            seen.insert(urlString.lowercased()).inserted
+        }
+    }
+
+    private static func extractTikTokImageURLStrings(from item: [String: Any], baseURL: URL) -> [String] {
+        let candidateKeys = ["originCover", "dynamicCover", "cover"]
+        let video = item["video"] as? [String: Any]
+        var seen = Set<String>()
+
+        return candidateKeys.compactMap { key in
+            guard let rawURL = (video?[key] as? String) ?? (item[key] as? String),
+                  let resolved = resolvedURLString(rawURL, relativeTo: baseURL) else {
+                return nil
+            }
+
+            return resolved
         }.filter { urlString in
             seen.insert(urlString.lowercased()).inserted
         }
@@ -1633,6 +1750,50 @@ final class GmailDeliveryService {
         return normalizedExcerpt.isEmpty ? nil : normalizedExcerpt
     }
 
+    private static func buildTikTokExcerpt(from item: [String: Any], shareMeta: [String: Any]?) -> String? {
+        let stats = item["stats"] as? [String: Any]
+        let likeCount = intValue(stats?["diggCount"])
+        let commentCount = intValue(stats?["commentCount"])
+        let author = item["author"] as? [String: Any]
+        let username = normalizedDisplayText((author?["uniqueId"] as? String) ?? (author?["nickname"] as? String) ?? "")
+        let timestamp = intValue(item["createTime"])
+        let contentItems = item["contents"] as? [[String: Any]] ?? []
+        let caption = normalizedDisplayText(
+            (contentItems.first?["desc"] as? String) ??
+            (item["desc"] as? String) ??
+            ((shareMeta?["desc"] as? String) ?? "")
+        )
+
+        var header = [String]()
+        if let likeCount {
+            header.append("\(likeCount) likes")
+        }
+        if let commentCount {
+            header.append("\(commentCount) \(commentCount == 1 ? "comment" : "comments")")
+        }
+
+        var excerpt = header.joined(separator: ", ")
+        if !username.isEmpty, let timestamp {
+            let date = instagramDateFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(timestamp)))
+            if excerpt.isEmpty {
+                excerpt = "\(username) on \(date)"
+            } else {
+                excerpt += " - \(username) on \(date)"
+            }
+        }
+
+        if !caption.isEmpty {
+            if excerpt.isEmpty {
+                excerpt = "\"\(caption)\"."
+            } else {
+                excerpt += ": \"\(caption)\"."
+            }
+        }
+
+        let normalizedExcerpt = normalizedDisplayText(excerpt)
+        return normalizedExcerpt.isEmpty ? nil : normalizedExcerpt
+    }
+
     private static func buildInstagramEmbedExcerpt(from media: [String: Any]) -> String? {
         let likeCount = intValue((media["edge_liked_by"] as? [String: Any])?["count"])
         let commentCount = intValue((media["edge_media_to_comment"] as? [String: Any])?["count"]) ?? intValue(media["commenter_count"])
@@ -1695,6 +1856,7 @@ final class GmailDeliveryService {
 
         let cleanedText = normalizeArticleText(plainText, title: title, excerpt: excerpt)
         guard wordCount(in: cleanedText) > 100,
+              !looksLikeStructuredListingPage(title: title, text: cleanedText),
               passesSummaryInputQualityGate(cleanedText, title: title) else {
             return nil
         }
@@ -1958,6 +2120,10 @@ final class GmailDeliveryService {
             return true
         }
 
+        if looksLikeAffiliateDisclosure(line) {
+            return true
+        }
+
         let headlineLikeWords = line.split(whereSeparator: \.isWhitespace)
         let hasDateToken = lowered.range(of: #"\b\d{1,2}/\d{1,2}/\d{2,4}\b"#, options: .regularExpression) != nil
         let hasTimeToken = lowered.range(of: #"\b\d{1,2}:\d{2}\s*[ap]\.m\.\b"#, options: .regularExpression) != nil
@@ -1977,6 +2143,69 @@ final class GmailDeliveryService {
            headlineLikeWords.count <= 18,
            titlecaseWords >= max(headlineLikeWords.count - 2, 4),
            !line.contains(".") {
+            return true
+        }
+
+        return false
+    }
+
+    private static func looksLikeAffiliateDisclosure(_ line: String) -> Bool {
+        let lowered = line.lowercased()
+        let markers = [
+            "things you buy through our links may earn",
+            "if you buy something through our links",
+            "we may earn a commission",
+            "may earn us a commission",
+            "contains affiliate links",
+            "this article contains affiliate links",
+            "from links on this page",
+            "shopping links",
+            "affiliate commission"
+        ]
+
+        return markers.contains(where: { lowered.contains($0) })
+    }
+
+    private static func looksLikeStructuredListingPage(title: String, text: String) -> Bool {
+        let loweredTitle = title.lowercased()
+        let loweredText = text.lowercased()
+
+        let titleMarkers = [
+            "ticketmaster",
+            "tickets",
+            "tour dates",
+            "concert dates",
+            "event schedule",
+            "showtimes"
+        ]
+
+        let textMarkers = [
+            "show events in list view",
+            "show events in calendar view",
+            "change date range",
+            "open additional information for",
+            "presale happening now",
+            "rating:",
+            "out of 5 based on",
+            "results show events",
+            "location dates all dates"
+        ]
+
+        let titleMarkerCount = titleMarkers.filter { loweredTitle.contains($0) }.count
+        let textMarkerCount = textMarkers.filter { loweredText.contains($0) }.count
+        let slashDateCount = countMatches(in: loweredText, pattern: #"\b\d{1,2}/\d{1,2}/\d{2,4}\b"#)
+        let monthDateCount = countMatches(in: loweredText, pattern: #"\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+\d{1,2},\s+\d{4}\b"#)
+        let timeCount = countMatches(in: loweredText, pattern: #"\b\d{1,2}:\d{2}\s*(?:am|pm)\b"#)
+
+        if titleMarkerCount >= 2 {
+            return true
+        }
+
+        if textMarkerCount >= 2 {
+            return true
+        }
+
+        if (slashDateCount + monthDateCount) >= 3 && timeCount >= 2 {
             return true
         }
 
@@ -2056,6 +2285,10 @@ final class GmailDeliveryService {
     private static func passesSummaryOutputQualityGate(_ summary: String) -> Bool {
         let normalized = collapseWhitespace(in: summary)
         guard wordCount(in: normalized) >= 20 else {
+            return false
+        }
+
+        if looksLikeAffiliateDisclosure(normalized) {
             return false
         }
 
@@ -2366,7 +2599,7 @@ final class GmailDeliveryService {
     }
 
     private static func stripSummaryPreamble(from text: String, title: String) -> String {
-        let normalized = collapseWhitespace(in: text)
+        let normalized = stripLeadingSummaryBoilerplate(from: collapseWhitespace(in: text))
         guard !normalized.isEmpty else {
             return normalized
         }
@@ -2397,6 +2630,31 @@ final class GmailDeliveryService {
         return normalized
     }
 
+    private static func stripLeadingSummaryBoilerplate(from text: String) -> String {
+        var cleaned = collapseWhitespace(in: text)
+        guard !cleaned.isEmpty else {
+            return cleaned
+        }
+
+        let patterns = [
+            #"^(?:things you buy through our links may earn[^.?!]*[.?!]\s*)+"#,
+            #"^(?:if you buy something through our links[^.?!]*[.?!]\s*)+"#,
+            #"^(?:we may earn a commission[^.?!]*[.?!]\s*)+"#,
+            #"^(?:this article contains affiliate links[^.?!]*[.?!]\s*)+"#
+        ]
+
+        for pattern in patterns {
+            cleaned = replaceMatches(
+                in: cleaned,
+                pattern: pattern,
+                with: ""
+            )
+            cleaned = collapseWhitespace(in: cleaned)
+        }
+
+        return cleaned
+    }
+
     private static func intValue(_ value: Any?) -> Int? {
         if let number = value as? NSNumber {
             return number.intValue
@@ -2424,6 +2682,28 @@ final class GmailDeliveryService {
         }
 
         return host == "instagram.com" || host == "www.instagram.com"
+    }
+
+    private static func isInstagramReelURL(_ url: URL) -> Bool {
+        guard isInstagramHost(url) else {
+            return false
+        }
+
+        let pathComponents = url.path
+            .split(separator: "/")
+            .map { $0.lowercased() }
+        return pathComponents.contains("reel") || pathComponents.contains("reels")
+    }
+
+    private static func isTikTokHost(_ url: URL) -> Bool {
+        guard let host = url.host?.lowercased() else {
+            return false
+        }
+
+        return host == "tiktok.com" ||
+            host == "www.tiktok.com" ||
+            host == "m.tiktok.com" ||
+            host == "vm.tiktok.com"
     }
 }
 
@@ -2483,6 +2763,12 @@ private struct CachedArticleMetadata: Sendable {
 }
 
 private struct InstagramPostMetadata {
+    let title: String?
+    let excerpt: String?
+    let imageURLStrings: [String]
+}
+
+private struct TikTokPostMetadata {
     let title: String?
     let excerpt: String?
     let imageURLStrings: [String]

@@ -1,8 +1,8 @@
 import Foundation
 
 enum SharedContainer {
-    static let appGroupID = "group.com.niederme.mailmoi"
-    private static let directoryName = "MailMoi"
+    static let appGroupID = "group.com.niederme.sendmoi"
+    private static let directoryName = "SendMoi"
     private static let sharedMediaDirectoryName = "SharedMedia"
     private static var isExtensionProcess: Bool {
         Bundle.main.bundleURL.pathExtension == "appex"

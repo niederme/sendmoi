@@ -24,6 +24,7 @@ Last updated: March 9, 2026
 - The onboarding finish step now shows the connected Gmail account, allows `Switch Account`, uses an explicit recipient `Save` action, and only reveals auto-send when a saved recipient is active.
 - The onboarding action row was normalized so the primary action stays pinned and `View Settings` appears as a full-width secondary control on the final step.
 - The share-extension `Auto-Sending...` overlay card now uses a softer translucent material treatment.
+- The share-extension `Auto-Sending...` overlay now treats any tap on the dimmed screen as `Edit`, matching the explicit `Edit` button.
 - If `Auto-send` is off, the share extension stays open and pre-fills the draft rather than sending immediately.
 - The desktop app includes a compose card again; the missing `desktopComposeCard` helper was restored so the macOS workspace compiles, but the card is informational only and points users back to the share sheet for actual drafting.
 - Email rendering was updated:
@@ -84,6 +85,7 @@ Last updated: March 9, 2026
 15. Share a TikTok video and an Instagram reel and confirm the outbound email renders exactly one poster image instead of stacking alternate cover variants.
 16. Launch the share sheet while signed out of Gmail and confirm the new connect alert appears, starts Google sign-in directly from the share sheet, and resumes without implying that auto-send already happened.
 17. Open the share sheet with no default recipient and confirm the initial helper text feels neutral, then tap `Send` and verify the red validation state appears and the `To` field becomes focused.
+18. Re-run Google Auth Platform branding verification using `https://send.moi/` as homepage and `https://send.moi/privacy/` + `https://send.moi/terms/` as policy links. The current rejection cites two issues from the previous attempt: no privacy-policy link on `https://nieder.me` and `https://send.moi/privacy/` flagged as a non-qualified policy domain.
 
 ## Local Setup
 
@@ -96,5 +98,6 @@ Last updated: March 9, 2026
 
 - `build/` is intentionally ignored in `.gitignore` and should remain untracked build output only.
 - Command-line builds in this environment were limited by provisioning / simulator / Xcode sandbox issues, so final verification should be done in Xcode.
+- A full local build succeeded with: `xcodebuild -project SendMoi.xcodeproj -scheme SendMoi -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO`.
 - The local worktree on `codex/reel-visual-fallback` is currently mixed and not safe to commit wholesale: it contains icon pipeline changes, launch asset changes, identity/config updates, Gmail/share-sheet code changes that already landed on `main` via `#10` and `#12`, docs updates, and new untracked marketing/docs assets. Review and split intentionally before committing.
 - This branch is currently `11` commits ahead of `origin/main`; before resuming on another machine, compare it against `main` and carve the remaining local-only work into smaller branches instead of reviving the whole mixed diff.

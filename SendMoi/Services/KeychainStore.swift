@@ -2,7 +2,7 @@ import Foundation
 import Security
 
 enum KeychainStore {
-    private static let service = "com.niederme.MailMoi"
+    private static let service = "com.niederme.SendMoi"
     private static let account = "gmail-session"
 
     static func loadSession() throws -> GmailSession? {
