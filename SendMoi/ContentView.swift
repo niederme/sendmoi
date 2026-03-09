@@ -280,13 +280,15 @@ struct ContentView: View {
                     } else if onboardingStep == 2 && model.session == nil {
                         Button {
                         } label: {
-                            Image(systemName: "chevron.right")
+                            Image(systemName: "lock.fill")
                         }
-                        .onboardingPrimaryButtonStyle(tint: onboardingBrandAccent)
+                        .onboardingSecondaryButtonStyle()
                         .buttonBorderShape(.circle)
                         .controlSize(.large)
                         .frame(width: 46, height: 46)
                         .disabled(true)
+                        .accessibilityLabel("Next unavailable")
+                        .accessibilityHint("Connect Gmail with the button above, or tap Skip.")
                     }
                 }
             }
@@ -468,11 +470,15 @@ struct ContentView: View {
                 Button("Connect Gmail") {
                     showsOnboardingAccountSheet = true
                 }
-                .onboardingPrimaryButtonStyle(tint: onboardingBrandAccent)
-                .buttonBorderShape(.capsule)
+                .buttonStyle(.borderedProminent)
                 .controlSize(.large)
                 .disabled(!GoogleOAuthConfig.isConfigured)
                 .padding(.top, 4)
+                .accessibilityHint("Opens Google sign-in in a system sheet.")
+
+                Text("Or tap Skip below and connect later from Account.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
         } else {
             VStack(alignment: .leading, spacing: 16) {
@@ -508,8 +514,8 @@ struct ContentView: View {
                         Button("Switch Account") {
                             showsOnboardingAccountSheet = true
                         }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(onboardingBrandAccent)
+                        .buttonStyle(.bordered)
+                        .controlSize(.regular)
                     }
                     .padding(.horizontal, 14)
                     .padding(.vertical, 12)
