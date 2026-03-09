@@ -23,6 +23,8 @@ Last updated: March 9, 2026
 - First-run now presents a branded 3-step setup guide as a modal instead of replacing the app shell, and setup can be reopened later from the dedicated bottom `Setup` actions.
 - The onboarding finish step now shows the connected Gmail account, allows `Switch Account`, uses an explicit recipient `Save` action, and only reveals auto-send when a saved recipient is active.
 - The onboarding action row was normalized so the primary action stays pinned and `View Settings` appears as a full-width secondary control on the final step.
+- Onboarding actions now use native system glass button styles on supported OS versions (with fallback styles on older targets), and custom liquid-glass button drawing was removed.
+- Onboarding nav behavior was refined so signed-out step 3 keeps a disabled right-chevron in the bottom nav while the primary `Connect Gmail` action lives inside the card; signed-in step 3 uses `Back` + `Done`.
 - The share-extension `Auto-Sending...` overlay card now uses a softer translucent material treatment.
 - The share-extension `Auto-Sending...` overlay now treats any tap on the dimmed screen as `Edit`, matching the explicit `Edit` button.
 - If `Auto-send` is off, the share extension stays open and pre-fills the draft rather than sending immediately.

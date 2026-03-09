@@ -224,16 +224,28 @@ struct ContentView: View {
     private var onboardingActions: some View {
         HStack(spacing: 12) {
             if onboardingStep == 2 && model.session != nil {
-                Button("View Settings") {
+                Button("Back") {
+                    onboardingStep -= 1
+                }
+                .onboardingSecondaryButtonStyle()
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
+
+                Spacer(minLength: 0)
+
+                Button("Done") {
                     finishOnboarding()
                 }
-                .buttonStyle(OnboardingLiquidGlassButtonStyle(variant: .secondary, accent: onboardingBrandAccent))
-                .frame(maxWidth: .infinity)
+                .onboardingPrimaryButtonStyle(tint: onboardingBrandAccent)
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
             } else {
                 Button("Skip") {
                     model.completeOnboarding()
                 }
-                .buttonStyle(OnboardingLiquidGlassButtonStyle(variant: .secondary, accent: onboardingBrandAccent))
+                .onboardingSecondaryButtonStyle()
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
 
                 Spacer(minLength: 10)
 
@@ -249,7 +261,10 @@ struct ContentView: View {
                         label: {
                             Image(systemName: "chevron.left")
                         }
-                        .buttonStyle(OnboardingLiquidGlassButtonStyle(variant: .secondary, accent: onboardingBrandAccent, isIconOnly: true))
+                        .onboardingSecondaryButtonStyle()
+                        .buttonBorderShape(.circle)
+                        .controlSize(.large)
+                        .frame(width: 46, height: 46)
                     }
 
                     if onboardingStep < 2 {
@@ -258,13 +273,20 @@ struct ContentView: View {
                         } label: {
                             Image(systemName: "chevron.right")
                         }
-                        .buttonStyle(OnboardingLiquidGlassButtonStyle(variant: .primary, accent: onboardingBrandAccent, isIconOnly: true))
-                    } else {
-                        Button(onboardingPrimaryButtonTitle) {
-                            handleOnboardingPrimaryAction()
+                        .onboardingPrimaryButtonStyle(tint: onboardingBrandAccent)
+                        .buttonBorderShape(.circle)
+                        .controlSize(.large)
+                        .frame(width: 46, height: 46)
+                    } else if onboardingStep == 2 && model.session == nil {
+                        Button {
+                        } label: {
+                            Image(systemName: "chevron.right")
                         }
-                        .buttonStyle(OnboardingLiquidGlassButtonStyle(variant: .primary, accent: onboardingBrandAccent))
-                        .disabled(onboardingStep == 2 && model.session == nil && !GoogleOAuthConfig.isConfigured)
+                        .onboardingPrimaryButtonStyle(tint: onboardingBrandAccent)
+                        .buttonBorderShape(.circle)
+                        .controlSize(.large)
+                        .frame(width: 46, height: 46)
+                        .disabled(true)
                     }
                 }
             }
@@ -280,14 +302,6 @@ struct ContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: onboardingStep)
-    }
-
-    private var onboardingPrimaryButtonTitle: String {
-        if onboardingStep < 2 {
-            return "Next"
-        }
-
-        return "Connect Gmail"
     }
 
     @ViewBuilder
@@ -322,11 +336,14 @@ struct ContentView: View {
         case 1:
             VStack(alignment: .leading, spacing: 14) {
                 Text("Pin SendMoi in your Share Sheet")
-                    .font(.system(size: 24, weight: .semibold))
+                    .font(.system(size: onboardingSecondStepHeadlineFontSize, weight: .bold))
+                    .foregroundStyle(.primary)
 
                 Text("Do this once and SendMoi stays one tap away.")
-                    .font(.subheadline)
+                    .font(.system(size: onboardingSecondStepSubheadingFontSize, weight: .medium))
                     .foregroundStyle(.secondary)
+                    .lineSpacing(1.3)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 TabView(selection: $onboardingPinSlide) {
                     ForEach(onboardingPinSlides) { slide in
@@ -362,11 +379,12 @@ struct ContentView: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(onboardingPinSlides[onboardingPinSlide].title)
-                        .font(.headline)
+                        .font(.system(size: onboardingSecondStepInstructionTitleFontSize, weight: .semibold))
 
                     Text(onboardingPinSlides[onboardingPinSlide].detail)
-                        .font(.footnote)
+                        .font(.system(size: onboardingSecondStepInstructionBodyFontSize, weight: .medium))
                         .foregroundStyle(.secondary)
+                        .lineSpacing(1.2)
                 }
                 .padding(.horizontal, 2)
 
@@ -403,6 +421,22 @@ struct ContentView: View {
         onboardingUsesTightFirstStepLayout ? 310 : 360
     }
 
+    private var onboardingSecondStepHeadlineFontSize: CGFloat {
+        onboardingUsesSmallPhoneLayout ? 24 : 28
+    }
+
+    private var onboardingSecondStepSubheadingFontSize: CGFloat {
+        onboardingUsesSmallPhoneLayout ? 17 : 19
+    }
+
+    private var onboardingSecondStepInstructionTitleFontSize: CGFloat {
+        onboardingUsesSmallPhoneLayout ? 18 : 20
+    }
+
+    private var onboardingSecondStepInstructionBodyFontSize: CGFloat {
+        onboardingUsesSmallPhoneLayout ? 16 : 17
+    }
+
     private struct OnboardingPinSlide: Identifiable {
         let id: Int
         let imageName: String
@@ -413,7 +447,7 @@ struct ContentView: View {
     @ViewBuilder
     private var onboardingFinishStep: some View {
         if model.session == nil {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 14) {
                 Text("Connect Gmail to finish setup.")
                     .font(.system(size: 24, weight: .semibold))
 
@@ -427,6 +461,15 @@ struct ContentView: View {
                     title: "Skip if you want",
                     detail: "You can use the app now and connect Gmail later."
                 )
+
+                Button("Connect Gmail") {
+                    showsOnboardingAccountSheet = true
+                }
+                .onboardingPrimaryButtonStyle(tint: onboardingBrandAccent)
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
+                .disabled(!GoogleOAuthConfig.isConfigured)
+                .padding(.top, 4)
             }
         } else {
             VStack(alignment: .leading, spacing: 16) {
@@ -952,7 +995,6 @@ struct ContentView: View {
             defaultRecipientSection
             shareSheetSection
             queueSection
-            statusMessageView
             setupActionsSection
             attributionSection
         }
@@ -1143,13 +1185,6 @@ struct ContentView: View {
         } footer: {
             Text(queueFooterText)
         }
-    }
-
-    private var statusMessageView: some View {
-        Text(model.statusMessage)
-            .font(.footnote)
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var setupActionsSection: some View {
@@ -2174,123 +2209,26 @@ private struct OnboardingGmailSheet: View {
     }
 }
 
-private enum OnboardingLiquidGlassButtonVariant {
-    case primary
-    case secondary
-}
-
-private struct OnboardingLiquidGlassButtonStyle: ButtonStyle {
-    @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.isEnabled) private var isEnabled
-
-    let variant: OnboardingLiquidGlassButtonVariant
-    let accent: Color
-    let isIconOnly: Bool
-
-    init(variant: OnboardingLiquidGlassButtonVariant, accent: Color, isIconOnly: Bool = false) {
-        self.variant = variant
-        self.accent = accent
-        self.isIconOnly = isIconOnly
-    }
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 19, weight: .semibold))
-            .foregroundStyle(labelColor)
-            .padding(.horizontal, horizontalPadding)
-            .padding(.vertical, 12)
-            .frame(minWidth: isIconOnly ? 46 : nil)
-            .background {
-                Capsule(style: .continuous)
-                    .fill(baseFill)
-                    .overlay {
-                        if variant == .secondary {
-                            Capsule(style: .continuous)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [
-                                            Color.white.opacity(colorScheme == .dark ? 0.16 : 0.22),
-                                            Color.white.opacity(colorScheme == .dark ? 0.07 : 0.12)
-                                        ],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                        }
-                    }
-                    .overlay {
-                        Capsule(style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        Color.white.opacity(variant == .primary ? 0.34 : 0.24),
-                                        Color.white.opacity(0.02)
-                                    ],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
-                    }
-                    .overlay {
-                        Capsule(style: .continuous)
-                            .strokeBorder(borderColor, lineWidth: 1)
-                    }
-            }
-            .shadow(color: shadowColor, radius: 14, y: 7)
-            .opacity(isEnabled ? 1 : 0.55)
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .animation(.easeOut(duration: 0.16), value: configuration.isPressed)
-    }
-
-    private var horizontalPadding: CGFloat {
-        if isIconOnly {
-            return 14
-        }
-        return variant == .primary ? 28 : 24
-    }
-
-    private var labelColor: Color {
-        switch variant {
-        case .primary:
-            return .white.opacity(colorScheme == .dark ? 0.98 : 0.94)
-        case .secondary:
-            return colorScheme == .dark ? .white.opacity(0.98) : Color.primary.opacity(0.96)
+private extension View {
+    @ViewBuilder
+    func onboardingPrimaryButtonStyle(tint: Color) -> some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            self
+                .buttonStyle(.glassProminent)
+                .tint(tint)
+        } else {
+            self
+                .buttonStyle(.borderedProminent)
+                .tint(tint)
         }
     }
 
-    private var baseFill: AnyShapeStyle {
-        switch variant {
-        case .primary:
-            return AnyShapeStyle(
-                LinearGradient(
-                    colors: [
-                        accent.opacity(colorScheme == .dark ? 0.95 : 0.9),
-                        accent.opacity(colorScheme == .dark ? 0.82 : 0.78)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-        case .secondary:
-            return AnyShapeStyle(.thinMaterial)
-        }
-    }
-
-    private var borderColor: Color {
-        switch variant {
-        case .primary:
-            return Color.white.opacity(colorScheme == .dark ? 0.34 : 0.44)
-        case .secondary:
-            return Color.white.opacity(colorScheme == .dark ? 0.34 : 0.44)
-        }
-    }
-
-    private var shadowColor: Color {
-        switch variant {
-        case .primary:
-            return accent.opacity(colorScheme == .dark ? 0.34 : 0.18)
-        case .secondary:
-            return Color.black.opacity(colorScheme == .dark ? 0.16 : 0.07)
+    @ViewBuilder
+    func onboardingSecondaryButtonStyle() -> some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            self.buttonStyle(.glass)
+        } else {
+            self.buttonStyle(.bordered)
         }
     }
 }
