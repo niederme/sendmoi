@@ -91,7 +91,7 @@
 		B20000010000000000000005 /* SendMoiShare.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SendMoiShare.entitlements; sourceTree = "<group>"; };
 		B20000010000000000000006 /* SafariPreprocessor.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = SafariPreprocessor.js; sourceTree = "<group>"; };
 		B20000010000000000000007 /* SendMoiShare-macOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "SendMoiShare-macOS.entitlements"; sourceTree = "<group>"; };
-		DC6FF07A2F55D5CB00415EAC /* send-moi.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "send-moi.icon"; sourceTree = "<group>"; };
+		DC6FF07A2F55D5CB00415EAC /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "AppIcon.icon"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -133,7 +133,7 @@
 				A20000010000000000000002 /* ContentView.swift */,
 				A20000010000000000000003 /* AppModel.swift */,
 				A20000010000000000000004 /* Models.swift */,
-				DC6FF07A2F55D5CB00415EAC /* send-moi.icon */,
+				DC6FF07A2F55D5CB00415EAC /* AppIcon.icon */,
 				A40000010000000000000004 /* Services */,
 			);
 			path = SendMoi;
