@@ -99,5 +99,5 @@ Last updated: March 9, 2026
 - `build/` is intentionally ignored in `.gitignore` and should remain untracked build output only.
 - Command-line builds in this environment were limited by provisioning / simulator / Xcode sandbox issues, so final verification should be done in Xcode.
 - A full local build succeeded with: `xcodebuild -project SendMoi.xcodeproj -scheme SendMoi -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO`.
-- The local worktree on `codex/reel-visual-fallback` is currently mixed and not safe to commit wholesale: it contains icon pipeline changes, launch asset changes, identity/config updates, Gmail/share-sheet code changes that already landed on `main` via `#10` and `#12`, docs updates, and new untracked marketing/docs assets. Review and split intentionally before committing.
-- This branch is currently `11` commits ahead of `origin/main`; before resuming on another machine, compare it against `main` and carve the remaining local-only work into smaller branches instead of reviving the whole mixed diff.
+- The mixed local tree has been checkpointed and pushed as commit `1584b4a` on branch `codex/reel-visual-fallback`, so another machine can pull this exact snapshot directly.
+- Relative to `origin/main`, this branch is currently `16` commits ahead and `2` commits behind; compare against `main` before carving follow-up PRs.
