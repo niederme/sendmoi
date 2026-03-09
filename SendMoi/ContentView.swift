@@ -340,6 +340,8 @@ struct ContentView: View {
                 Text("Pin SendMoi in your Share Sheet")
                     .font(.system(size: onboardingSecondStepHeadlineFontSize, weight: .bold))
                     .foregroundStyle(.primary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.86)
 
                 Text("Do this once and SendMoi stays one tap away.")
                     .font(.system(size: onboardingSecondStepSubheadingFontSize, weight: .medium))
@@ -356,7 +358,9 @@ struct ContentView: View {
                                     .resizable()
                                     .interpolation(.high)
                                     .scaledToFit()
-                                    .padding(14)
+                                    .padding(onboardingPinCarouselImagePadding)
+                                    .accessibilityLabel(Text(slide.accessibilityLabel))
+                                    .accessibilityHint(Text(slide.accessibilityHint))
                             }
                             .overlay(
                                 RoundedRectangle(cornerRadius: 24)
@@ -367,13 +371,29 @@ struct ContentView: View {
                 }
                 .frame(height: onboardingPinCarouselHeight)
                 .tabViewStyle(.page(indexDisplayMode: .never))
+                .accessibilityLabel(Text("Pin SendMoi setup steps"))
+                .accessibilityValue(Text("Step \(onboardingPinSlide + 1) of \(onboardingPinSlides.count)"))
+
+                Text("Step \(onboardingPinSlide + 1) of \(onboardingPinSlides.count)")
+                    .font(.system(size: onboardingSecondStepProgressFontSize, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
 
                 HStack(spacing: 6) {
                     Spacer(minLength: 0)
                     ForEach(onboardingPinSlides) { slide in
-                        Capsule()
-                            .fill(slide.id == onboardingPinSlide ? onboardingBrandAccent : onboardingMutedTrack)
-                            .frame(width: slide.id == onboardingPinSlide ? 16 : 6, height: 5)
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                onboardingPinSlide = slide.id
+                            }
+                        } label: {
+                            Capsule()
+                                .fill(slide.id == onboardingPinSlide ? onboardingBrandAccent : onboardingMutedTrack)
+                                .frame(width: slide.id == onboardingPinSlide ? 16 : 6, height: 5)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(Text("Show step \(slide.id + 1)"))
+                        .accessibilityHint(Text(slide.title))
                     }
                     Spacer(minLength: 0)
                 }
@@ -389,6 +409,10 @@ struct ContentView: View {
                         .lineSpacing(1.2)
                 }
                 .padding(.horizontal, 2)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(
+                    Text("\(onboardingPinSlides[onboardingPinSlide].title). \(onboardingPinSlides[onboardingPinSlide].detail)")
+                )
 
             }
         default:
@@ -402,25 +426,35 @@ struct ContentView: View {
                 id: 0,
                 imageName: "OnboardingPinStep1",
                 title: "1. Open Share and tap More",
-                detail: "From the first app row in the share sheet, open More to edit your app list."
+                detail: "From the first app row in the share sheet, open More to edit your app list.",
+                accessibilityLabel: "Share sheet app row with More highlighted.",
+                accessibilityHint: "This shows where to find More before editing your app list."
             ),
             OnboardingPinSlide(
                 id: 1,
                 imageName: "OnboardingPinStep2",
                 title: "2. Add SendMoi to Favorites",
-                detail: "Tap the green plus next to SendMoi so it appears in Favorites."
+                detail: "Tap the green plus next to SendMoi so it appears in Favorites.",
+                accessibilityLabel: "Apps list showing SendMoi being added to Favorites.",
+                accessibilityHint: "Use the plus button next to SendMoi in the apps list."
             ),
             OnboardingPinSlide(
                 id: 2,
                 imageName: "OnboardingPinStep3",
                 title: "3. Keep SendMoi enabled",
-                detail: "Make sure SendMoi stays toggled on, then tap Done."
+                detail: "Make sure SendMoi stays toggled on, then tap Done.",
+                accessibilityLabel: "Apps list showing SendMoi enabled and ready.",
+                accessibilityHint: "Verify SendMoi stays enabled, then finish by tapping Done."
             )
         ]
     }
 
     private var onboardingPinCarouselHeight: CGFloat {
-        onboardingUsesTightFirstStepLayout ? 310 : 360
+        onboardingUsesSmallPhoneLayout ? 320 : 360
+    }
+
+    private var onboardingPinCarouselImagePadding: CGFloat {
+        onboardingUsesSmallPhoneLayout ? 10 : 14
     }
 
     private var onboardingSecondStepHeadlineFontSize: CGFloat {
@@ -439,11 +473,17 @@ struct ContentView: View {
         onboardingUsesSmallPhoneLayout ? 16 : 17
     }
 
+    private var onboardingSecondStepProgressFontSize: CGFloat {
+        onboardingUsesSmallPhoneLayout ? 13 : 14
+    }
+
     private struct OnboardingPinSlide: Identifiable {
         let id: Int
         let imageName: String
         let title: String
         let detail: String
+        let accessibilityLabel: String
+        let accessibilityHint: String
     }
 
     @ViewBuilder
