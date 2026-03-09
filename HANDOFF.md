@@ -49,13 +49,14 @@ Last updated: March 9, 2026
 - The onboarding footer now leaves `Skip` on its own and groups `Back` with the trailing primary action.
 - Onboarding compact-layout detection is now device-based (not step-1-only), so step 2/3 typography, card spacing, and bottom inset scale correctly on smaller iPhones.
 - Onboarding step 2 now adds `Step x of 3` progress text, tappable pagination dots, compact-phone image padding tuning, and explicit accessibility labels/hints for each slide.
+- Onboarding step 3 now uses a clearly-disabled lock-style trailing nav control when Gmail is disconnected, keeps `Connect Gmail` as the in-card primary action, and adds helper copy that clarifies users can still skip and connect later.
 - iOS deployment target is now `18.0` for both `SendMoi` and `SendMoiShare`; Foundation Models summary support remains optional at runtime and falls back on unsupported OS versions.
 - New in the current working tree:
   - repo-wide rename from MailMoi to SendMoi: project, targets, schemes, folders, and user-facing copy
   - bundle identifiers, App Group ID, and shared container/keychain storage identifiers intentionally remain on the existing MailMoi values for upgrade continuity
   - added a first-pass `TERMS.md` so the Google OAuth consent screen can point at a public Terms of Service URL alongside the existing privacy policy
   - `MARKETING_VERSION` is now `0.3` and `CURRENT_PROJECT_VERSION` is now `6` for both targets, set via `./scripts/prepare_release.sh --version 0.3`
-  - the legacy `CFBundleIconFile` override was removed, and the main app now ships from the explicit `AppIcon.appiconset` while keeping `send-moi.icon` as the editable design source
+  - the legacy `CFBundleIconFile` override was removed, and the main app now ships from the explicit `AppIcon.appiconset` while keeping `AppIcon.icon` as the editable design source
   - `scripts/prepare_release.sh` now bumps version/build across both targets and prints the signing + bundle settings before an archive
   - the macOS app now uses a desktop-style card layout instead of reusing the iPhone/iPad form
   - image-only shares are first-class queue items, with fallback titles like `Shared Photo`
@@ -71,7 +72,8 @@ Last updated: March 9, 2026
   - manual sends now queue first and dismiss the sheet immediately, then continue best-effort preview enrichment and delivery in the background; if that work does not finish, the queued item remains for later retry
   - if Gmail is not connected, the share sheet now stops before auto-send, presents a `Connect Gmail in SendMoi` alert, and can start Google sign-in directly from the share sheet so queued items can resume sending with less ambiguity
   - if no default recipient is saved, the share extension now starts with a neutral inline helper under `To`, only switches to the red validation copy after a failed send attempt, and refocuses the `To` field so the user can recover immediately
-  - refreshed the SendMoi icon source in `marketing/send-moi.icon` and `SendMoi/send-moi.icon`, regenerated every `AppIcon.appiconset` size from the updated 1024 master PNG, and updated marketing icon exports in this repo
+  - refreshed the SendMoi icon source in `marketing/send-moi.icon` and `SendMoi/AppIcon.icon`, regenerated every `AppIcon.appiconset` size from the updated 1024 master PNG, and updated marketing icon exports in this repo
+  - fixed issue #28 by repointing the Xcode icon-source reference to `SendMoi/AppIcon.icon` and restoring `AppIconBackground` light/dark parity while the same color is intentionally used in both appearances
 
 ## Things To Verify On The Next Machine
 
@@ -85,7 +87,7 @@ Last updated: March 9, 2026
 6. Share a photo directly from Photos (without a URL) and confirm it can be queued, sent, and removed without leaving orphaned files in the App Group container.
 7. Share an X/Twitter post and an Overcast episode and confirm the title / source URL / summary behavior looks intentional rather than noisy.
 8. Run the macOS target and confirm the desktop card layout feels right at common window sizes, especially queue deletion and account disclosure behavior.
-9. Run `./scripts/prepare_release.sh --version <next-version>` before the next archive, then verify App Store Connect accepts the `AppIcon` set for both iOS and macOS, shows the expected branded thumbnail, and no longer includes `send-moi.icon` as an extra bundled resource.
+9. Run `./scripts/prepare_release.sh --version <next-version>` before the next archive, then verify App Store Connect accepts the `AppIcon` set for both iOS and macOS, shows the expected branded thumbnail, and no longer includes `AppIcon.icon` as an extra bundled resource.
 10. Confirm the next Xcode Cloud upload succeeds with build number `3`; the previous failure was `The bundle version must be higher than the previously uploaded version.`
 11. After the next icon refresh, run `./scripts/prune_app_icon_set.sh` and confirm Xcode no longer shows `AppIcon` asset warnings before archiving.
 12. Launch the share sheet while signed out of Gmail and confirm the new connect alert appears, starts Google sign-in from the share sheet itself, and resumes sending without implying that auto-send already happened.

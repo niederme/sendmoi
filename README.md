@@ -78,7 +78,7 @@ The current build is set up to ship through TestFlight.
 - Xcode Cloud is configured to start on pushes to `main`.
 - The active workflow archives both iOS and macOS builds.
 - Successful archives are prepared for `TestFlight (Internal Testing Only)`.
-- The project keeps the branded `send-moi.icon` file as the editable design source, while shipping builds use the checked-in `AppIcon.appiconset` so iPhone, iPad, and macOS all share the same explicit asset-catalog icon path.
+- The project keeps the branded `AppIcon.icon` file as the editable design source, while shipping builds use the checked-in `AppIcon.appiconset` so iPhone, iPad, and macOS all share the same explicit asset-catalog icon path.
 
 When refreshing the icon set from the branded source, run `./scripts/prune_app_icon_set.sh` after copying regenerated PNGs into `SendMoi/Assets.xcassets/AppIcon.appiconset`. That removes any files that are not declared in `Contents.json`, which prevents Xcode's `AppIcon has an unassigned child` warning if an export drops in an extra 1024x1024 PNG.
 
