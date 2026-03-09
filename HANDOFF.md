@@ -4,14 +4,14 @@ Last updated: March 9, 2026
 
 ## Current State
 
-- Repo: `codex/onboarding-typography-parity`
+- Repo: `codex/onboarding-step2-carousel`
 - Latest intended app version: `0.3`
 - Recent shipped commits:
   - `0e5a871` `Fix summary promo filtering for concise homepage copy (#18)`
   - `0488709` `Allow summaries for concise high-quality pages (#16)`
   - `a7e22c8` `Remove in-app splash overlay to fix wrong startup paper plane (#14)`
 - Current PR focus:
-  - `#24` onboarding typography pass: normalize cross-step headline/subhead scale and spacing, and ensure compact iPhone sizing applies consistently beyond step 1.
+  - `#25` onboarding step-2 carousel UX: improve progression feedback, indicator controls, and accessibility labeling while keeping slide copy/image pairing stable.
 
 ## Quick Resume On Another Mac
 
@@ -48,6 +48,7 @@ Last updated: March 9, 2026
 - `AGENTS.md` now treats `BUG:` and `ISSUE:` as the explicit GitHub issue creation prefixes.
 - The onboarding footer now leaves `Skip` on its own and groups `Back` with the trailing primary action.
 - Onboarding compact-layout detection is now device-based (not step-1-only), so step 2/3 typography, card spacing, and bottom inset scale correctly on smaller iPhones.
+- Onboarding step 2 now adds `Step x of 3` progress text, tappable pagination dots, compact-phone image padding tuning, and explicit accessibility labels/hints for each slide.
 - iOS deployment target is now `18.0` for both `SendMoi` and `SendMoiShare`; Foundation Models summary support remains optional at runtime and falls back on unsupported OS versions.
 - New in the current working tree:
   - repo-wide rename from MailMoi to SendMoi: project, targets, schemes, folders, and user-facing copy
