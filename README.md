@@ -78,9 +78,9 @@ The current build is set up to ship through TestFlight.
 - Xcode Cloud is configured to start on pushes to `main`.
 - The active workflow archives both iOS and macOS builds.
 - Successful archives are prepared for `TestFlight (Internal Testing Only)`.
-- The project keeps the branded `AppIcon.icon` file as the editable design source, while shipping builds use the checked-in `AppIcon.appiconset` so iPhone, iPad, and macOS all share the same explicit asset-catalog icon path.
+- `SendMoi/AppIcon.icon` is the single source of truth for the app icon. It is processed directly by actool (`folder.iconcomposer.icon`) alongside `Assets.xcassets`, so `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon` resolves from the Icon Composer file without any exported PNG set. Do not revert to a PNG-based `AppIcon.appiconset` — the `.icon` file is the build source, not just an editable reference.
 
-When refreshing the icon set from the branded source, run `./scripts/prune_app_icon_set.sh` after copying regenerated PNGs into `SendMoi/Assets.xcassets/AppIcon.appiconset`. That removes any files that are not declared in `Contents.json`, which prevents Xcode's `AppIcon has an unassigned child` warning if an export drops in an extra 1024x1024 PNG.
+To update the artwork, open `SendMoi/AppIcon.icon` in Icon Composer, make changes, and commit. No PNG export or extra build steps are needed.
 
 That means a merge into `main` should automatically enqueue a new TestFlight build for the current internal testers.
 
