@@ -2149,20 +2149,15 @@ private struct OnboardingGmailSheet: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
+                    .frame(maxWidth: .infinity)
                 } else if phase == .failure {
                     Button("Try Again") {
                         beginSignIn()
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
+                    .frame(maxWidth: .infinity)
                 }
-
-                Button(phase == .success ? "Done" : "Close") {
-                    dismiss()
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
-                .disabled(phase == .connecting)
             }
             .padding(24)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -2170,6 +2165,7 @@ private struct OnboardingGmailSheet: View {
             #if os(macOS) || targetEnvironment(macCatalyst)
             .frame(minWidth: 520, minHeight: 420)
             #endif
+            .presentationDetents([.medium])
             .task {
                 guard phase == .connecting else {
                     return
