@@ -1,17 +1,17 @@
 # SendMoi Handoff
 
-Last updated: March 9, 2026
+Last updated: March 10, 2026
 
 ## Current State
 
-- Repo: `codex/onboarding-step2-carousel`
+- Repo: `codex/restore-appicon-catalog`
 - Latest intended app version: `0.3`
 - Recent shipped commits:
   - `0e5a871` `Fix summary promo filtering for concise homepage copy (#18)`
   - `0488709` `Allow summaries for concise high-quality pages (#16)`
   - `a7e22c8` `Remove in-app splash overlay to fix wrong startup paper plane (#14)`
 - Current PR focus:
-  - `#25` onboarding step-2 carousel UX: improve progression feedback, indicator controls, and accessibility labeling while keeping slide copy/image pairing stable.
+  - restore missing `AppIcon.appiconset` files, keep current `AppIconBackground` values, and remove stale `LaunchScreen.storyboard` project references that break local builds.
 
 ## Quick Resume On Another Mac
 
@@ -43,7 +43,7 @@ Last updated: March 9, 2026
 - Added:
   - `PRIVACY.md`
   - `TERMS.md`
-  - iOS launch screen asset and storyboard (`Splash.imageset`, `LaunchScreen.storyboard`)
+  - iOS launch screen asset (`Splash.imageset`)
 - `README.md` now reflects current behavior instead of hardcoding the old `0.1` release framing.
 - `AGENTS.md` now treats `BUG:` and `ISSUE:` as the explicit GitHub issue creation prefixes.
 - The onboarding footer now leaves `Skip` on its own and groups `Back` with the trailing primary action.
@@ -74,6 +74,7 @@ Last updated: March 9, 2026
   - if no default recipient is saved, the share extension now starts with a neutral inline helper under `To`, only switches to the red validation copy after a failed send attempt, and refocuses the `To` field so the user can recover immediately
   - refreshed the SendMoi icon source in `marketing/send-moi.icon` and `SendMoi/AppIcon.icon`, regenerated every `AppIcon.appiconset` size from the updated 1024 master PNG, and updated marketing icon exports in this repo
   - fixed issue #28 by repointing the Xcode icon-source reference to `SendMoi/AppIcon.icon` and restoring `AppIconBackground` light/dark parity while the same color is intentionally used in both appearances
+  - restored the missing `SendMoi/Assets.xcassets/AppIcon.appiconset` catalog files so `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon` resolves again, and removed stale `LaunchScreen.storyboard` file references from `project.pbxproj` because launch is now configured through `Info.plist` `UILaunchScreen` keys
 
 ## Things To Verify On The Next Machine
 
