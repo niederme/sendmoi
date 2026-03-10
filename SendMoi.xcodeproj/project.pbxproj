@@ -23,7 +23,6 @@
 		A1000001000000000000000E /* SharedSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000010 /* SharedSessionStore.swift */; };
 		A1000001000000000000000F /* GmailDeliveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000011 /* GmailDeliveryService.swift */; };
 		A10000010000000000000010 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000013 /* Assets.xcassets */; };
-		A10000010000000000000011 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000014 /* LaunchScreen.storyboard */; platformFilter = ios; };
 		B10000010000000000000001 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000004 /* Models.swift */; };
 		B10000010000000000000002 /* QueueStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000008 /* QueueStore.swift */; };
 		B10000010000000000000003 /* RecipientStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000009 /* RecipientStore.swift */; };
@@ -83,7 +82,6 @@
 		A20000010000000000000011 /* GmailDeliveryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GmailDeliveryService.swift; sourceTree = "<group>"; };
 		A20000010000000000000012 /* SendMoi-macOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "SendMoi-macOS.entitlements"; sourceTree = "<group>"; };
 		A20000010000000000000013 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		A20000010000000000000014 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		B20000010000000000000001 /* ShareExtensionModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareExtensionModel.swift; sourceTree = "<group>"; };
 		B20000010000000000000002 /* ShareView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareView.swift; sourceTree = "<group>"; };
 		B20000010000000000000003 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
@@ -128,7 +126,6 @@
 				A2000001000000000000000E /* SendMoi.entitlements */,
 				A20000010000000000000012 /* SendMoi-macOS.entitlements */,
 				A20000010000000000000013 /* Assets.xcassets */,
-				A20000010000000000000014 /* LaunchScreen.storyboard */,
 				A20000010000000000000001 /* SendMoiApp.swift */,
 				A20000010000000000000002 /* ContentView.swift */,
 				A20000010000000000000003 /* AppModel.swift */,
@@ -258,7 +255,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000010000000000000010 /* Assets.xcassets in Resources */,
-				A10000010000000000000011 /* LaunchScreen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

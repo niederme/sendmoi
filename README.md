@@ -20,7 +20,7 @@ SendMoi currently ships the full core workflow:
 - Retry queued emails when the app launches, becomes active, or connectivity returns.
 - Share queue state, saved recipients, and session data through the App Group `group.com.niederme.mailmoi`.
 - Let the share sheet either send immediately or stay open with a pre-filled draft, based on the global `Auto-send` setting in the app.
-- Use the iOS launch storyboard branding directly at startup, without an extra in-app splash overlay.
+- Use the iOS `UILaunchScreen` asset configuration (`AppIconBackground` + `Splash`) directly at startup, without an extra in-app splash overlay.
 - Use a settings-style form on iPhone and iPad, and a desktop card layout on macOS.
 - Show a branded first-run setup guide with step-by-step onboarding, Gmail connect/switch, and a final “ready” step that can save recipient defaults before entering settings.
 - Let users reopen setup from the app and run a destructive reset flow that disconnects Gmail and clears saved setup preferences.
