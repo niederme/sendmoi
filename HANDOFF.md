@@ -4,7 +4,7 @@ Last updated: March 10, 2026
 
 ## Current State
 
-- Repo: `codex/fix-sendmoi-bundle-identifiers` (based on `origin/main`)
+- Repo: `codex/worktree-helpers` (based on `origin/main`)
 - Latest intended app version: `0.3`
 - Recent shipped commits:
   - `ec40844` `Use Icon Composer .icon file as app icon source, drop legacy PNG appiconset (#33)`
@@ -15,9 +15,9 @@ Last updated: March 10, 2026
 
 1. `git clone https://github.com/niederme/sendmoi.git`
 2. `cd sendmoi`
-3. `git checkout codex/fix-sendmoi-bundle-identifiers`
+3. `git checkout codex/worktree-helpers`
 4. `git pull --rebase origin main`
-5. Open `SendMoi.xcodeproj` in Xcode and continue from `codex/fix-sendmoi-bundle-identifiers`.
+5. Open `SendMoi.xcodeproj` in Xcode and continue from `codex/worktree-helpers`.
 
 ## What Changed Recently
 
@@ -75,6 +75,9 @@ Last updated: March 10, 2026
   - if Gmail is not connected, the share sheet now stops before auto-send, presents a `Connect Gmail in SendMoi` alert, and can start Google sign-in directly from the share sheet so queued items can resume sending with less ambiguity
   - if no default recipient is saved, the share extension now starts with a neutral inline helper under `To`, only switches to the red validation copy after a failed send attempt, and refocuses the `To` field so the user can recover immediately
   - `SendMoi/AppIcon.icon` is now the direct build source for the app icon: actool processes it as `folder.iconcomposer.icon` alongside `Assets.xcassets`, so `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon` resolves from the Icon Composer file without any exported PNG set — do not revert to a PNG-based `AppIcon.appiconset`; to update artwork, edit `AppIcon.icon` in Icon Composer and commit
+  - added `./scripts/new-task` to create branch-scoped Git worktrees for parallel tasks (defaults to `codex/*` branch naming)
+  - added `./scripts/close-task` to squash-merge task branches into `main` with cleanup for local worktrees/branches
+  - added `.githooks/pre-commit` guard to block direct commits on `main` (after local `git config core.hooksPath .githooks`)
 
 ## Things To Verify On The Next Machine
 
@@ -101,7 +104,8 @@ Last updated: March 10, 2026
 1. Open `SendMoi.xcodeproj` in Xcode.
 2. Enable automatic signing for both `SendMoi` and `SendMoiShare`.
 3. Confirm the App Group is `group.com.niederme.mailmoi`.
-4. If moving to a different Google Cloud project, update `SendMoi/Services/GoogleOAuthConfig.swift`.
+4. Run `git config core.hooksPath .githooks` once so the main-branch commit guard is active.
+5. If moving to a different Google Cloud project, update `SendMoi/Services/GoogleOAuthConfig.swift`.
 
 ## Notes
 

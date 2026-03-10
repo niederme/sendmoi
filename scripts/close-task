@@ -1,0 +1,165 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage:
+  ./scripts/close-task <task-branch> --message "Squash commit message" [--target main] [--keep-worktree] [--no-sync]
+
+Examples:
+  ./scripts/close-task codex/onboarding-copy --message "Refine onboarding copy"
+  ./scripts/close-task onboarding-copy --message "Refine onboarding copy" --target main
+EOF
+}
+
+if ! command -v git >/dev/null 2>&1; then
+  echo "git is required" >&2
+  exit 1
+fi
+
+if [[ $# -lt 1 ]]; then
+  usage >&2
+  exit 1
+fi
+
+task_branch_input=""
+target_branch="main"
+commit_message=""
+keep_worktree=false
+should_sync=true
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --message|-m)
+      [[ $# -ge 2 ]] || { echo "Missing value for --message" >&2; exit 1; }
+      commit_message="$2"
+      shift 2
+      ;;
+    --target)
+      [[ $# -ge 2 ]] || { echo "Missing value for --target" >&2; exit 1; }
+      target_branch="$2"
+      shift 2
+      ;;
+    --keep-worktree)
+      keep_worktree=true
+      shift
+      ;;
+    --no-sync)
+      should_sync=false
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    -*)
+      echo "Unknown option: $1" >&2
+      usage >&2
+      exit 1
+      ;;
+    *)
+      if [[ -n "$task_branch_input" ]]; then
+        echo "Only one task branch is allowed" >&2
+        usage >&2
+        exit 1
+      fi
+      task_branch_input="$1"
+      shift
+      ;;
+  esac
+done
+
+if [[ -z "$task_branch_input" ]]; then
+  echo "Missing task branch" >&2
+  usage >&2
+  exit 1
+fi
+
+if [[ -z "$commit_message" ]]; then
+  echo "--message is required so squash commits stay intentional" >&2
+  usage >&2
+  exit 1
+fi
+
+if [[ "$task_branch_input" == codex/* || "$task_branch_input" == */* ]]; then
+  task_branch="$task_branch_input"
+else
+  task_branch="codex/$task_branch_input"
+fi
+
+if [[ "$task_branch" == "$target_branch" ]]; then
+  echo "Task branch and target branch must be different" >&2
+  exit 1
+fi
+
+root_dir="$(git rev-parse --show-toplevel)"
+cd "$root_dir"
+
+if [[ -n "$(git status --porcelain)" ]]; then
+  echo "Working tree is not clean. Commit or stash changes before closing a task branch." >&2
+  exit 1
+fi
+
+if ! git show-ref --verify --quiet "refs/heads/$task_branch"; then
+  echo "Local task branch '$task_branch' not found." >&2
+  exit 1
+fi
+
+if ! git show-ref --verify --quiet "refs/heads/$target_branch"; then
+  if git show-ref --verify --quiet "refs/remotes/origin/$target_branch"; then
+    git branch "$target_branch" "origin/$target_branch"
+  else
+    echo "Target branch '$target_branch' not found locally or on origin." >&2
+    exit 1
+  fi
+fi
+
+task_worktree="$(git worktree list --porcelain | awk -v ref="refs/heads/$task_branch" '
+  /^worktree / { wt=$2 }
+  /^branch / { if ($2 == ref) { print wt; exit } }
+')"
+
+if [[ -n "$task_worktree" ]]; then
+  if [[ -n "$(git -C "$task_worktree" status --porcelain)" ]]; then
+    echo "Task worktree has uncommitted changes: $task_worktree" >&2
+    echo "Commit or stash there first." >&2
+    exit 1
+  fi
+fi
+
+if [[ "$should_sync" == true ]]; then
+  git fetch origin "$target_branch"
+fi
+
+git checkout "$target_branch"
+
+if [[ "$should_sync" == true ]] && git show-ref --verify --quiet "refs/remotes/origin/$target_branch"; then
+  git pull --ff-only origin "$target_branch"
+fi
+
+git merge --squash "$task_branch"
+
+if git diff --cached --quiet; then
+  echo "No staged changes after squash merge; nothing to commit." >&2
+  exit 1
+fi
+
+git commit -m "$commit_message"
+
+if [[ "$keep_worktree" == false ]] && [[ -n "$task_worktree" ]]; then
+  git worktree remove "$task_worktree"
+fi
+
+git branch -D "$task_branch"
+
+echo
+echo "Task closed"
+echo "  Target branch: $target_branch"
+echo "  Removed branch: $task_branch"
+if [[ "$keep_worktree" == false ]] && [[ -n "$task_worktree" ]]; then
+  echo "  Removed worktree: $task_worktree"
+fi
+echo
+echo "Next:"
+echo "  git push origin $target_branch"

@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage:
+  ./scripts/new-task <task-name-or-branch> [--path /custom/worktree/path] [--base origin/main] [--no-fetch]
+
+Examples:
+  ./scripts/new-task onboarding-copy
+  ./scripts/new-task codex/onboarding-copy
+  ./scripts/new-task codex/onboarding-copy --path ../sendmoi-onboarding-copy
+EOF
+}
+
+if ! command -v git >/dev/null 2>&1; then
+  echo "git is required" >&2
+  exit 1
+fi
+
+if [[ $# -lt 1 ]]; then
+  usage >&2
+  exit 1
+fi
+
+input_branch=""
+custom_path=""
+base_ref="origin/main"
+should_fetch=true
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --path)
+      [[ $# -ge 2 ]] || { echo "Missing value for --path" >&2; exit 1; }
+      custom_path="$2"
+      shift 2
+      ;;
+    --base)
+      [[ $# -ge 2 ]] || { echo "Missing value for --base" >&2; exit 1; }
+      base_ref="$2"
+      shift 2
+      ;;
+    --no-fetch)
+      should_fetch=false
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    -*)
+      echo "Unknown option: $1" >&2
+      usage >&2
+      exit 1
+      ;;
+    *)
+      if [[ -n "$input_branch" ]]; then
+        echo "Only one task name/branch is allowed" >&2
+        usage >&2
+        exit 1
+      fi
+      input_branch="$1"
+      shift
+      ;;
+  esac
+done
+
+if [[ -z "$input_branch" ]]; then
+  echo "Missing task name/branch" >&2
+  usage >&2
+  exit 1
+fi
+
+root_dir="$(git rev-parse --show-toplevel)"
+repo_name="$(basename "$root_dir")"
+repo_parent="$(dirname "$root_dir")"
+
+normalize_slug() {
+  local raw="$1"
+  echo "$raw" \
+    | tr '[:upper:]' '[:lower:]' \
+    | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//'
+}
+
+if [[ "$input_branch" == codex/* || "$input_branch" == */* ]]; then
+  branch_name="$input_branch"
+else
+  slug="$(normalize_slug "$input_branch")"
+  if [[ -z "$slug" ]]; then
+    echo "Task name '$input_branch' cannot be converted into a valid branch name" >&2
+    exit 1
+  fi
+  branch_name="codex/$slug"
+fi
+
+if [[ -z "$custom_path" ]]; then
+  path_suffix="${branch_name//\//-}"
+  worktree_path="$repo_parent/${repo_name}-${path_suffix}"
+else
+  worktree_path="$custom_path"
+fi
+
+if [[ -e "$worktree_path" ]]; then
+  echo "Destination already exists: $worktree_path" >&2
+  exit 1
+fi
+
+if [[ "$should_fetch" == true ]]; then
+  git -C "$root_dir" fetch origin --prune
+fi
+
+branch_ref="refs/heads/$branch_name"
+remote_ref="refs/remotes/origin/$branch_name"
+
+existing_worktree="$(git -C "$root_dir" worktree list --porcelain | awk -v ref="$branch_ref" '
+  /^worktree / { wt=$2 }
+  /^branch / { if ($2 == ref) { print wt; exit } }
+')"
+
+if [[ -n "$existing_worktree" ]]; then
+  echo "Branch '$branch_name' is already checked out in: $existing_worktree" >&2
+  exit 1
+fi
+
+if git -C "$root_dir" show-ref --verify --quiet "$branch_ref"; then
+  git -C "$root_dir" worktree add "$worktree_path" "$branch_name"
+elif git -C "$root_dir" show-ref --verify --quiet "$remote_ref"; then
+  git -C "$root_dir" worktree add -b "$branch_name" "$worktree_path" "origin/$branch_name"
+else
+  git -C "$root_dir" worktree add -b "$branch_name" "$worktree_path" "$base_ref"
+fi
+
+echo
+echo "Created worktree"
+echo "  Branch:   $branch_name"
+echo "  Path:     $worktree_path"
+echo "  Base ref: $base_ref"
+echo
+echo "Next:"
+echo "  cd \"$worktree_path\""
+echo "  git status"

@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+
+set -eu
+
+branch_name="$(git symbolic-ref --quiet --short HEAD || true)"
+
+if [ "${SENDMOI_ALLOW_MAIN_COMMIT:-0}" = "1" ]; then
+  exit 0
+fi
+
+if [ "$branch_name" = "main" ]; then
+  printf '%s\n' "Direct commits to 'main' are blocked by this repository."
+  printf '%s\n' "Create a task branch first: ./scripts/new-task <task-name>"
+  printf '%s\n' "If you must bypass once, run: SENDMOI_ALLOW_MAIN_COMMIT=1 git commit ..."
+  exit 1
+fi

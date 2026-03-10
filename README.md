@@ -110,6 +110,32 @@ For local development builds:
 
 The repo already includes a configured OAuth client ID in [GoogleOAuthConfig.swift](/Users/niederme/~Repos/sendmoi/SendMoi/Services/GoogleOAuthConfig.swift). If you are moving this project to a different Google Cloud project, update the client ID there and keep the redirect configuration aligned with [Info.plist](/Users/niederme/~Repos/sendmoi/SendMoi/Info.plist).
 
+## Parallel Branch Workflow
+
+Use Git worktrees so each task branch has its own folder and clean working tree.
+
+One-time hook setup per clone:
+
+```sh
+git config core.hooksPath .githooks
+```
+
+Create a new task branch + worktree:
+
+```sh
+./scripts/new-task onboarding-copy
+```
+
+That creates a `codex/onboarding-copy` branch and a sibling worktree folder (for example `../sendmoi-codex-onboarding-copy`).
+
+Close a task branch with squash merge + cleanup:
+
+```sh
+./scripts/close-task codex/onboarding-copy --message "Refine onboarding copy"
+```
+
+By default, `close-task` syncs `main`, squashes the task branch into `main`, commits with your message, removes the task worktree (if present), and deletes the local task branch.
+
 ## Known Limitations
 
 - Background delivery while the app is fully terminated is not implemented. The queue is durable, but retries resume only after the app launches, becomes active, or the share extension runs again.
