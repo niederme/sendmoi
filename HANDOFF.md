@@ -21,6 +21,7 @@ Last updated: March 10, 2026
 
 ## What Changed Recently
 
+- `AGENTS.md` Git Workflow now requires syncing with `origin/main` before opening a PR (`git fetch origin` + `git rebase origin/main`, or merge when rebase is not appropriate) and explicitly recommends one branch/worktree per parallel task.
 - iPhone compact settings now shows a subhead under `SendMoi` (`Send links to your Gmail inbox without losing them in tabs, bookmarks, or chats.`) and uses larger inter-section spacing to separate Account, Recipient, Share Sheet, Offline Queue, and Setup blocks.
 - Opened issue `#43` (`Make Offline Queue collapsible with prominent retry CTA`) and updated iPhone/iPad settings so `Offline Queue` now uses a collapsible disclosure row with summary text plus a full-width prominent `Send Queued Now` action when expanded.
 - Onboarding connected-account layout now preserves a one-line `Switch Account` button label by prioritizing button width and allowing the email/details text block to truncate first.
