@@ -19,6 +19,39 @@
 - This is a solo-review workflow: no required approvals, but do not merge until the diff has been reviewed and relevant tests/checks have passed.
 - Do not include unrelated working tree changes in commits unless explicitly requested.
 
+## Delivery Lifecycle Workflow
+
+### 1) Start New Feature/Fix Work
+- Write or identify the GitHub issue first. Every branch should map to one primary issue.
+- Start from latest `main`:
+  - `git checkout main`
+  - `git pull --ff-only`
+  - `git checkout -b codex/<short-slug>`
+- For concurrent work, use separate branches and prefer separate worktrees:
+  - `git worktree add ../sendmoi-<short-slug> -b codex/<short-slug> main`
+- Keep scope tight: branch changes should stay focused on the linked issue.
+
+### 2) When Asked To Open A PR
+- Confirm the issue number to link in the PR. If missing, ask before creating the PR.
+- Complete the commit workflow checks (`README.md` / `HANDOFF.md`) and run relevant tests/checks.
+- Sync branch right before PR creation:
+  - `git fetch origin`
+  - `git rebase origin/main` (or merge `origin/main` when rebase is not appropriate)
+- Resolve conflicts, rerun checks, then push:
+  - normal push: `git push -u origin codex/<short-slug>`
+  - after rebase: `git push --force-with-lease`
+- Open PR against `main` and link the issue in the PR body using `Closes #<issue-number>`.
+
+### 3) After Merge Confirmation
+- Sync local `main`:
+  - `git checkout main`
+  - `git pull --ff-only`
+- Clean up feature branch:
+  - `git branch -d codex/<short-slug>` (if this fails after squash merge, use `git branch -D codex/<short-slug>`)
+  - `git push origin --delete codex/<short-slug>`
+- Clean up parallel workspace metadata when used:
+  - `git worktree prune`
+
 ## GitHub Issues Workflow
 - Treat messages prefixed with `BUG:` or `ISSUE:` as a request to create a GitHub issue directly.
 - Classify issue type and labels based on context (for example: `bug`, `enhancement`, `chore`) unless the user explicitly forces a type.

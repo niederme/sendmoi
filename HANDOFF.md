@@ -4,7 +4,7 @@ Last updated: March 10, 2026
 
 ## Current State
 
-- Repo: `codex/layout-subhead-spacing` (based on `origin/main`)
+- Repo: `codex/document-workflow-lifecycle` (based on `origin/main`)
 - Latest intended app version: `0.3`
 - Recent shipped commits:
   - `ec40844` `Use Icon Composer .icon file as app icon source, drop legacy PNG appiconset (#33)`
@@ -15,12 +15,13 @@ Last updated: March 10, 2026
 
 1. `git clone https://github.com/niederme/sendmoi.git`
 2. `cd sendmoi`
-3. `git checkout codex/layout-subhead-spacing`
+3. `git checkout codex/document-workflow-lifecycle`
 4. `git pull --rebase origin main`
-5. Open `SendMoi.xcodeproj` in Xcode and continue from `codex/layout-subhead-spacing`.
+5. Open `SendMoi.xcodeproj` in Xcode and continue from `codex/document-workflow-lifecycle`.
 
 ## What Changed Recently
 
+- `AGENTS.md` now includes an explicit end-to-end delivery lifecycle: start from issue + fresh `codex/*` branch off updated `main`, rebase/merge from `origin/main` before opening PR, require PR issue linkage (`Closes #...`), and run post-merge cleanup (`main` sync, branch deletion, optional worktree prune).
 - `AGENTS.md` Git Workflow now requires syncing with `origin/main` before opening a PR (`git fetch origin` + `git rebase origin/main`, or merge when rebase is not appropriate) and explicitly recommends one branch/worktree per parallel task.
 - iPhone compact settings now shows a subhead under `SendMoi` (`Send links to your Gmail inbox without losing them in tabs, bookmarks, or chats.`) and uses larger inter-section spacing to separate Account, Recipient, Share Sheet, Offline Queue, and Setup blocks.
 - Opened issue `#43` (`Make Offline Queue collapsible with prominent retry CTA`) and updated iPhone/iPad settings so `Offline Queue` now uses a collapsible disclosure row with summary text plus a full-width prominent `Send Queued Now` action when expanded.
