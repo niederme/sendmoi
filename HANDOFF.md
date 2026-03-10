@@ -4,7 +4,7 @@ Last updated: March 10, 2026
 
 ## Current State
 
-- Repo: `codex/document-workflow-lifecycle` (based on `origin/main`)
+- Repo: `codex/guard-remote-branch-delete` (based on `origin/main`)
 - Latest intended app version: `0.3`
 - Recent shipped commits:
   - `ec40844` `Use Icon Composer .icon file as app icon source, drop legacy PNG appiconset (#33)`
@@ -15,12 +15,13 @@ Last updated: March 10, 2026
 
 1. `git clone https://github.com/niederme/sendmoi.git`
 2. `cd sendmoi`
-3. `git checkout codex/document-workflow-lifecycle`
+3. `git checkout codex/guard-remote-branch-delete`
 4. `git pull --rebase origin main`
-5. Open `SendMoi.xcodeproj` in Xcode and continue from `codex/document-workflow-lifecycle`.
+5. Open `SendMoi.xcodeproj` in Xcode and continue from `codex/guard-remote-branch-delete`.
 
 ## What Changed Recently
 
+- `AGENTS.md` post-merge cleanup now marks remote branch deletion as conditional (`git push origin --delete codex/<short-slug> (if remote branch exists)`) to avoid noisy errors when GitHub already removed the branch.
 - `AGENTS.md` now uses a faster documentation cadence: keep doc updates lightweight during implementation, then require one full `README.md` + `HANDOFF.md` reconciliation pass right before opening a PR (plus recheck after rebase/conflict resolution).
 - `AGENTS.md` now removes separate `Commit Workflow` / `Git Workflow` sections and folds those rules directly into the single `Delivery Lifecycle Workflow` (start, implement/commit, PR, post-merge) so there is one canonical process.
 - `AGENTS.md` now clarifies that `Commit Workflow` and `Git Workflow` are guardrails that are explicitly incorporated into the end-to-end `Delivery Lifecycle Workflow` steps, so there is one canonical process instead of parallel checklists.
