@@ -47,10 +47,12 @@ For reachable web URLs, SendMoi attempts to enrich the message before sending:
 - Pulls a page description when one is available.
 - Generates a short summary when enough high-quality body content is available (including concise profile/home pages), sizing the blurb to the amount of source text instead of always forcing an article-length recap.
 - Keeps promo filtering strict for obvious CTA fragments while avoiding false positives that can drop substantive profile/homepage lines.
+- Strips generic "here is a summary" lead-ins and markdown formatting artifacts from generated summaries, and suppresses summary output for structured listing pages (for example event schedules or real-estate listing blobs) when the content quality is low.
 - Inlines a preview image when the page exposes one and the image fetch succeeds.
 - Renders the HTML email as a responsive card layout for desktop and mobile clients.
 - Normalizes common shared-post formats, including X/Twitter share text and Overcast titles, before building the email.
 - Promotes real article URLs out of shared social-post text when possible, instead of preserving short links or social wrapper URLs.
+- For X/Twitter shares, canonicalizes `.../video/1` or `.../photo/1` URLs back to the tweet status URL, and promotes `t.co` short links to the resolved status URL when possible so source links stay readable.
 
 If metadata lookup fails, SendMoi falls back to the title, description, image, and URL captured from the shared item.
 
@@ -70,6 +72,7 @@ The `SendMoiShare` extension is included for iPhone, iPad, and macOS share sheet
 - If no default recipient is saved, the share sheet shows a neutral inline helper under `To`, then promotes that guidance into a red validation message only after you tap `Send` without a recipient; on iPhone and iPad it also returns focus to the `To` field so you can fix it immediately.
 - If immediate delivery fails, it writes the message into the shared queue and exits cleanly.
 - If the host app only supplies a URL, the extension can still fetch metadata and allow manual editing before queueing.
+- If URL metadata for an X/Twitter share is missing a preview image, the share extension now tries a Link Presentation image fallback (including `t.co` and `pic.twitter.com` variants) and stores that image in the shared container for inline send.
 - Image-only shares from apps like Photos are stored in the shared App Group container, then cleaned up after send or deletion.
 
 ## Distribution
