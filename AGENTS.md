@@ -9,6 +9,9 @@
 ## Git Workflow
 - Work from `main` on short-lived branches named `codex/*`.
 - Do not push directly to `main` unless explicitly told to.
+- Before opening a PR, sync your branch with the latest `origin/main` (`git fetch origin` then `git rebase origin/main`).
+- If rebase is not appropriate for the branch, merge `origin/main` before opening the PR.
+- For parallel tasks, keep one branch per task (and prefer one worktree per branch) so work can proceed on multiple branches at once without cross-contamination.
 - Commit at sensible, verifiable milestones without waiting for approval.
 - Multiple commits per branch are fine; keep them scoped and readable.
 - Leave changes PR-ready when a task is complete.

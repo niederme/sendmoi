@@ -4,7 +4,7 @@ Last updated: March 10, 2026
 
 ## Current State
 
-- Repo: `codex/offline-queue-collapsible-cta` (based on `origin/main`)
+- Repo: `codex/layout-subhead-spacing` (based on `origin/main`)
 - Latest intended app version: `0.3`
 - Recent shipped commits:
   - `ec40844` `Use Icon Composer .icon file as app icon source, drop legacy PNG appiconset (#33)`
@@ -15,12 +15,14 @@ Last updated: March 10, 2026
 
 1. `git clone https://github.com/niederme/sendmoi.git`
 2. `cd sendmoi`
-3. `git checkout codex/offline-queue-collapsible-cta`
+3. `git checkout codex/layout-subhead-spacing`
 4. `git pull --rebase origin main`
-5. Open `SendMoi.xcodeproj` in Xcode and continue from `codex/offline-queue-collapsible-cta`.
+5. Open `SendMoi.xcodeproj` in Xcode and continue from `codex/layout-subhead-spacing`.
 
 ## What Changed Recently
 
+- `AGENTS.md` Git Workflow now requires syncing with `origin/main` before opening a PR (`git fetch origin` + `git rebase origin/main`, or merge when rebase is not appropriate) and explicitly recommends one branch/worktree per parallel task.
+- iPhone compact settings now shows a subhead under `SendMoi` (`Send links to your Gmail inbox without losing them in tabs, bookmarks, or chats.`) and uses larger inter-section spacing to separate Account, Recipient, Share Sheet, Offline Queue, and Setup blocks.
 - Opened issue `#43` (`Make Offline Queue collapsible with prominent retry CTA`) and updated iPhone/iPad settings so `Offline Queue` now uses a collapsible disclosure row with summary text plus a full-width prominent `Send Queued Now` action when expanded.
 - Onboarding connected-account layout now preserves a one-line `Switch Account` button label by prioritizing button width and allowing the email/details text block to truncate first.
 - `AGENTS.md` issue-media guidance no longer requires uploading screenshots/videos into the repo (for example `docs/bugs/...`); local-only media can be user-attached manually.
