@@ -1,6 +1,6 @@
 # SendMoi Handoff
 
-Last updated: March 11, 2026
+Last updated: March 10, 2026
 
 ## Current State
 
@@ -38,6 +38,7 @@ Last updated: March 11, 2026
   - summary length now scales with extracted page text length so shorter pages get shorter blurbs instead of forcing article-sized summaries
   - summary generation now accepts concise but substantive pages (70+ cleaned words), so profile/home pages can still produce a 1-2 sentence recap
   - summary promo filtering now treats newsletter mentions as promo only for short CTA-style lines, so substantive profile/homepage content is not dropped from summary input
+  - summary sanitization now strips generic lead-ins like "Here is a summary...", removes markdown formatting artifacts (for example `**bold**`), rejects affiliate-disclosure boilerplate, and suppresses low-signal structured listing summaries (for example Ticketmaster/Zillow-style schedule or listing blobs)
 - Added:
   - `PRIVACY.md`
   - `TERMS.md`
@@ -89,6 +90,7 @@ Last updated: March 11, 2026
 13. Open the share sheet with no default recipient and confirm the initial helper text feels neutral, then tap `Send` and verify the red validation state appears and the `To` field becomes focused.
 14. Share a concise profile/homepage URL that includes a newsletter mention in body copy and confirm SendMoi still generates a short summary when the page has meaningful text.
 15. Confirm App Store Connect processing reports iOS compatibility as `iOS 18.0 or later` after uploading the next archive.
+16. Share a Zillow or Ticketmaster listing URL and confirm SendMoi omits low-quality structured summaries instead of sending scraped listing blobs, markdown artifacts, or generic "Here is a summary..." prefixes.
 
 ## Local Setup
 

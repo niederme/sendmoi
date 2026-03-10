@@ -1697,6 +1697,7 @@ final class GmailDeliveryService {
         // Allow concise homepage/profile content to be summarized when it still has
         // meaningful body text, while relying on existing quality gates to reject noise.
         guard wordCount(in: cleanedText) >= 70,
+              !looksLikeStructuredListingPage(title: title, text: cleanedText),
               passesSummaryInputQualityGate(cleanedText, title: title) else {
             return nil
         }
@@ -1959,6 +1960,10 @@ final class GmailDeliveryService {
             return true
         }
 
+        if looksLikeAffiliateDisclosure(line) {
+            return true
+        }
+
         let headlineLikeWords = line.split(whereSeparator: \.isWhitespace)
 
         // Treat newsletter mentions as promo only when they are short CTA-style copy.
@@ -1988,6 +1993,77 @@ final class GmailDeliveryService {
            headlineLikeWords.count <= 18,
            titlecaseWords >= max(headlineLikeWords.count - 2, 4),
            !line.contains(".") {
+            return true
+        }
+
+        return false
+    }
+
+    private static func looksLikeAffiliateDisclosure(_ line: String) -> Bool {
+        let lowered = line.lowercased()
+        let markers = [
+            "things you buy through our links may earn",
+            "if you buy something through our links",
+            "we may earn a commission",
+            "may earn us a commission",
+            "contains affiliate links",
+            "this article contains affiliate links",
+            "from links on this page",
+            "shopping links",
+            "affiliate commission"
+        ]
+
+        return markers.contains(where: { lowered.contains($0) })
+    }
+
+    private static func looksLikeStructuredListingPage(title: String, text: String) -> Bool {
+        let loweredTitle = title.lowercased()
+        let loweredText = text.lowercased()
+
+        let titleMarkers = [
+            "ticketmaster",
+            "tickets",
+            "tour dates",
+            "concert dates",
+            "event schedule",
+            "showtimes",
+            "zillow",
+            "realtor",
+            "redfin",
+            "homes for sale"
+        ]
+
+        let textMarkers = [
+            "show events in list view",
+            "show events in calendar view",
+            "change date range",
+            "open additional information for",
+            "presale happening now",
+            "results show events",
+            "location dates all dates",
+            "off market zestimate",
+            "facts & features",
+            "beds",
+            "baths",
+            "sqft",
+            "single family"
+        ]
+
+        let titleMarkerCount = titleMarkers.filter { loweredTitle.contains($0) }.count
+        let textMarkerCount = textMarkers.filter { loweredText.contains($0) }.count
+        let slashDateCount = countMatches(in: loweredText, pattern: #"\b\d{1,2}/\d{1,2}/\d{2,4}\b"#)
+        let monthDateCount = countMatches(in: loweredText, pattern: #"\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+\d{1,2},\s+\d{4}\b"#)
+        let timeCount = countMatches(in: loweredText, pattern: #"\b\d{1,2}:\d{2}\s*(?:am|pm)\b"#)
+
+        if titleMarkerCount >= 2 {
+            return true
+        }
+
+        if textMarkerCount >= 3 {
+            return true
+        }
+
+        if (slashDateCount + monthDateCount) >= 3 && timeCount >= 2 {
             return true
         }
 
@@ -2065,8 +2141,12 @@ final class GmailDeliveryService {
     }
 
     private static func passesSummaryOutputQualityGate(_ summary: String) -> Bool {
-        let normalized = collapseWhitespace(in: summary)
+        let normalized = sanitizeSummaryText(summary)
         guard wordCount(in: normalized) >= 20 else {
+            return false
+        }
+
+        if looksLikeAffiliateDisclosure(normalized) {
             return false
         }
 
@@ -2078,12 +2158,18 @@ final class GmailDeliveryService {
             return false
         }
 
+        if looksLikeStructuredListingSummary(normalized) {
+            return false
+        }
+
         let lowered = normalized.lowercased()
         let markers = [
             "sign up",
             "the latest",
             "your weekly horoscopes",
-            "more more more"
+            "more more more",
+            "here is a summary",
+            "summary of the content"
         ]
 
         if markers.contains(where: { lowered.contains($0) }) {
@@ -2096,6 +2182,63 @@ final class GmailDeliveryService {
         }
 
         return true
+    }
+
+    private static func looksLikeStructuredListingSummary(_ text: String) -> Bool {
+        let lowered = text.lowercased()
+        let markers = [
+            "off market zestimate",
+            "facts & features",
+            "show events in list view",
+            "show events in calendar view",
+            "change date range",
+            "results show events",
+            "location dates all dates",
+            "rating: ",
+            "out of 5 based on",
+            "beds",
+            "baths",
+            "sqft"
+        ]
+
+        let markerHits = markers.filter { lowered.contains($0) }.count
+        if markerHits >= 3 {
+            return true
+        }
+
+        let slashDateCount = countMatches(in: lowered, pattern: #"\b\d{1,2}/\d{1,2}/\d{2,4}\b"#)
+        let timeCount = countMatches(in: lowered, pattern: #"\b\d{1,2}:\d{2}\s*(?:am|pm)\b"#)
+        if slashDateCount >= 2 && timeCount >= 2 {
+            return true
+        }
+
+        return false
+    }
+
+    private static func sanitizeSummaryText(_ text: String) -> String {
+        let renderedLinks = renderMarkdownLinksAsPlainText(in: text)
+        let strippedMarkdown = stripMarkdownFormatting(in: renderedLinks)
+        return collapseWhitespace(in: strippedMarkdown)
+    }
+
+    private static func stripMarkdownFormatting(in text: String) -> String {
+        var cleaned = text
+        let replacements: [(pattern: String, replacement: String)] = [
+            (#"(?m)^\s{0,3}#{1,6}\s*"#, ""),
+            (#"(?m)^\s{0,3}[-*+]\s+"#, ""),
+            (#"(?m)^\s{0,3}\d+\.\s+"#, ""),
+            (#"`{1,3}"#, ""),
+            (#"\*\*"#, ""),
+            (#"__"#, ""),
+            (#"\*(?=\S)|(?<=\S)\*"#, ""),
+            (#"_(?=\S)|(?<=\S)_"#, "")
+        ]
+
+        for (pattern, replacement) in replacements {
+            cleaned = replaceMatches(in: cleaned, pattern: pattern, with: replacement)
+        }
+
+        return cleaned
     }
 
     private static func countMatches(in text: String, pattern: String) -> Int {
@@ -2377,7 +2520,9 @@ final class GmailDeliveryService {
     }
 
     private static func stripSummaryPreamble(from text: String, title: String) -> String {
-        let normalized = collapseWhitespace(in: text)
+        let normalized = sanitizeSummaryText(
+            stripLeadingSummaryBoilerplate(from: collapseWhitespace(in: text))
+        )
         guard !normalized.isEmpty else {
             return normalized
         }
@@ -2385,6 +2530,8 @@ final class GmailDeliveryService {
         let escapedTitle = NSRegularExpression.escapedPattern(for: title)
         let patterns = [
             #"^(?:(?:here is|here's)\s+(?:a\s+)?)?summary:\s*"#,
+            #"^(?:(?:here is|here's)\s+(?:a\s+)?)summary of (?:the )?content[:.\s-]*"#,
+            #"^(?:(?:here is|here's)\s+(?:a\s+)?)summary of (?:the )?(?:listing|post|tweet|thread)[:.\s-]*"#,
             #"^(?:(?:here is|here's)\s+)?a summary of (?:the )?(?:article|story|piece)\s+["“]?"# + escapedTitle + #"["”]?(?:\s*[.:;-]\s*|\s+)"#,
             #"^(?:(?:here is|here's)\s+)?(?:this )?(?:article|story|piece)\s+(?:is|covers|explains)\s+"#
         ]
@@ -2405,7 +2552,28 @@ final class GmailDeliveryService {
             }
         }
 
-        return normalized
+        return sanitizeSummaryText(normalized)
+    }
+
+    private static func stripLeadingSummaryBoilerplate(from text: String) -> String {
+        var cleaned = collapseWhitespace(in: text)
+        guard !cleaned.isEmpty else {
+            return cleaned
+        }
+
+        let patterns = [
+            #"^(?:things you buy through our links may earn[^.?!]*[.?!]\s*)+"#,
+            #"^(?:if you buy something through our links[^.?!]*[.?!]\s*)+"#,
+            #"^(?:we may earn a commission[^.?!]*[.?!]\s*)+"#,
+            #"^(?:this article contains affiliate links[^.?!]*[.?!]\s*)+"#
+        ]
+
+        for pattern in patterns {
+            cleaned = replaceMatches(in: cleaned, pattern: pattern, with: "")
+            cleaned = collapseWhitespace(in: cleaned)
+        }
+
+        return cleaned
     }
 
     private static func intValue(_ value: Any?) -> Int? {
