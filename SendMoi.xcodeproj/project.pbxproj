@@ -24,6 +24,7 @@
 		A1000001000000000000000F /* GmailDeliveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000011 /* GmailDeliveryService.swift */; };
 		A10000010000000000000010 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000013 /* Assets.xcassets */; };
 		DC6FF07B2F55D5CB00415EAC /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = DC6FF07A2F55D5CB00415EAC /* AppIcon.icon */; };
+		DC6FF07D2F55D5CB00415EAC /* sendmoi-demo-hero.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = DC6FF07C2F55D5CB00415EAC /* sendmoi-demo-hero.mp4 */; };
 		B10000010000000000000001 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000004 /* Models.swift */; };
 		B10000010000000000000002 /* QueueStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000008 /* QueueStore.swift */; };
 		B10000010000000000000003 /* RecipientStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000009 /* RecipientStore.swift */; };
@@ -91,6 +92,7 @@
 		B20000010000000000000006 /* SafariPreprocessor.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = SafariPreprocessor.js; sourceTree = "<group>"; };
 		B20000010000000000000007 /* SendMoiShare-macOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "SendMoiShare-macOS.entitlements"; sourceTree = "<group>"; };
 		DC6FF07A2F55D5CB00415EAC /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "AppIcon.icon"; sourceTree = "<group>"; };
+		DC6FF07C2F55D5CB00415EAC /* sendmoi-demo-hero.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Resources/sendmoi-demo-hero.mp4"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -128,6 +130,7 @@
 				A20000010000000000000012 /* SendMoi-macOS.entitlements */,
 				A20000010000000000000013 /* Assets.xcassets */,
 				DC6FF07A2F55D5CB00415EAC /* AppIcon.icon */,
+				DC6FF07C2F55D5CB00415EAC /* sendmoi-demo-hero.mp4 */,
 				A20000010000000000000001 /* SendMoiApp.swift */,
 				A20000010000000000000002 /* ContentView.swift */,
 				A20000010000000000000003 /* AppModel.swift */,
@@ -257,6 +260,7 @@
 			files = (
 				A10000010000000000000010 /* Assets.xcassets in Resources */,
 				DC6FF07B2F55D5CB00415EAC /* AppIcon.icon in Resources */,
+				DC6FF07D2F55D5CB00415EAC /* sendmoi-demo-hero.mp4 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
