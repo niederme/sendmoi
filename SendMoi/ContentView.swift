@@ -2318,7 +2318,7 @@ private final class LoopingVideoPlayerModel: ObservableObject {
             return
         }
 
-        let item = AVPlayerItem(url: url)
+        let item = Self.makeVideoOnlyItem(url: url)
         looper = AVPlayerLooper(player: queuePlayer, templateItem: item)
     }
 
@@ -2328,6 +2328,29 @@ private final class LoopingVideoPlayerModel: ObservableObject {
 
     func pause() {
         player.pause()
+    }
+
+    private static func makeVideoOnlyItem(url: URL) -> AVPlayerItem {
+        let sourceAsset = AVURLAsset(url: url)
+        let composition = AVMutableComposition()
+        guard
+            let sourceVideoTrack = sourceAsset.tracks(withMediaType: .video).first,
+            let videoOnlyCompositionTrack = composition.addMutableTrack(
+                withMediaType: .video,
+                preferredTrackID: kCMPersistentTrackID_Invalid
+            )
+        else {
+            return AVPlayerItem(url: url)
+        }
+
+        do {
+            let timeRange = CMTimeRange(start: .zero, duration: sourceAsset.duration)
+            try videoOnlyCompositionTrack.insertTimeRange(timeRange, of: sourceVideoTrack, at: .zero)
+            videoOnlyCompositionTrack.preferredTransform = sourceVideoTrack.preferredTransform
+            return AVPlayerItem(asset: composition)
+        } catch {
+            return AVPlayerItem(url: url)
+        }
     }
 }
 
