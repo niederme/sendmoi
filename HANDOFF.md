@@ -47,7 +47,7 @@ Last updated: March 10, 2026
 - The onboarding footer now leaves `Skip` on its own and groups `Back` with the trailing primary action.
 - Onboarding compact-layout detection is now device-based (not step-1-only), so step 2/3 typography, card spacing, and bottom inset scale correctly on smaller iPhones.
 - Onboarding step 2 now adds `Step x of 3` progress text, tappable pagination dots, compact-phone image padding tuning, and explicit accessibility labels/hints for each slide.
-- Onboarding step 3 now uses a clearly-disabled lock-style trailing nav control when Gmail is disconnected, keeps `Connect Gmail` as the in-card primary action, and adds helper copy that clarifies users can still skip and connect later.
+- Onboarding step 3 now uses a clearly-disabled `chevron.right` trailing nav control when Gmail is disconnected, keeps `Connect Gmail` as the in-card primary action, and adds helper copy that clarifies users can still skip and connect later.
 - iOS deployment target is now `18.0` for both `SendMoi` and `SendMoiShare`; Foundation Models summary support remains optional at runtime and falls back on unsupported OS versions.
 - New in the current working tree:
   - repo-wide rename from MailMoi to SendMoi: project, targets, schemes, folders, and user-facing copy
