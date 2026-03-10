@@ -43,7 +43,7 @@
   - `git pull --ff-only`
 - Clean up feature branch:
   - `git branch -d codex/<short-slug>` (if this fails after squash merge, use `git branch -D codex/<short-slug>`)
-  - `git push origin --delete codex/<short-slug>`
+  - `git push origin --delete codex/<short-slug>` (if remote branch exists)
 - Clean up parallel workspace metadata when used:
   - `git worktree prune`
 
