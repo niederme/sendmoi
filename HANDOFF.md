@@ -21,6 +21,7 @@ Last updated: March 10, 2026
 
 ## What Changed Recently
 
+- `AGENTS.md` now clarifies that `Commit Workflow` and `Git Workflow` are guardrails that are explicitly incorporated into the end-to-end `Delivery Lifecycle Workflow` steps, so there is one canonical process instead of parallel checklists.
 - `AGENTS.md` now includes an explicit end-to-end delivery lifecycle: start from issue + fresh `codex/*` branch off updated `main`, rebase/merge from `origin/main` before opening PR, require PR issue linkage (`Closes #...`), and run post-merge cleanup (`main` sync, branch deletion, optional worktree prune).
 - `AGENTS.md` Git Workflow now requires syncing with `origin/main` before opening a PR (`git fetch origin` + `git rebase origin/main`, or merge when rebase is not appropriate) and explicitly recommends one branch/worktree per parallel task.
 - iPhone compact settings now shows a subhead under `SendMoi` (`Send links to your Gmail inbox without losing them in tabs, bookmarks, or chats.`) and uses larger inter-section spacing to separate Account, Recipient, Share Sheet, Offline Queue, and Setup blocks.
