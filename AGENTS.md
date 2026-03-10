@@ -23,4 +23,4 @@
 - If required details are missing, ask a short follow-up question before creating the issue.
 - If the user provides screenshots/videos, include them in the issue:
   - use existing URLs directly when available
-  - otherwise upload media into the repo (for example under `docs/bugs/...`) and link it in the issue body.
+  - if media is local-only, ask for a shareable URL or confirm the user will attach it manually (do not require committing media into this repo).
