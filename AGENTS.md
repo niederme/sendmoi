@@ -18,18 +18,19 @@
 - Commit at sensible, verifiable milestones without waiting for approval.
 - Multiple commits per branch are fine; keep them scoped and readable.
 - Do not include unrelated working tree changes in commits unless explicitly requested.
-- Before every commit, review `README.md` and `HANDOFF.md`.
-- Update `README.md` whenever setup steps, commands, behavior, or other user-facing documentation changed.
-- Update `HANDOFF.md` whenever the working branch, current focus, recent changes, open items, or resume steps changed.
-- Do not finalize a commit until `README.md` and `HANDOFF.md` are updated or explicitly confirmed to still be accurate.
+- Update docs during development when the commit changes setup steps, commands, behavior, or active-branch context.
+- Prefer milestone-sized doc updates during implementation to reduce conflict churn.
 
 ### 3) When Asked To Open A PR
 - Confirm the issue number to link in the PR. If missing, ask before creating the PR.
 - Complete relevant tests/checks.
+- Run a full docs reconciliation pass before opening the PR:
+  - review `README.md` and `HANDOFF.md` end-to-end
+  - update both files to match the final branch state, or explicitly confirm they are still accurate
 - Sync branch right before PR creation:
   - `git fetch origin`
   - `git rebase origin/main` (or merge `origin/main` when rebase is not appropriate)
-- Resolve conflicts, rerun checks, then push:
+- Resolve conflicts, rerun checks, and re-verify `README.md` / `HANDOFF.md`, then push:
   - normal push: `git push -u origin codex/<short-slug>`
   - after rebase: `git push --force-with-lease`
 - Open PR against `main` and link the issue in the PR body using `Closes #<issue-number>`.
