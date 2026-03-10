@@ -519,7 +519,7 @@ struct ContentView: View {
                 Text("Or tap Skip below and connect later from Account. · [Privacy Policy](https://send.moi/privacy)")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-                    .tint(.secondary)
+                    .tint(onboardingBrandAccent)
             }
         } else {
             VStack(alignment: .leading, spacing: 16) {
