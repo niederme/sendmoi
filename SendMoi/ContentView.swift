@@ -499,7 +499,7 @@ struct ContentView: View {
                 onboardingFeatureRow(
                     iconName: "lock.shield.fill",
                     title: "Secure sign-in",
-                    detail: "Google handles the login in a system sheet."
+                    detail: "Google handles the login. SendMoi never sees your password or inbox."
                 )
                 onboardingFeatureRow(
                     iconName: "envelope.badge.fill",
@@ -516,9 +516,10 @@ struct ContentView: View {
                 .padding(.top, 4)
                 .accessibilityHint("Opens Google sign-in in a system sheet.")
 
-                Text("Or tap Skip below and connect later from Account.")
+                Text("Or tap Skip below and connect later from Account. · [Privacy Policy](https://send.moi/privacy)")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+                    .tint(.secondary)
             }
         } else {
             VStack(alignment: .leading, spacing: 16) {
