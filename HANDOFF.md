@@ -4,7 +4,7 @@ Last updated: March 10, 2026
 
 ## Current State
 
-- Repo: `codex/issue-36-switch-account-wrap` (based on `origin/main`)
+- Repo: `codex/fix-sendmoi-bundle-identifiers` (based on `origin/main`)
 - Latest intended app version: `0.3`
 - Recent shipped commits:
   - `ec40844` `Use Icon Composer .icon file as app icon source, drop legacy PNG appiconset (#33)`
@@ -15,9 +15,9 @@ Last updated: March 10, 2026
 
 1. `git clone https://github.com/niederme/sendmoi.git`
 2. `cd sendmoi`
-3. `git checkout main`
+3. `git checkout codex/fix-sendmoi-bundle-identifiers`
 4. `git pull --rebase origin main`
-5. Open `SendMoi.xcodeproj` in Xcode and continue from `main`.
+5. Open `SendMoi.xcodeproj` in Xcode and continue from `codex/fix-sendmoi-bundle-identifiers`.
 
 ## What Changed Recently
 
@@ -55,7 +55,7 @@ Last updated: March 10, 2026
 - iOS deployment target is now `18.0` for both `SendMoi` and `SendMoiShare`; Foundation Models summary support remains optional at runtime and falls back on unsupported OS versions.
 - New in the current working tree:
   - repo-wide rename from MailMoi to SendMoi: project, targets, schemes, folders, and user-facing copy
-  - bundle identifiers, App Group ID, and shared container/keychain storage identifiers intentionally remain on the existing MailMoi values for upgrade continuity
+  - bundle identifiers now match the renamed app targets: `com.niederme.SendMoi` and `com.niederme.SendMoi.ShareExtension`; shared App Group and storage identifiers remain on the existing MailMoi values for continuity
   - added a first-pass `TERMS.md` so the Google OAuth consent screen can point at a public Terms of Service URL alongside the existing privacy policy
   - `MARKETING_VERSION` is now `0.3` and `CURRENT_PROJECT_VERSION` is now `6` for both targets, set via `./scripts/prepare_release.sh --version 0.3`
   - the legacy `CFBundleIconFile` override was removed
