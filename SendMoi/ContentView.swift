@@ -280,7 +280,7 @@ struct ContentView: View {
                     } else if onboardingStep == 2 && model.session == nil {
                         Button {
                         } label: {
-                            Image(systemName: "lock.fill")
+                            Image(systemName: "chevron.right")
                         }
                         .onboardingSecondaryButtonStyle()
                         .buttonBorderShape(.circle)
