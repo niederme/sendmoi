@@ -4,7 +4,7 @@ Last updated: March 10, 2026
 
 ## Current State
 
-- Repo: `codex/fix-sendmoi-bundle-identifiers` (based on `origin/main`)
+- Repo: `codex/offline-queue-collapsible-cta` (based on `origin/main`)
 - Latest intended app version: `0.3`
 - Recent shipped commits:
   - `ec40844` `Use Icon Composer .icon file as app icon source, drop legacy PNG appiconset (#33)`
@@ -15,12 +15,13 @@ Last updated: March 10, 2026
 
 1. `git clone https://github.com/niederme/sendmoi.git`
 2. `cd sendmoi`
-3. `git checkout codex/fix-sendmoi-bundle-identifiers`
+3. `git checkout codex/offline-queue-collapsible-cta`
 4. `git pull --rebase origin main`
-5. Open `SendMoi.xcodeproj` in Xcode and continue from `codex/fix-sendmoi-bundle-identifiers`.
+5. Open `SendMoi.xcodeproj` in Xcode and continue from `codex/offline-queue-collapsible-cta`.
 
 ## What Changed Recently
 
+- Opened issue `#43` (`Make Offline Queue collapsible with prominent retry CTA`) and updated iPhone/iPad settings so `Offline Queue` now uses a collapsible disclosure row with summary text plus a full-width prominent `Send Queued Now` action when expanded.
 - Onboarding connected-account layout now preserves a one-line `Switch Account` button label by prioritizing button width and allowing the email/details text block to truncate first.
 - `AGENTS.md` issue-media guidance no longer requires uploading screenshots/videos into the repo (for example `docs/bugs/...`); local-only media can be user-attached manually.
 - Share-sheet behavior is now controlled by a global `Auto-send` setting in the main app instead of living inside the compose form.
@@ -95,6 +96,7 @@ Last updated: March 10, 2026
 14. Share a concise profile/homepage URL that includes a newsletter mention in body copy and confirm SendMoi still generates a short summary when the page has meaningful text.
 15. Confirm App Store Connect processing reports iOS compatibility as `iOS 18.0 or later` after uploading the next archive.
 16. Share a Zillow or Ticketmaster listing URL and confirm SendMoi omits low-quality structured summaries instead of sending scraped listing blobs, markdown artifacts, or generic "Here is a summary..." prefixes.
+17. On iPhone and iPad, verify the `Offline Queue` section now starts collapsed when the queue is empty, auto-expands when queued items exist, and still allows manual retry + deletion from the expanded state.
 
 ## Local Setup
 

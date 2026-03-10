@@ -1207,6 +1207,28 @@ struct ContentView: View {
         model.isOnline ? "Network looks available. The app retries automatically." : "Offline or unreachable. Items remain queued."
     }
 
+    private var queueSummaryTitle: String {
+        let count = model.queuedEmails.count
+
+        if count == 0 {
+            return "No pending emails"
+        }
+
+        return "\(count) pending email\(count == 1 ? "" : "s")"
+    }
+
+    private var queueSummaryDetail: String {
+        if model.isBusy && !model.queuedEmails.isEmpty {
+            return "Retry in progress"
+        }
+
+        if model.queuedEmails.isEmpty {
+            return "Queue is clear"
+        }
+
+        return "Tap to review and send now"
+    }
+
     private func saveDefaultRecipient() {
         focusedField = nil
         model.setDefaultRecipient(model.defaultRecipient)
@@ -1225,36 +1247,50 @@ struct ContentView: View {
 
     private var queueSection: some View {
         Section {
-            if model.queuedEmails.isEmpty {
-                Text("No pending emails.")
-                    .foregroundStyle(.secondary)
-            } else {
-                ForEach(model.queuedEmails) { item in
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(item.title)
-                            .font(.headline)
-                        Text("To: \(item.toEmail)")
-                            .font(.subheadline)
-                        Text(item.urlString)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                        if let lastError = item.lastError {
-                            Text(lastError)
+            DisclosureGroup(isExpanded: $model.isQueueSectionExpanded) {
+                if model.queuedEmails.isEmpty {
+                    Text("No pending emails.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(model.queuedEmails) { item in
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(item.title)
+                                .font(.headline)
+                            Text("To: \(item.toEmail)")
+                                .font(.subheadline)
+                            Text(item.urlString)
                                 .font(.footnote)
-                                .foregroundStyle(.orange)
+                                .foregroundStyle(.secondary)
+                            if let lastError = item.lastError {
+                                Text(lastError)
+                                    .font(.footnote)
+                                    .foregroundStyle(.orange)
+                            }
                         }
+                        .padding(.vertical, 4)
                     }
-                    .padding(.vertical, 4)
+                    .onDelete(perform: model.deleteQueuedEmails)
                 }
-                .onDelete(perform: model.deleteQueuedEmails)
-            }
-
-            Button("Send Queued Now") {
-                Task {
-                    await model.retryNow()
+                Button {
+                    Task {
+                        await model.retryNow()
+                    }
+                } label: {
+                    Text("Send Queued Now")
+                        .frame(maxWidth: .infinity)
                 }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .disabled(model.isBusy || model.queuedEmails.isEmpty)
+            } label: {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(queueSummaryTitle)
+                    Text(queueSummaryDetail)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 2)
             }
-            .disabled(model.isBusy || model.queuedEmails.isEmpty)
         } header: {
             Text("Offline Queue")
         } footer: {

@@ -22,6 +22,7 @@ SendMoi currently ships the full core workflow:
 - Let the share sheet either send immediately or stay open with a pre-filled draft, based on the global `Auto-send` setting in the app.
 - Use the iOS `UILaunchScreen` asset configuration (`AppIconBackground` + `Splash`) directly at startup, without an extra in-app splash overlay.
 - Use a settings-style form on iPhone and iPad, and a desktop card layout on macOS.
+- Show the iPhone/iPad `Offline Queue` section as a collapsible row with queue-state summary text and a prominent `Send Queued Now` action in the expanded content.
 - Show a branded first-run setup guide with step-by-step onboarding, Gmail connect/switch, and a final “ready” step that can save recipient defaults before entering settings.
 - Keep the onboarding hero demo video fully silent without interrupting background audio from other apps.
 - Let users reopen setup from the app and run a destructive reset flow that disconnects Gmail and clears saved setup preferences.
