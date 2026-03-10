@@ -114,5 +114,5 @@ The repo already includes a configured OAuth client ID in [GoogleOAuthConfig.swi
 
 - Background delivery while the app is fully terminated is not implemented. The queue is durable, but retries resume only after the app launches, becomes active, or the share extension runs again.
 - TestFlight distribution is currently configured for internal testing only.
-- Bundle identifiers intentionally remain `com.niederme.MailMoi` and `com.niederme.MailMoi.ShareExtension` for existing-app continuity.
-- Command-line builds still require valid provisioning for `com.niederme.MailMoi` and `com.niederme.MailMoi.ShareExtension`. In Xcode, automatic signing handles this; with `xcodebuild`, use `-allowProvisioningUpdates`.
+- Bundle identifiers now use `com.niederme.SendMoi` and `com.niederme.SendMoi.ShareExtension`.
+- Command-line builds require valid provisioning for `com.niederme.SendMoi` and `com.niederme.SendMoi.ShareExtension`. In Xcode, automatic signing handles this; with `xcodebuild`, use `-allowProvisioningUpdates`.
