@@ -62,7 +62,8 @@ Last updated: March 10, 2026
   - share-extension media is persisted into the shared App Group container and deleted after send / queue deletion
   - the share extension activation rule now accepts image, text, URL, HTML, and property-list payloads
   - X/Twitter share text and Overcast links are normalized more aggressively before sending
-  - shared X/Twitter links now prefer canonical tweet/content URLs, with an X oEmbed fallback for tweet previews when page metadata is weak
+  - shared X/Twitter links now prefer canonical tweet/content URLs, including promotion away from `t.co` short links when the resolved status URL is available, with an X oEmbed fallback when page metadata is weak
+  - when X/Twitter metadata does not provide a preview image, the share extension now attempts a Link Presentation image fallback (including `t.co` and `pic.twitter.com` links) and stores the result in the shared container for inline send
   - low-quality summaries are filtered more aggressively, and summaries are skipped for X/Twitter and Overcast sources
   - the restored `desktopComposeCard` keeps the macOS compose panel buildable again after the helper was accidentally dropped from `ContentView.swift`, while preserving the current share-sheet-only drafting flow
   - iOS startup now relies on `UILaunchScreen` in `Info.plist`; the extra in-app splash overlay was removed so the startup mark matches the launch asset instead of rendering an SF Symbol paper plane
@@ -82,7 +83,7 @@ Last updated: March 10, 2026
    - App Store Connect screenshot previously showed macOS app version `1.0`
 5. Publish stable public URLs for both the privacy policy and terms page on `nieder.me`, then attach those URLs to the Google OAuth consent screen so the blue missing-policy banner disappears.
 6. Share a photo directly from Photos (without a URL) and confirm it can be queued, sent, and removed without leaving orphaned files in the App Group container.
-7. Share an X/Twitter post and an Overcast episode and confirm the title / source URL / summary behavior looks intentional rather than noisy.
+7. Share an X/Twitter post (including `t.co` and `/video/`/`/photo/` variants) and an Overcast episode and confirm title, source URL, summary, and preview image behavior all look intentional rather than noisy.
 8. Run the macOS target and confirm the desktop card layout feels right at common window sizes, especially queue deletion and account disclosure behavior.
 9. Run `./scripts/prepare_release.sh --version <next-version>` before the next archive, then verify App Store Connect accepts the `AppIcon` set for both iOS and macOS and shows the expected branded thumbnail.
 10. Confirm the next Xcode Cloud upload succeeds with build number `3`; the previous failure was `The bundle version must be higher than the previously uploaded version.`

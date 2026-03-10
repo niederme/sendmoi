@@ -197,7 +197,7 @@ final class GmailDeliveryService {
             )
         }
 
-        let url = Self.canonicalizedTweetURL(rawURL)
+        let url = await Self.resolvedContentURL(for: rawURL)
         let sanitizedFallbackExcerpt = Self.isMeaninglessTweetExcerpt(fallbackExcerpt, for: url) ? "" : fallbackExcerpt
         guard
               let scheme = url.scheme?.lowercased(),
@@ -225,7 +225,18 @@ final class GmailDeliveryService {
             )
         }
 
-        let resolvedURLString = Self.canonicalizedTweetURLString(metadata.urlString ?? url.absoluteString) ?? (metadata.urlString ?? url.absoluteString)
+        let resolvedURLString = Self.preferredResolvedSourceURLString(
+            metadataURLString: metadata.urlString,
+            requestURLString: url.absoluteString,
+            fetchedTitle: metadata.title,
+            fetchedExcerpt: metadata.excerpt
+        )
+        let derivedSocialTitle = Self.derivedSocialTitle(
+            resolvedURLString: resolvedURLString,
+            metadataURLString: metadata.urlString,
+            fetchedTitle: metadata.title
+        )
+        let socialFallbackTitle = Self.normalizedDisplayText(derivedSocialTitle ?? fallbackTitle)
         let resolvedImageURLStrings = Self.preferredImageURLStrings(
             from: metadata,
             fallbackImageURLStrings: fallbackImageURLStrings,
@@ -247,14 +258,113 @@ final class GmailDeliveryService {
             resolvedExcerpt = metadata.excerpt ?? sanitizedFallbackExcerpt
         }
 
+        let preferredFetchedTitle = metadata.title ?? socialFallbackTitle
+        let resolvedTitle: String
+        if Self.shouldUseSocialFallbackTitle(preferredFetchedTitle, resolvedURLString: resolvedURLString) {
+            resolvedTitle = socialFallbackTitle
+        } else {
+            resolvedTitle = preferredFetchedTitle
+        }
+
         return EmailContent(
-            title: shouldPreferParsedSocialShare ? fallbackTitle : (metadata.title ?? fallbackTitle),
+            title: shouldPreferParsedSocialShare ? socialFallbackTitle : resolvedTitle,
             excerpt: resolvedExcerpt,
             summary: metadata.summary ?? fallbackSummary,
             urlString: resolvedURLString,
             imageURLStrings: resolvedImageURLStrings,
             inlineImages: inlineImages
         )
+    }
+
+    private static func resolvedContentURL(for rawURL: URL) async -> URL {
+        let canonicalRawURL = canonicalizedTweetURL(rawURL)
+        guard let host = canonicalRawURL.host?.lowercased(),
+              host == "t.co" else {
+            return canonicalRawURL
+        }
+
+        var request = URLRequest(url: canonicalRawURL)
+        request.httpMethod = "HEAD"
+        request.timeoutInterval = 4
+        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
+
+        do {
+            let (_, response) = try await URLSession.sendMoiMetadata.data(for: request)
+            if let expandedURL = preferredExpandedURL(from: response, fallbackURL: canonicalRawURL) {
+                return canonicalizedTweetURL(expandedURL)
+            }
+        } catch {}
+
+        var fallbackRequest = request
+        fallbackRequest.httpMethod = "GET"
+
+        do {
+            let (_, response) = try await URLSession.sendMoiMetadata.data(for: fallbackRequest)
+            if let expandedURL = preferredExpandedURL(from: response, fallbackURL: canonicalRawURL) {
+                return canonicalizedTweetURL(expandedURL)
+            }
+        } catch {}
+
+        return canonicalRawURL
+    }
+
+    private static func preferredExpandedURL(from response: URLResponse, fallbackURL: URL) -> URL? {
+        guard let httpResponse = response as? HTTPURLResponse else {
+            return nil
+        }
+
+        if let location = httpResponse.value(forHTTPHeaderField: "Location"),
+           let redirectedURL = URL(string: location, relativeTo: fallbackURL)?.absoluteURL {
+            return redirectedURL
+        }
+
+        return httpResponse.url
+    }
+
+    private static func isTweetShortenerHost(_ host: String) -> Bool {
+        let normalized = host.lowercased()
+        return normalized == "t.co" || normalized == "www.t.co"
+    }
+
+    private static func isTweetShortenerURL(_ url: URL) -> Bool {
+        guard let host = url.host else {
+            return false
+        }
+
+        return isTweetShortenerHost(host)
+    }
+
+    private static func preferredResolvedSourceURLString(
+        metadataURLString: String?,
+        requestURLString: String,
+        fetchedTitle: String?,
+        fetchedExcerpt: String?
+    ) -> String {
+        let primary = canonicalizedTweetURLString(metadataURLString ?? requestURLString) ?? (metadataURLString ?? requestURLString)
+        guard let primaryURL = URL(string: primary),
+              isTweetShortenerURL(primaryURL) else {
+            return primary
+        }
+
+        let candidates = [fetchedTitle, fetchedExcerpt]
+        for candidate in candidates {
+            guard let detected = firstDetectedWebURLString(in: candidate) else {
+                continue
+            }
+
+            let canonical = canonicalizedTweetURLString(detected) ?? detected
+            guard
+                  let canonicalURL = URL(string: canonical) else {
+                continue
+            }
+
+            let host = canonicalURL.host?.lowercased() ?? ""
+            if !isTweetShortenerHost(host) {
+                return canonical
+            }
+        }
+
+        return primary
     }
 
     private func fetchArticleMetadata(for url: URL, fallbackTitle: String) async -> FetchedArticleMetadata? {
@@ -272,7 +382,6 @@ final class GmailDeliveryService {
     }
 
     private func fetchAndCacheArticleMetadata(for canonicalURL: URL) async -> CachedArticleMetadata? {
-        let shouldTryXOEmbedFallback = Self.isTweetHost(canonicalURL)
         var request = URLRequest(url: canonicalURL)
         request.httpMethod = "GET"
         request.setValue("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", forHTTPHeaderField: "Accept")
@@ -282,16 +391,17 @@ final class GmailDeliveryService {
 
         do {
             let (data, response) = try await URLSession.sendMoiMetadata.data(for: request)
+            let responseURL = Self.canonicalizedTweetURL((response as? HTTPURLResponse)?.url ?? canonicalURL)
+            let shouldTryXOEmbedFallback = Self.isTweetHost(canonicalURL) || Self.isTweetHost(responseURL)
             guard let httpResponse = response as? HTTPURLResponse,
                   (200..<300).contains(httpResponse.statusCode),
                   let html = decodeHTML(data: data) else {
                 if shouldTryXOEmbedFallback {
-                    return await fetchXOEmbedMetadata(for: canonicalURL)
+                    return await fetchXOEmbedMetadata(for: responseURL)
                 }
                 return nil
             }
 
-            let responseURL = Self.canonicalizedTweetURL(httpResponse.url ?? canonicalURL)
             let metaTags = Self.extractMetaTags(from: html)
             var instagramMetadata = Self.extractInstagramPostMetadata(fromHTML: html, baseURL: responseURL)
             if instagramMetadata == nil,
@@ -340,7 +450,7 @@ final class GmailDeliveryService {
             await Self.previewMetadataCache.store(metadata, for: canonicalURL.absoluteString)
             return metadata
         } catch {
-            if shouldTryXOEmbedFallback {
+            if Self.isTweetHost(canonicalURL) {
                 return await fetchXOEmbedMetadata(for: canonicalURL)
             }
             return nil
@@ -961,6 +1071,10 @@ final class GmailDeliveryService {
            pathComponents[1].lowercased() == "status",
            pathComponents[3].lowercased() == "mediaviewer" {
             normalizedPathComponents = Array(pathComponents.prefix(3))
+        } else if pathComponents.count >= 5,
+                  pathComponents[1].lowercased() == "status",
+                  (pathComponents[3].lowercased() == "video" || pathComponents[3].lowercased() == "photo") {
+            normalizedPathComponents = Array(pathComponents.prefix(3))
         } else if pathComponents.count >= 2,
                   pathComponents.last?.lowercased() == "mediaviewer",
                   let tweetID = components.queryItems?.first(where: { $0.name == "currentTweet" })?.value,
@@ -1291,6 +1405,93 @@ final class GmailDeliveryService {
         }
 
         return excerpt.isEmpty || excerpt == "x" || excerpt == "twitter"
+    }
+
+    private static func derivedSocialTitle(
+        resolvedURLString: String,
+        metadataURLString: String?,
+        fetchedTitle: String?
+    ) -> String? {
+        if let title = SharedPostTextParser.derivedSocialPostShare(
+            from: canonicalizedTweetURLString(resolvedURLString) ?? resolvedURLString
+        )?.title {
+            return title
+        }
+
+        if let metadataURLString,
+           let title = SharedPostTextParser.derivedSocialPostShare(
+               from: canonicalizedTweetURLString(metadataURLString) ?? metadataURLString
+           )?.title {
+            return title
+        }
+
+        if let urlCandidate = firstDetectedWebURLString(in: fetchedTitle),
+           let title = SharedPostTextParser.derivedSocialPostShare(
+               from: canonicalizedTweetURLString(urlCandidate) ?? urlCandidate
+           )?.title {
+            return title
+        }
+
+        return nil
+    }
+
+    private static func firstDetectedWebURLString(in text: String?) -> String? {
+        guard let text = text?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !text.isEmpty,
+              let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) else {
+            return nil
+        }
+
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        for match in detector.matches(in: text, options: [], range: range) {
+            guard
+                match.resultType == .link,
+                let url = match.url,
+                let scheme = url.scheme?.lowercased(),
+                scheme == "http" || scheme == "https"
+            else {
+                continue
+            }
+
+            return url.absoluteString
+        }
+
+        return nil
+    }
+
+    private static func shouldUseSocialFallbackTitle(_ fetchedTitle: String, resolvedURLString: String) -> Bool {
+        let trimmed = fetchedTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return true
+        }
+
+        let lowered = trimmed.lowercased()
+        if lowered == "x" || lowered == "twitter" || lowered == "x / ?" {
+            return true
+        }
+
+        if let fetchedURL = URL(string: trimmed),
+           isTweetHost(fetchedURL) {
+            return true
+        }
+
+        if lowered.contains("/status/"),
+           lowered.contains("http") {
+            return true
+        }
+
+        if lowered.contains("twitter.com/") || lowered.contains("x.com/") {
+            return true
+        }
+
+        if let host = URL(string: resolvedURLString)?.host?.lowercased() {
+            let condensedHost = host.replacingOccurrences(of: "www.", with: "")
+            if lowered == host || lowered == condensedHost {
+                return true
+            }
+        }
+
+        return false
     }
 
     private static func parseAttributes(from tag: String) -> [String: String] {
@@ -2433,6 +2634,17 @@ final class GmailDeliveryService {
            preservesProviderSourceHosts.contains(responseHost),
            candidateHost != responseHost {
             return responseURL.absoluteString
+        }
+
+        if isTweetShortenerHost(candidateHost) {
+            if let responseHost = normalizedHost(from: responseURL),
+               !isTweetShortenerHost(responseHost) {
+                return responseURL.absoluteString
+            }
+
+            if !isTweetShortenerHost(requestHost) {
+                return requestURL.absoluteString
+            }
         }
 
         return candidateURLString

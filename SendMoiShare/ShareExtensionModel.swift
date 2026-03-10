@@ -1,6 +1,12 @@
 import Foundation
+import LinkPresentation
 import SwiftUI
 import UniformTypeIdentifiers
+#if canImport(UIKit)
+import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 @MainActor
 final class ShareExtensionModel: ObservableObject {
@@ -337,10 +343,20 @@ final class ShareExtensionModel: ObservableObject {
             }
 
             guard let self else { return }
-            let metadata = await self.deliveryService.fetchDraftPreview(
+            var metadata = await self.deliveryService.fetchDraftPreview(
                 urlString: normalizedURLString,
                 fallbackTitle: titleSnapshot
             )
+            if metadata?.imageURLString == nil,
+               Self.shouldAttemptSocialImageFallback(for: normalizedURLString),
+               let fallbackImageURLString = await Self.fetchLinkPreviewImageURLString(for: normalizedURLString) {
+                metadata = DraftPreviewMetadata(
+                    title: metadata?.title,
+                    description: metadata?.description,
+                    summary: metadata?.summary,
+                    imageURLString: fallbackImageURLString
+                )
+            }
 
             await MainActor.run {
                 guard self.urlString.trimmingCharacters(in: .whitespacesAndNewlines) == normalizedURLString else {
@@ -656,6 +672,108 @@ final class ShareExtensionModel: ObservableObject {
         let condensedHost = host.replacingOccurrences(of: "www.", with: "")
         return loweredTitle == host || loweredTitle == condensedHost
     }
+
+    private static func shouldAttemptSocialImageFallback(for urlString: String) -> Bool {
+        guard let host = URL(string: urlString)?.host?.lowercased() else {
+            return false
+        }
+
+        return host == "x.com" ||
+            host == "www.x.com" ||
+            host == "twitter.com" ||
+            host == "www.twitter.com" ||
+            host == "t.co" ||
+            host == "www.t.co" ||
+            host == "pic.twitter.com" ||
+            host == "www.pic.twitter.com"
+    }
+
+    private static func fetchLinkPreviewImageURLString(for urlString: String) async -> String? {
+        guard let url = URL(string: urlString) else {
+            return nil
+        }
+
+        let provider = LPMetadataProvider()
+        provider.timeout = 5
+
+        do {
+            let metadata = try await provider.startFetchingMetadata(for: url)
+            guard let imageProvider = metadata.imageProvider,
+                  let (imageData, fileExtension) = await loadImageData(from: imageProvider),
+                  let fileURL = try? SharedContainer.storeSharedMedia(data: imageData, fileExtension: fileExtension) else {
+                return nil
+            }
+
+            return fileURL.absoluteString
+        } catch {
+            return nil
+        }
+    }
+
+    private static func loadImageData(from provider: NSItemProvider) async -> (Data, String)? {
+        let candidates: [(String, String)] = [
+            (UTType.jpeg.identifier, "jpg"),
+            (UTType.png.identifier, "png"),
+            (UTType.heic.identifier, "heic"),
+            (UTType.gif.identifier, "gif")
+        ]
+
+        for (typeIdentifier, fileExtension) in candidates where provider.hasItemConformingToTypeIdentifier(typeIdentifier) {
+            if let data = await loadDataRepresentation(from: provider, typeIdentifier: typeIdentifier) {
+                return (data, fileExtension)
+            }
+        }
+
+#if canImport(UIKit)
+        if let image = await loadUIImage(from: provider),
+           let data = image.jpegData(compressionQuality: 0.92) {
+            return (data, "jpg")
+        }
+#elseif canImport(AppKit)
+        if let image = await loadNSImage(from: provider),
+           let tiffData = image.tiffRepresentation,
+           let bitmap = NSBitmapImageRep(data: tiffData),
+           let data = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.92]) {
+            return (data, "jpg")
+        }
+#endif
+
+        return nil
+    }
+
+    private static func loadDataRepresentation(from provider: NSItemProvider, typeIdentifier: String) async -> Data? {
+        await withCheckedContinuation { continuation in
+            provider.loadDataRepresentation(forTypeIdentifier: typeIdentifier) { data, _ in
+                continuation.resume(returning: data)
+            }
+        }
+    }
+
+#if canImport(UIKit)
+    private static func loadUIImage(from provider: NSItemProvider) async -> UIImage? {
+        guard provider.canLoadObject(ofClass: UIImage.self) else {
+            return nil
+        }
+
+        return await withCheckedContinuation { continuation in
+            provider.loadObject(ofClass: UIImage.self) { object, _ in
+                continuation.resume(returning: object as? UIImage)
+            }
+        }
+    }
+#elseif canImport(AppKit)
+    private static func loadNSImage(from provider: NSItemProvider) async -> NSImage? {
+        guard provider.canLoadObject(ofClass: NSImage.self) else {
+            return nil
+        }
+
+        return await withCheckedContinuation { continuation in
+            provider.loadObject(ofClass: NSImage.self) { object, _ in
+                continuation.resume(returning: object as? NSImage)
+            }
+        }
+    }
+#endif
 }
 
 private struct PendingPreviewApplication {
