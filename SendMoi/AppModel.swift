@@ -11,6 +11,7 @@ final class AppModel: ObservableObject {
     @Published var isBusy = false
     @Published var isOnline = false
     @Published var isAccountSectionExpanded = true
+    @Published var isQueueSectionExpanded = false
     @Published var shouldShowOnboarding = false
 
     private let client = GmailAPIClient()
@@ -179,8 +180,18 @@ final class AppModel: ObservableObject {
     }
 
     private func reloadQueueFromDisk() {
+        let previousCount = queuedEmails.count
+
         do {
             queuedEmails = try QueueStore.load()
+            let hasQueuedEmails = !queuedEmails.isEmpty
+            let hadQueuedEmails = previousCount > 0
+
+            if hasQueuedEmails && !hadQueuedEmails {
+                isQueueSectionExpanded = true
+            } else if !hasQueuedEmails {
+                isQueueSectionExpanded = false
+            }
         } catch {
             statusMessage = "Could not load the offline queue: \(error.localizedDescription)"
         }
