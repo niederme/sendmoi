@@ -15,6 +15,7 @@ SendMoi currently ships the full core workflow:
 - Send from the authenticated Gmail account.
 - Save a default recipient in its own dedicated settings section and reuse recent recipients.
 - Use the app to manage Gmail, recipient defaults, share-sheet behavior, a desktop compose guide panel, and the offline queue.
+- Show a compact iPhone settings intro subhead under the main title and use roomier spacing between settings sections for readability.
 - Handle links, pasted post text, and image-only shares as first-class queueable items.
 - Queue every outbound email locally before network delivery.
 - Retry queued emails when the app launches, becomes active, or connectivity returns.

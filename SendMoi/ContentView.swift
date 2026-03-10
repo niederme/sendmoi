@@ -1065,13 +1065,25 @@ struct ContentView: View {
     }
 
     private var compactMobileContent: some View {
-        Form {
-            accountSection
-            defaultRecipientSection
-            shareSheetSection
-            queueSection
-            setupActionsSection
-            attributionSection
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Send links to your Gmail inbox without losing them in tabs, bookmarks, or chats.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .lineSpacing(1.2)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 12)
+
+            Form {
+                accountSection
+                defaultRecipientSection
+                shareSheetSection
+                queueSection
+                setupActionsSection
+                attributionSection
+            }
+            .listSectionSpacing(24)
         }
     }
 
