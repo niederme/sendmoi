@@ -4,7 +4,7 @@ Last updated: March 11, 2026
 
 ## Current State
 
-- Repo: `main`
+- Repo: `codex/issue-36-switch-account-wrap` (based on `origin/main`)
 - Latest intended app version: `0.3`
 - Recent shipped commits:
   - `ec40844` `Use Icon Composer .icon file as app icon source, drop legacy PNG appiconset (#33)`
@@ -21,6 +21,8 @@ Last updated: March 11, 2026
 
 ## What Changed Recently
 
+- Onboarding connected-account layout now preserves a one-line `Switch Account` button label by prioritizing button width and allowing the email/details text block to truncate first.
+- `AGENTS.md` issue-media guidance no longer requires uploading screenshots/videos into the repo (for example `docs/bugs/...`); local-only media can be user-attached manually.
 - Share-sheet behavior is now controlled by a global `Auto-send` setting in the main app instead of living inside the compose form.
 - The default recipient is now a separate top-level `Recipient` section instead of being nested inside the collapsed `Account` view.
 - The default recipient field now saves via the keyboard submit action (`Done`) and via an explicit prominent `Save Default Recipient` button that dismisses focus before saving.

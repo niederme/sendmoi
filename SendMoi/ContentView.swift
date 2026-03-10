@@ -544,19 +544,27 @@ struct ContentView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(model.session?.emailAddress ?? "Signed in to Gmail")
                                 .font(.body.weight(.medium))
+                                .lineLimit(1)
+                                .truncationMode(.middle)
 
                             Text("You can switch accounts before finishing setup.")
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
+                                .lineLimit(2)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
-                        Spacer(minLength: 0)
-
-                        Button("Switch Account") {
+                        Button {
                             showsOnboardingAccountSheet = true
+                        } label: {
+                            Text("Switch Account")
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.95)
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.regular)
+                        .fixedSize(horizontal: true, vertical: false)
+                        .layoutPriority(2)
                     }
                     .padding(.horizontal, 14)
                     .padding(.vertical, 12)
