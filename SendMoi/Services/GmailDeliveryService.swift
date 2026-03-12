@@ -721,8 +721,8 @@ final class GmailDeliveryService {
         let titleMarkup = makeTitleMarkup(content: content, fontFamily: fontFamily)
         let excerptBlock = content.excerpt.isEmpty ? "" : """
                             <tr>
-                              <td class="mm-card-pad mm-excerpt" style="padding: 15px 50px 20px 50px; font-family: \(fontFamily); font-size: 26px; line-height: 31px; color: #111111;">
-                                \(escapeHTML(content.excerpt))
+                              <td class="mm-card-pad mm-excerpt" style="padding: 15px 50px 20px 50px; font-family: \(fontFamily); font-size: 26px; line-height: 31px; color: #111111; word-break: break-word;">
+                                \(formattedMultilineHTML(content.excerpt))
                               </td>
                             </tr>
                             """
@@ -802,7 +802,7 @@ final class GmailDeliveryService {
         return imageSources.enumerated().map { index, imageSource in
             let topPadding = index == 0 ? "50px" : "12px"
             let imageMarkup = """
-                              <img src="\(escapeHTMLAttribute(imageSource))" alt="\(escapeHTMLAttribute(content.title))" width="750" style="display: block; width: 100%; height: auto; border: 0; outline: none; text-decoration: none;">
+                              <img src="\(escapeHTMLAttribute(imageSource))" alt="\(escapeHTMLAttribute(content.title))" width="750" style="display: block; width: 100%; height: auto; border: 0; outline: none; text-decoration: none; border-radius: 18px; background-color: #f4f4f4;">
                               """
             let linkedImageMarkup: String
             if let urlString = content.urlString, !urlString.isEmpty {
@@ -835,7 +835,13 @@ final class GmailDeliveryService {
             }
 
             let trimmed = imageURLString.trimmingCharacters(in: .whitespacesAndNewlines)
-            return trimmed.isEmpty ? nil : trimmed
+            guard !trimmed.isEmpty,
+                  let imageURL = URL(string: trimmed),
+                  !imageURL.isFileURL else {
+                return nil
+            }
+
+            return trimmed
         }
     }
 
@@ -920,6 +926,15 @@ final class GmailDeliveryService {
 
     private static func escapeHTMLAttribute(_ string: String) -> String {
         escapeHTML(string)
+    }
+
+    private static func formattedMultilineHTML(_ string: String) -> String {
+        escapeHTML(
+            string
+                .replacingOccurrences(of: "\r\n", with: "\n")
+                .replacingOccurrences(of: "\r", with: "\n")
+        )
+        .replacingOccurrences(of: "\n", with: "<br>")
     }
 
     private static func wrappedBase64(_ base64: String, lineLength: Int = 76) -> String {
@@ -1389,8 +1404,8 @@ final class GmailDeliveryService {
             return nil
         }
 
-        let joined = lines.joined(separator: " ")
-        let collapsed = collapseWhitespace(in: joined)
+        let joined = lines.joined(separator: "\n")
+        let collapsed = normalizeLineBrokenWhitespace(in: joined)
         guard !collapsed.isEmpty else {
             return nil
         }
@@ -1570,6 +1585,11 @@ final class GmailDeliveryService {
         }
 
         if isInstagramHost(url),
+           Set(normalizedMetadata.map { $0.lowercased() }) != Set(normalizedFallback.map { $0.lowercased() }) {
+            return normalizedMetadata
+        }
+
+        if isTweetHost(url),
            Set(normalizedMetadata.map { $0.lowercased() }) != Set(normalizedFallback.map { $0.lowercased() }) {
             return normalizedMetadata
         }
@@ -2555,6 +2575,38 @@ final class GmailDeliveryService {
             .components(separatedBy: .whitespacesAndNewlines)
             .filter { !$0.isEmpty }
             .joined(separator: " ")
+    }
+
+    private static func collapseInlineWhitespace(in text: String) -> String {
+        text
+            .components(separatedBy: .whitespaces)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
+
+    private static func normalizeLineBrokenWhitespace(in text: String) -> String {
+        let normalizedNewlines = text
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+        let lines = normalizedNewlines.components(separatedBy: "\n")
+        var normalizedLines: [String] = []
+        var previousLineWasBlank = false
+
+        for line in lines {
+            let collapsedLine = collapseInlineWhitespace(in: line).trimmingCharacters(in: .whitespacesAndNewlines)
+            if collapsedLine.isEmpty {
+                if !previousLineWasBlank, !normalizedLines.isEmpty {
+                    normalizedLines.append("")
+                }
+                previousLineWasBlank = true
+                continue
+            }
+
+            normalizedLines.append(collapsedLine)
+            previousLineWasBlank = false
+        }
+
+        return normalizedLines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private static func normalizedDisplayText(_ text: String) -> String {

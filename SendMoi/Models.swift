@@ -126,7 +126,7 @@ enum SharedPostTextParser {
 
     static func parseSocialPostShare(in text: String) -> ParsedSocialPostShare? {
         let extractedLink = markdownLikeLink(in: text)
-        let candidateSource = collapseWhitespace(in: extractedLink?.text ?? text)
+        let candidateSource = normalizeLineBrokenWhitespace(in: extractedLink?.text ?? text)
         guard !candidateSource.isEmpty else {
             return nil
         }
@@ -158,7 +158,7 @@ enum SharedPostTextParser {
 
             let author = collapseWhitespace(in: String(unwrappedCandidate[authorRange]))
             let networkToken = collapseWhitespace(in: String(unwrappedCandidate[networkRange])).lowercased()
-            let body = collapseWhitespace(in: String(unwrappedCandidate[bodyRange]))
+            let body = normalizeLineBrokenWhitespace(in: String(unwrappedCandidate[bodyRange]))
             guard !author.isEmpty, !body.isEmpty else {
                 continue
             }
@@ -179,7 +179,7 @@ enum SharedPostTextParser {
     }
 
     static func parseLinkedSocialPostShare(title: String, excerpt: String, urlString: String?) -> ParsedSocialPostShare? {
-        let normalizedExcerpt = collapseWhitespace(in: excerpt)
+        let normalizedExcerpt = normalizeLineBrokenWhitespace(in: excerpt)
         guard !normalizedExcerpt.isEmpty else {
             return nil
         }
@@ -204,7 +204,7 @@ enum SharedPostTextParser {
         }
 
         let author = collapseWhitespace(in: String(normalizedExcerpt[authorRange]))
-        let body = collapseWhitespace(in: String(normalizedExcerpt[bodyRange]))
+        let body = normalizeLineBrokenWhitespace(in: String(normalizedExcerpt[bodyRange]))
         let shortURL = String(normalizedExcerpt[shortURLRange]).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !author.isEmpty, !body.isEmpty else {
             return nil
@@ -301,6 +301,38 @@ enum SharedPostTextParser {
             .components(separatedBy: .whitespacesAndNewlines)
             .filter { !$0.isEmpty }
             .joined(separator: " ")
+    }
+
+    private static func collapseInlineWhitespace(in text: String) -> String {
+        text
+            .components(separatedBy: .whitespaces)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
+
+    private static func normalizeLineBrokenWhitespace(in text: String) -> String {
+        let normalizedNewlines = text
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+        let lines = normalizedNewlines.components(separatedBy: "\n")
+        var normalizedLines: [String] = []
+        var previousLineWasBlank = false
+
+        for line in lines {
+            let collapsedLine = collapseInlineWhitespace(in: line).trimmingCharacters(in: .whitespacesAndNewlines)
+            if collapsedLine.isEmpty {
+                if !previousLineWasBlank, !normalizedLines.isEmpty {
+                    normalizedLines.append("")
+                }
+                previousLineWasBlank = true
+                continue
+            }
+
+            normalizedLines.append(collapsedLine)
+            previousLineWasBlank = false
+        }
+
+        return normalizedLines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private static func socialNetworkLabel(for host: String) -> String? {

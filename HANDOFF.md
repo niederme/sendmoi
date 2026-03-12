@@ -1,11 +1,11 @@
 # SendMoi Handoff
 
-Last updated: March 10, 2026
+Last updated: March 12, 2026
 
 ## Current State
 
 - Repo: `codex/guard-remote-branch-delete` (based on `origin/main`)
-- Latest intended app version: `0.3`
+- Latest intended app version: `0.4`
 - Recent shipped commits:
   - `ec40844` `Use Icon Composer .icon file as app icon source, drop legacy PNG appiconset (#33)`
   - `0e5a871` `Fix summary promo filtering for concise homepage copy (#18)`
@@ -65,7 +65,7 @@ Last updated: March 10, 2026
   - repo-wide rename from MailMoi to SendMoi: project, targets, schemes, folders, and user-facing copy
   - bundle identifiers now match the renamed app targets: `com.niederme.SendMoi` and `com.niederme.SendMoi.ShareExtension`; shared App Group and storage identifiers remain on the existing MailMoi values for continuity
   - added a first-pass `TERMS.md` so the Google OAuth consent screen can point at a public Terms of Service URL alongside the existing privacy policy
-  - `MARKETING_VERSION` is now `0.3` and `CURRENT_PROJECT_VERSION` is now `6` for both targets, set via `./scripts/prepare_release.sh --version 0.3`
+  - `MARKETING_VERSION` is now `0.4` and `CURRENT_PROJECT_VERSION` is now `8` for both targets, set while preparing the `0.4` release
   - the legacy `CFBundleIconFile` override was removed
   - `scripts/prepare_release.sh` now bumps version/build across both targets and prints the signing + bundle settings before an archive
   - the macOS app now uses a desktop-style card layout instead of reusing the iPhone/iPad form
@@ -90,7 +90,7 @@ Last updated: March 10, 2026
 2. Confirm the new `Recipient` section placement feels right on iPhone, that `Account` now only handles Gmail sign-in state, that the recipient save action dismisses the keyboard cleanly, and that the macOS desktop compose card appears without trying to edit main-app draft state.
 3. Do a true cold launch on iPhone after reinstalling the app to verify the splash screen appears (Apple caches launch screens aggressively).
 4. Confirm App Store Connect metadata versions match the code version:
-   - project is now `0.3`
+   - project is now `0.4`
    - App Store Connect screenshot previously showed macOS app version `1.0`
 5. Publish stable public URLs for both the privacy policy and terms page on `nieder.me`, then attach those URLs to the Google OAuth consent screen so the blue missing-policy banner disappears.
 6. Share a photo directly from Photos (without a URL) and confirm it can be queued, sent, and removed without leaving orphaned files in the App Group container.

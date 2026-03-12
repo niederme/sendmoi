@@ -21,6 +21,8 @@
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
 			<key>CFBundleURLName</key>
 			<string>com.niederme.SendMoi.oauth</string>
 			<key>CFBundleURLSchemes</key>
@@ -50,6 +52,8 @@
 	</dict>
 	<key>UIStatusBarHidden</key>
 	<false/>
+	<key>GIDClientID</key>
+	<string>958893096854-nioq7ak84uq1vfs1ouh0uv5t2g3tksn6.apps.googleusercontent.com</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

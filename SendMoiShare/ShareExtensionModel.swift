@@ -349,7 +349,11 @@ final class ShareExtensionModel: ObservableObject {
             )
             if metadata?.imageURLString == nil,
                Self.shouldAttemptSocialImageFallback(for: normalizedURLString),
-               let fallbackImageURLString = await Self.fetchLinkPreviewImageURLString(for: normalizedURLString) {
+               let fallbackImageURLString = await Self.fetchSocialFallbackImageURLString(
+                    primaryURLString: normalizedURLString,
+                    title: titleSnapshot,
+                    excerpt: excerptSnapshot
+               ) {
                 metadata = DraftPreviewMetadata(
                     title: metadata?.title,
                     description: metadata?.description,
@@ -708,6 +712,142 @@ final class ShareExtensionModel: ObservableObject {
         } catch {
             return nil
         }
+    }
+
+    private static func fetchSocialFallbackImageURLString(
+        primaryURLString: String,
+        title: String,
+        excerpt: String
+    ) async -> String? {
+        let candidateURLStrings = await socialImageFallbackCandidateURLStrings(
+            primaryURLString: primaryURLString,
+            title: title,
+            excerpt: excerpt
+        )
+
+        for candidateURLString in candidateURLStrings {
+            if let imageURLString = await fetchLinkPreviewImageURLString(for: candidateURLString) {
+                return imageURLString
+            }
+        }
+
+        return nil
+    }
+
+    private static func socialImageFallbackCandidateURLStrings(
+        primaryURLString: String,
+        title: String,
+        excerpt: String
+    ) async -> [String] {
+        var candidates = [primaryURLString]
+        let embeddedURLStrings = detectedURLStrings(in: [excerpt, title])
+
+        for embeddedURLString in embeddedURLStrings {
+            guard embeddedURLString.caseInsensitiveCompare(primaryURLString) != .orderedSame else {
+                continue
+            }
+
+            appendURLString(embeddedURLString, to: &candidates)
+
+            if shouldResolveSocialPreviewURL(embeddedURLString),
+               let resolvedURLString = await resolvedSocialPreviewURLString(for: embeddedURLString) {
+                appendURLString(resolvedURLString, to: &candidates)
+            }
+        }
+
+        return candidates
+    }
+
+    private static func appendURLString(_ urlString: String, to candidates: inout [String]) {
+        guard !candidates.contains(where: { $0.caseInsensitiveCompare(urlString) == .orderedSame }) else {
+            return
+        }
+
+        candidates.append(urlString)
+    }
+
+    private static func detectedURLStrings(in candidates: [String]) -> [String] {
+        guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) else {
+            return []
+        }
+
+        var detectedURLs: [String] = []
+
+        for candidate in candidates {
+            let range = NSRange(candidate.startIndex..<candidate.endIndex, in: candidate)
+            let matches = detector.matches(in: candidate, options: [], range: range)
+
+            for match in matches {
+                guard
+                    match.resultType == .link,
+                    let url = match.url,
+                    let scheme = url.scheme?.lowercased(),
+                    scheme == "http" || scheme == "https"
+                else {
+                    continue
+                }
+
+                appendURLString(url.absoluteString, to: &detectedURLs)
+            }
+        }
+
+        return detectedURLs
+    }
+
+    private static func shouldResolveSocialPreviewURL(_ urlString: String) -> Bool {
+        guard let host = URL(string: urlString)?.host?.lowercased() else {
+            return false
+        }
+
+        return host == "t.co" ||
+            host == "www.t.co" ||
+            host == "pic.twitter.com" ||
+            host == "www.pic.twitter.com"
+    }
+
+    private static func resolvedSocialPreviewURLString(for urlString: String) async -> String? {
+        guard let url = URL(string: urlString) else {
+            return nil
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "HEAD"
+        request.timeoutInterval = 4
+        request.setValue(
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+            forHTTPHeaderField: "User-Agent"
+        )
+
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            if let resolvedURL = preferredRedirectTarget(from: response, fallbackURL: url) {
+                return resolvedURL.absoluteString
+            }
+        } catch {}
+
+        request.httpMethod = "GET"
+
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            if let resolvedURL = preferredRedirectTarget(from: response, fallbackURL: url) {
+                return resolvedURL.absoluteString
+            }
+        } catch {}
+
+        return nil
+    }
+
+    private static func preferredRedirectTarget(from response: URLResponse, fallbackURL: URL) -> URL? {
+        guard let httpResponse = response as? HTTPURLResponse else {
+            return nil
+        }
+
+        if let location = httpResponse.value(forHTTPHeaderField: "Location"),
+           let redirectedURL = URL(string: location, relativeTo: fallbackURL)?.absoluteURL {
+            return redirectedURL
+        }
+
+        return httpResponse.url
     }
 
     private static func loadImageData(from provider: NSItemProvider) async -> (Data, String)? {
