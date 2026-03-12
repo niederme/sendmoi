@@ -3,15 +3,19 @@
 ## Delivery Lifecycle Workflow
 
 ### 1) Start New Feature/Fix Work
-- Write or identify the GitHub issue first. Every branch should map to one primary issue.
-- Do not push directly to `main`; all work happens on a task branch.
+- For feature/fix work, write or identify the GitHub issue first. Small doc-only or chore-only changes do not require an issue unless explicitly requested. Every non-doc/chore branch should map to one primary issue.
+- Before writing code, editing files, or starting implementation work, run `git branch --show-current`.
+- If you are on `main`, create or switch to a feature branch before making changes.
+- Do not treat `main` as a working branch for active development, unless told explicitly to.
+- Default workflow for non-trivial work: create a dedicated `git worktree` for each active feature branch/thread so multiple branches can stay in progress at once. For trivial one-off changes, a normal branch in the main checkout is fine.
+- Do not push directly to `main`; all work happens on a task branch, unless told explicitly to.
 - Work from `main` on short-lived branches named `codex/*`.
 - Start from latest `main`:
   - `git checkout main`
   - `git pull --ff-only`
   - `git checkout -b codex/<short-slug>`
 - For concurrent work, use separate branches and prefer separate worktrees:
-  - `git worktree add ../sendmoi-<short-slug> -b codex/<short-slug> main`
+  - `git worktree add ../SendMoi-<short-slug> -b codex/<short-slug> main`
 - Keep scope tight: branch changes should stay focused on the linked issue.
 
 ### 2) Implement And Commit
@@ -51,7 +55,7 @@
 - Treat messages prefixed with `BUG:` or `ISSUE:` as a request to create a GitHub issue directly.
 - Classify issue type and labels based on context (for example: `bug`, `enhancement`, `chore`) unless the user explicitly forces a type.
 - If the user includes a type hint inline (for example: `ISSUE: [bug] ...`), honor it.
-- If required details are missing, ask a short follow-up question before creating the issue.
+- If required details are missing, ask a short follow-up question before creating the issue. Otherwise, create it without an extra confirmation step.
 - If the user provides screenshots/videos, include them in the issue:
   - use existing URLs directly when available
   - if media is local-only, ask for a shareable URL or confirm the user will attach it manually (do not require committing media into this repo).
