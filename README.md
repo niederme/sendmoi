@@ -118,3 +118,7 @@ The repo already includes a configured OAuth client ID in [GoogleOAuthConfig.swi
 - TestFlight distribution is currently configured for internal testing only.
 - Bundle identifiers now use `com.niederme.SendMoi` and `com.niederme.SendMoi.ShareExtension`.
 - Command-line builds require valid provisioning for `com.niederme.SendMoi` and `com.niederme.SendMoi.ShareExtension`. In Xcode, automatic signing handles this; with `xcodebuild`, use `-allowProvisioningUpdates`.
+
+## License
+
+MIT with [Commons Clause](https://commonsclause.com). Free to use, modify, and distribute - commercial or proprietary use is not permitted.
