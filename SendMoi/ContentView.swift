@@ -370,7 +370,7 @@ struct ContentView: View {
                     }
                 }
                 .frame(height: onboardingPinCarouselHeight)
-                .tabViewStyle(.page(indexDisplayMode: .never))
+                .sendMoiPageTabViewStyle()
                 .accessibilityLabel(Text("Pin SendMoi setup steps"))
                 .accessibilityValue(Text("Step \(onboardingPinSlide + 1) of \(onboardingPinSlides.count)"))
 
@@ -1083,7 +1083,7 @@ struct ContentView: View {
                 setupActionsSection
                 attributionSection
             }
-            .listSectionSpacing(24)
+            .sendMoiListSectionSpacing(24)
         }
     }
 
@@ -1379,6 +1379,26 @@ struct ContentView: View {
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
         }
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func sendMoiPageTabViewStyle() -> some View {
+        #if os(iOS) || targetEnvironment(macCatalyst)
+        self.tabViewStyle(.page(indexDisplayMode: .never))
+        #else
+        self
+        #endif
+    }
+
+    @ViewBuilder
+    func sendMoiListSectionSpacing(_ spacing: CGFloat) -> some View {
+        #if os(iOS) || targetEnvironment(macCatalyst)
+        self.listSectionSpacing(spacing)
+        #else
+        self
+        #endif
     }
 }
 
