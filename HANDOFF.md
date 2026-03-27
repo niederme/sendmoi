@@ -1,10 +1,10 @@
 # SendMoi Handoff
 
-Last updated: March 10, 2026
+Last updated: March 27, 2026
 
 ## Current State
 
-- Repo: `codex/guard-remote-branch-delete` (based on `origin/main`)
+- Repo: `codex/reconnect-gmail-scope` (based on `origin/main`)
 - Latest intended app version: `0.3`
 - Recent shipped commits:
   - `ec40844` `Use Icon Composer .icon file as app icon source, drop legacy PNG appiconset (#33)`
@@ -22,6 +22,7 @@ Last updated: March 10, 2026
 ## What Changed Recently
 
 - `AGENTS.md` post-merge cleanup now marks remote branch deletion as conditional (`git push origin --delete codex/<short-slug> (if remote branch exists)`) to avoid noisy errors when GitHub already removed the branch.
+- Gmail queue recovery now detects the Gmail API `insufficient authentication scopes` failure, keeps the item in the offline queue, and surfaces explicit `Reconnect Gmail` actions in both the queue and account UI so users can repair stale/under-scoped sessions without guessing.
 - `AGENTS.md` now uses a faster documentation cadence: keep doc updates lightweight during implementation, then require one full `README.md` + `HANDOFF.md` reconciliation pass right before opening a PR (plus recheck after rebase/conflict resolution).
 - `AGENTS.md` now removes separate `Commit Workflow` / `Git Workflow` sections and folds those rules directly into the single `Delivery Lifecycle Workflow` (start, implement/commit, PR, post-merge) so there is one canonical process.
 - `AGENTS.md` now clarifies that `Commit Workflow` and `Git Workflow` are guardrails that are explicitly incorporated into the end-to-end `Delivery Lifecycle Workflow` steps, so there is one canonical process instead of parallel checklists.
@@ -104,6 +105,7 @@ Last updated: March 10, 2026
 15. Confirm App Store Connect processing reports iOS compatibility as `iOS 18.0 or later` after uploading the next archive.
 16. Share a Zillow or Ticketmaster listing URL and confirm SendMoi omits low-quality structured summaries instead of sending scraped listing blobs, markdown artifacts, or generic "Here is a summary..." prefixes.
 17. On iPhone and iPad, verify the `Offline Queue` section now starts collapsed when the queue is empty, auto-expands when queued items exist, and still allows manual retry + deletion from the expanded state.
+18. Reproduce a stale or under-scoped Gmail session, confirm queued sends show `Reconnect Gmail`, complete reauth, and verify the queued items then send successfully.
 
 ## Local Setup
 

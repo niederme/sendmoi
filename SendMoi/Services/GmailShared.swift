@@ -7,6 +7,7 @@ enum GmailAPIError: LocalizedError {
     case invalidRedirect
     case invalidState
     case signInCanceled
+    case insufficientAuthenticationScopes
     case authorizationFailed(String)
     case rateLimitExceeded(String)
     case transport(Error)
@@ -26,6 +27,8 @@ enum GmailAPIError: LocalizedError {
             return "The OAuth redirect did not match the original sign-in request."
         case .signInCanceled:
             return "Google sign-in was canceled."
+        case .insufficientAuthenticationScopes:
+            return "Reconnect Gmail to grant send permission."
         case .authorizationFailed(let message):
             return message
         case .rateLimitExceeded(let message):
@@ -35,6 +38,22 @@ enum GmailAPIError: LocalizedError {
         case .api(let message):
             return message
         }
+    }
+
+    var requiresReconnect: Bool {
+        switch self {
+        case .insufficientAuthenticationScopes:
+            return true
+        default:
+            return false
+        }
+    }
+
+    static func indicatesInsufficientAuthenticationScopes(_ message: String) -> Bool {
+        let normalized = message.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return normalized.localizedCaseInsensitiveContains("insufficient authentication scopes")
+            || normalized.localizedCaseInsensitiveContains("grant send permission")
     }
 }
 
