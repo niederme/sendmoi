@@ -1112,6 +1112,20 @@ struct ContentView: View {
             DisclosureGroup(isExpanded: $model.isAccountSectionExpanded) {
                 if let session = model.session {
                     LabeledContent("From", value: session.emailAddress ?? "Authenticated via Gmail")
+
+                    if model.requiresGmailReconnect {
+                        Text("The saved Gmail session is missing send permission.")
+                            .font(.footnote)
+                            .foregroundStyle(.orange)
+
+                        Button("Reconnect Gmail") {
+                            Task {
+                                await model.signIn()
+                            }
+                        }
+                        .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
+                    }
+
                     Button("Sign Out") {
                         model.signOut()
                     }
@@ -1208,6 +1222,10 @@ struct ContentView: View {
     }
 
     private var accountSectionFooterText: String {
+        if model.requiresGmailReconnect {
+            return "Reconnect Gmail to restore send permission for queued items."
+        }
+
         if usesDesktopLayout {
         return "Manage Gmail sign-in for the desktop app."
         } else {
@@ -1216,6 +1234,10 @@ struct ContentView: View {
     }
 
     private var queueFooterText: String {
+        if model.requiresGmailReconnect {
+            return "Reconnect Gmail to restore send permission, then retry the queue."
+        }
+
         model.isOnline ? "Network looks available. The app retries automatically." : "Offline or unreachable. Items remain queued."
     }
 
@@ -1236,6 +1258,10 @@ struct ContentView: View {
 
         if model.queuedEmails.isEmpty {
             return "Queue is clear"
+        }
+
+        if model.requiresGmailReconnect {
+            return "Reconnect Gmail to resume sending"
         }
 
         return "Tap to review and send now"
@@ -1283,6 +1309,21 @@ struct ContentView: View {
                     }
                     .onDelete(perform: model.deleteQueuedEmails)
                 }
+
+                if model.requiresGmailReconnect {
+                    Button {
+                        Task {
+                            await model.signIn()
+                        }
+                    } label: {
+                        Text("Reconnect Gmail")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
+                }
+
                 Button {
                     Task {
                         await model.retryNow()
@@ -1293,7 +1334,7 @@ struct ContentView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                .disabled(model.isBusy || model.queuedEmails.isEmpty)
+                .disabled(model.isBusy || model.queuedEmails.isEmpty || model.requiresGmailReconnect)
             } label: {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(queueSummaryTitle)
@@ -1807,6 +1848,24 @@ extension ContentView {
                 if let session = model.session {
                     desktopReadout(label: "Signed in as", value: session.emailAddress ?? "Authenticated via Gmail")
 
+                    if model.requiresGmailReconnect {
+                        Text("The saved Gmail session is missing send permission.")
+                            .font(.footnote)
+                            .foregroundStyle(.orange)
+
+                        HStack {
+                            Button("Reconnect Gmail") {
+                                Task {
+                                    await model.signIn()
+                                }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
+
+                            Spacer()
+                        }
+                    }
+
                     HStack {
                         Button("Sign Out", role: .destructive) {
                             model.signOut()
@@ -2015,7 +2074,25 @@ extension ContentView {
                             await model.retryNow()
                         }
                     }
-                    .disabled(model.isBusy || model.queuedEmails.isEmpty)
+                    .disabled(model.isBusy || model.queuedEmails.isEmpty || model.requiresGmailReconnect)
+                }
+
+                if model.requiresGmailReconnect {
+                    HStack {
+                        Text("Reconnect Gmail, then retry the queue.")
+                            .font(.footnote)
+                            .foregroundStyle(.orange)
+
+                        Spacer()
+
+                        Button("Reconnect Gmail") {
+                            Task {
+                                await model.signIn()
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
+                    }
                 }
             }
         }

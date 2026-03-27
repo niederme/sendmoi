@@ -12,6 +12,7 @@ final class AppModel: ObservableObject {
     @Published var isOnline = false
     @Published var isAccountSectionExpanded = true
     @Published var isQueueSectionExpanded = false
+    @Published var requiresGmailReconnect = false
     @Published var shouldShowOnboarding = false
 
     private let client = GmailAPIClient()
@@ -54,22 +55,25 @@ final class AppModel: ObservableObject {
     func signIn() async -> Bool {
         guard !isBusy else { return false }
         isBusy = true
+        var didSignIn = false
 
         do {
             let signedInSession = try await client.signIn()
             session = signedInSession
             try KeychainStore.save(session: signedInSession)
             try SharedSessionStore.save(signedInSession)
+            requiresGmailReconnect = false
             statusMessage = "Signed in as \(signedInSession.emailAddress ?? "your Gmail account")."
             isAccountSectionExpanded = false
             reloadQueueFromDisk()
+            didSignIn = true
         } catch {
             statusMessage = "Sign in failed: \(error.localizedDescription)"
         }
 
         isBusy = false
 
-        if session != nil {
+        if didSignIn {
             await processQueue()
             return true
         }
@@ -83,6 +87,7 @@ final class AppModel: ObservableObject {
             try KeychainStore.clearSession()
             SharedSessionStore.clear()
             session = nil
+            requiresGmailReconnect = false
             isAccountSectionExpanded = true
             statusMessage = "Signed out. Queued items stay on disk until you send them."
         } catch {
@@ -118,13 +123,28 @@ final class AppModel: ObservableObject {
                     RecipientStore.record(next.toEmail)
                     statusMessage = "Sent \"\(next.title)\" to \(next.toEmail)."
                 } catch {
-                    markFailure(for: next.id, message: error.localizedDescription)
-                    statusMessage = "Queued item kept for retry: \(error.localizedDescription)"
+                    if let gmailError = error as? GmailAPIError, gmailError.requiresReconnect {
+                        requiresGmailReconnect = true
+                        isAccountSectionExpanded = true
+                        isQueueSectionExpanded = true
+                        markFailure(for: next.id, message: gmailError.localizedDescription)
+                        statusMessage = "Reconnect Gmail to grant send permission. Queued items will send after you reconnect."
+                    } else {
+                        markFailure(for: next.id, message: error.localizedDescription)
+                        statusMessage = "Queued item kept for retry: \(error.localizedDescription)"
+                    }
                     break
                 }
             }
         } catch {
-            statusMessage = "Queue processing paused: \(error.localizedDescription)"
+            if let gmailError = error as? GmailAPIError, gmailError.requiresReconnect {
+                requiresGmailReconnect = true
+                isAccountSectionExpanded = true
+                isQueueSectionExpanded = true
+                statusMessage = "Reconnect Gmail to grant send permission. Queued items will send after you reconnect."
+            } else {
+                statusMessage = "Queue processing paused: \(error.localizedDescription)"
+            }
         }
     }
 
@@ -192,6 +212,8 @@ final class AppModel: ObservableObject {
             } else if !hasQueuedEmails {
                 isQueueSectionExpanded = false
             }
+
+            updateReconnectRequirement()
         } catch {
             statusMessage = "Could not load the offline queue: \(error.localizedDescription)"
         }
@@ -211,13 +233,25 @@ final class AppModel: ObservableObject {
             removeManagedMedia(for: item)
         }
         queuedEmails.removeAll { ids.contains($0.id) }
+        updateReconnectRequirement()
         persistQueue()
     }
 
     private func markFailure(for id: UUID, message: String) {
         if let index = queuedEmails.firstIndex(where: { $0.id == id }) {
             queuedEmails[index].lastError = message
+            updateReconnectRequirement()
             persistQueue()
+        }
+    }
+
+    private func updateReconnectRequirement() {
+        requiresGmailReconnect = queuedEmails.contains { item in
+            guard let lastError = item.lastError else {
+                return false
+            }
+
+            return GmailAPIError.indicatesInsufficientAuthenticationScopes(lastError)
         }
     }
 

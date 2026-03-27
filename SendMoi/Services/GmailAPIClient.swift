@@ -142,10 +142,7 @@ final class GmailAPIClient {
             }
 
             guard (200..<300).contains(httpResponse.statusCode) else {
-                if let message = Self.extractErrorMessage(from: data) {
-                    throw GmailAPIError.api(message)
-                }
-                throw GmailAPIError.api("Google API returned status \(httpResponse.statusCode).")
+                throw Self.apiError(from: data, statusCode: httpResponse.statusCode)
             }
 
             return data
@@ -175,6 +172,18 @@ final class GmailAPIClient {
         }
 
         return nil
+    }
+
+    private static func apiError(from data: Data, statusCode: Int) -> GmailAPIError {
+        if let message = extractErrorMessage(from: data) {
+            if GmailAPIError.indicatesInsufficientAuthenticationScopes(message) {
+                return .insufficientAuthenticationScopes
+            }
+
+            return .api(message)
+        }
+
+        return .api("Google API returned status \(statusCode).")
     }
 
     private static func authorizationError(from queryItems: [URLQueryItem]) -> GmailAPIError? {

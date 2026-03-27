@@ -19,6 +19,7 @@ SendMoi currently ships the full core workflow:
 - Handle links, pasted post text, and image-only shares as first-class queueable items.
 - Queue every outbound email locally before network delivery.
 - Retry queued emails when the app launches, becomes active, or connectivity returns.
+- Detect missing Gmail send permission on queued delivery failures and prompt the user to reconnect Gmail before retrying.
 - Share queue state, saved recipients, and session data through the App Group `group.com.niederme.mailmoi`.
 - Let the share sheet either send immediately or stay open with a pre-filled draft, based on the global `Auto-send` setting in the app.
 - Use the iOS `UILaunchScreen` asset configuration (`AppIconBackground` + `Splash`) directly at startup, without an extra in-app splash overlay.
