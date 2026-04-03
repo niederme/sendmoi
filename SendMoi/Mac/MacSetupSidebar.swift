@@ -1,0 +1,229 @@
+import SwiftUI
+
+struct MacSetupSidebar: View {
+    @EnvironmentObject private var model: AppModel
+
+    let openSetupGuide: () -> Void
+    let showResetConfirmation: () -> Void
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                gmailCard
+                recipientCard
+                shareBehaviorCard
+                setupCard
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(.regularMaterial)
+    }
+
+    private var gmailCard: some View {
+        MacSidebarCard(
+            title: "Gmail",
+            subtitle: model.requiresGmailReconnect
+                ? "Reconnect Gmail to restore send permission for queued items."
+                : "Use the connected account for queued delivery on this Mac."
+        ) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .center, spacing: 12) {
+                    Image(systemName: model.session == nil ? "person.crop.circle.badge.xmark" : "checkmark.shield.fill")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(model.session == nil ? .orange : .accentColor)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(model.session?.emailAddress ?? "No Gmail account connected")
+                            .font(.headline)
+
+                        Text(model.session == nil ? "SendMoi needs Gmail to send queued items." : "Signed in to Gmail")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer(minLength: 0)
+                }
+
+                if let session = model.session {
+                    LabeledContent("Signed in as", value: session.emailAddress ?? "Authenticated via Gmail")
+                        .font(.footnote)
+
+                    if model.requiresGmailReconnect {
+                        Button("Reconnect Gmail") {
+                            Task {
+                                await model.signIn()
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
+                    }
+
+                    Button("Sign Out", role: .destructive) {
+                        model.signOut()
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(model.isBusy)
+                } else {
+                    Button("Sign In With Google") {
+                        Task {
+                            await model.signIn()
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
+                }
+
+                if !GoogleOAuthConfig.isConfigured {
+                    Text("Set `GoogleOAuthConfig.clientID` before signing in.")
+                        .font(.footnote)
+                        .foregroundStyle(.orange)
+                }
+            }
+        }
+    }
+
+    private var recipientCard: some View {
+        MacSidebarCard(
+            title: "Default Recipient",
+            subtitle: "Used as the default when starting from the share sheet."
+        ) {
+            VStack(alignment: .leading, spacing: 12) {
+                TextField("Email address", text: $model.defaultRecipient)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit(saveDefaultRecipient)
+
+                Button("Save Default Recipient") {
+                    saveDefaultRecipient()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(model.isBusy)
+            }
+        }
+    }
+
+    private var shareBehaviorCard: some View {
+        MacSidebarCard(
+            title: "Share Behavior",
+            subtitle: model.shareSheetAutoSendEnabled
+                ? "Items shared from other apps send automatically when enough details are available."
+                : "Items shared from other apps stay open so you can review the draft before sending."
+        ) {
+            Toggle(isOn: Binding(
+                get: { model.shareSheetAutoSendEnabled },
+                set: { model.setShareSheetAutoSendEnabled($0) }
+            )) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Auto-send shared items")
+                    Text(model.shareSheetAutoSendEnabled ? "Automatic send is on." : "Manual review stays on.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .toggleStyle(.switch)
+        }
+    }
+
+    private var setupCard: some View {
+        MacSidebarCard(
+            title: "Setup",
+            subtitle: "Reopen the guide or reset SendMoi to first launch."
+        ) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(model.statusMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+
+                Button("Open Setup Guide") {
+                    openSetupGuide()
+                }
+                .buttonStyle(.bordered)
+                .disabled(model.isBusy)
+
+                Button("Clear Settings", role: .destructive) {
+                    showResetConfirmation()
+                }
+                .buttonStyle(.bordered)
+                .disabled(model.isBusy)
+            }
+        }
+    }
+
+    private func saveDefaultRecipient() {
+        model.setDefaultRecipient(model.defaultRecipient)
+    }
+}
+
+private struct MacSidebarCard<Content: View>: View {
+    let title: String
+    let subtitle: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.headline)
+
+                Text(subtitle)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            content
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.primary.opacity(0.04))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+        )
+    }
+}
+
+#if DEBUG
+@MainActor
+private struct MacSetupSidebar_Previews: PreviewProvider {
+    static var previews: some View {
+        Group {
+            MacSetupSidebar(
+                openSetupGuide: {},
+                showResetConfirmation: {}
+            )
+            .environmentObject(
+                SendMoiPreviewFixtures.appModel(
+                    queuedEmails: SendMoiPreviewFixtures.queuedItems,
+                    defaultRecipient: "ideas@sendmoi.app",
+                    shareSheetAutoSendEnabled: true,
+                    session: SendMoiPreviewFixtures.connectedSession,
+                    statusMessage: "Signed in as founder@sendmoi.app.",
+                    isOnline: true
+                )
+            )
+            .frame(width: 340, height: 560)
+            .previewDisplayName("Connected Setup")
+
+            MacSetupSidebar(
+                openSetupGuide: {},
+                showResetConfirmation: {}
+            )
+            .environmentObject(
+                SendMoiPreviewFixtures.appModel(
+                    defaultRecipient: "",
+                    shareSheetAutoSendEnabled: false,
+                    session: nil,
+                    statusMessage: "Configure Google OAuth, sign in, then queue or send shared items.",
+                    isOnline: false
+                )
+            )
+            .frame(width: 340, height: 560)
+            .previewDisplayName("Needs Setup")
+        }
+    }
+}
+#endif
