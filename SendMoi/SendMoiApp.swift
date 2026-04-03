@@ -14,7 +14,7 @@ struct SendMoiApp: App {
                 }
         }
         #if os(macOS)
-        .defaultSize(width: 1040, height: 640)
+        .defaultSize(width: 1040, height: 720)
         .windowResizability(.contentMinSize)
         .restorationBehavior(.disabled)
         #endif
