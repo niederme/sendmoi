@@ -2,13 +2,13 @@
   "fill-specializations" : [
     {
       "value" : {
-        "solid" : "display-p3:0.12157,0.41176,0.98431,1.00000"
+        "solid" : "extended-gray:1.00000,1.00000"
       }
     },
     {
       "appearance" : "dark",
       "value" : {
-        "automatic-gradient" : "display-p3:0.12157,0.41176,0.98431,1.00000"
+        "automatic-gradient" : "extended-gray:0.00000,1.00000"
       }
     }
   ],
@@ -16,26 +16,17 @@
     {
       "layers" : [
         {
-          "blend-mode-specializations" : [
-            {
-              "appearance" : "tinted",
-              "value" : "normal"
-            }
-          ],
-          "fill-specializations" : [
-            {
-              "appearance" : "tinted",
-              "value" : "automatic"
-            }
-          ],
+          "fill" : "automatic",
           "glass" : true,
           "hidden" : false,
           "image-name" : "4 – goggles.svg",
           "name" : "4 – goggles"
         },
         {
+          "blend-mode" : "plus-darker",
           "glass" : false,
-          "image-name" : "3 – goggles shadow.svg",
+          "hidden" : false,
+          "image-name" : "3 – goggles shadow.png",
           "name" : "3 – goggles shadow"
         }
       ],
