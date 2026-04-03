@@ -4,3 +4,4 @@ xcuserdata/
 build/
 .claude
 .worktrees/
+.deriveddata-local/
