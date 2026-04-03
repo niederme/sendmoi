@@ -4,37 +4,16 @@ enum SharedContainer {
     static let appGroupID = "group.com.niederme.sendmoi"
     private static let directoryName = "SendMoi"
     private static let sharedMediaDirectoryName = "SharedMedia"
-    private static var isExtensionProcess: Bool {
-        Bundle.main.bundleURL.pathExtension == "appex"
-    }
-
-    private static var shouldUseAppGroup: Bool {
-        #if os(macOS)
-        return isExtensionProcess
-        #else
-        return true
-        #endif
-    }
 
     static func appDirectoryURL() throws -> URL {
         let fileManager = FileManager.default
-        let baseURL: URL
-        if shouldUseAppGroup,
-           let groupURL = fileManager.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
-            baseURL = groupURL
-        } else {
-            baseURL = try fileManager.url(
-                for: .applicationSupportDirectory,
-                in: .userDomainMask,
-                appropriateFor: nil,
-                create: true
-            )
-        }
+        let baseURL = try preferredBaseURL(fileManager: fileManager)
 
         let appDirectory = baseURL.appendingPathComponent(directoryName, isDirectory: true)
         if !fileManager.fileExists(atPath: appDirectory.path()) {
             try fileManager.createDirectory(at: appDirectory, withIntermediateDirectories: true)
         }
+        migrateLegacyApplicationSupportDirectoryIfNeeded(to: appDirectory, fileManager: fileManager)
         return appDirectory
     }
 
@@ -74,10 +53,7 @@ enum SharedContainer {
     }
 
     static var sharedDefaults: UserDefaults {
-        if shouldUseAppGroup {
-            return UserDefaults(suiteName: appGroupID) ?? .standard
-        }
-        return .standard
+        UserDefaults(suiteName: appGroupID) ?? .standard
     }
 
     private static func sharedMediaDirectoryURL() throws -> URL {
@@ -87,6 +63,65 @@ enum SharedContainer {
             try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
         }
         return directoryURL
+    }
+
+    private static func preferredBaseURL(fileManager: FileManager) throws -> URL {
+        if let groupURL = fileManager.containerURL(forSecurityApplicationGroupIdentifier: appGroupID),
+           groupURL.path.contains("/Library/Group Containers/") {
+            return groupURL
+        }
+
+        let manualGroupURL = fileManager.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Group Containers", isDirectory: true)
+            .appendingPathComponent(appGroupID, isDirectory: true)
+        if fileManager.fileExists(atPath: manualGroupURL.path()) {
+            return manualGroupURL
+        }
+
+        return try applicationSupportBaseURL(fileManager: fileManager)
+    }
+
+    private static func applicationSupportBaseURL(fileManager: FileManager) throws -> URL {
+        try fileManager.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )
+    }
+
+    private static func migrateLegacyApplicationSupportDirectoryIfNeeded(to appDirectory: URL, fileManager: FileManager) {
+        guard appDirectory.path.contains("/Library/Group Containers/") else {
+            return
+        }
+
+        guard let legacyDirectory = try? applicationSupportBaseURL(fileManager: fileManager)
+            .appendingPathComponent(directoryName, isDirectory: true),
+            legacyDirectory.standardizedFileURL != appDirectory.standardizedFileURL,
+            fileManager.fileExists(atPath: legacyDirectory.path()) else {
+            return
+        }
+
+        let legacyContents = (try? fileManager.contentsOfDirectory(
+            at: legacyDirectory,
+            includingPropertiesForKeys: nil
+        )) ?? []
+
+        for legacyItem in legacyContents {
+            let destination = appDirectory.appendingPathComponent(legacyItem.lastPathComponent, isDirectory: false)
+            guard !fileManager.fileExists(atPath: destination.path()) else {
+                continue
+            }
+            try? fileManager.moveItem(at: legacyItem, to: destination)
+        }
+
+        let remainingContents = (try? fileManager.contentsOfDirectory(
+            at: legacyDirectory,
+            includingPropertiesForKeys: nil
+        )) ?? []
+        if remainingContents.isEmpty {
+            try? fileManager.removeItem(at: legacyDirectory)
+        }
     }
 }
 

@@ -60,6 +60,7 @@ struct ContentView: View {
                 openSetupGuide: openSetupGuide,
                 showResetConfirmation: { showsResetConfirmation = true }
             )
+            .frame(minWidth: 980, minHeight: 600, alignment: .topLeading)
         } else {
             mobileContent
         }
@@ -1544,9 +1545,11 @@ private struct ContentView_Previews: PreviewProvider {
 }
 
 @MainActor
+@MainActor
 private final class LoopingVideoPlayerModel: ObservableObject {
     let player: AVQueuePlayer
     private var looper: AVPlayerLooper?
+    private var shouldAutoPlay = false
 
     init(resource: String, ext: String) {
         let queuePlayer = AVQueuePlayer()
@@ -1558,35 +1561,46 @@ private final class LoopingVideoPlayerModel: ObservableObject {
             return
         }
 
-        let item = Self.makeVideoOnlyItem(url: url)
-        looper = AVPlayerLooper(player: queuePlayer, templateItem: item)
+        Task {
+            let item = await Self.makeVideoOnlyItem(url: url)
+            looper = AVPlayerLooper(player: queuePlayer, templateItem: item)
+            if shouldAutoPlay {
+                player.play()
+            }
+        }
     }
 
     func play() {
+        shouldAutoPlay = true
         player.play()
     }
 
     func pause() {
+        shouldAutoPlay = false
         player.pause()
     }
 
-    private static func makeVideoOnlyItem(url: URL) -> AVPlayerItem {
+    private static func makeVideoOnlyItem(url: URL) async -> AVPlayerItem {
         let sourceAsset = AVURLAsset(url: url)
         let composition = AVMutableComposition()
-        guard
-            let sourceVideoTrack = sourceAsset.tracks(withMediaType: .video).first,
-            let videoOnlyCompositionTrack = composition.addMutableTrack(
-                withMediaType: .video,
-                preferredTrackID: kCMPersistentTrackID_Invalid
-            )
-        else {
-            return AVPlayerItem(url: url)
-        }
 
         do {
-            let timeRange = CMTimeRange(start: .zero, duration: sourceAsset.duration)
+            let sourceVideoTracks = try await sourceAsset.loadTracks(withMediaType: .video)
+            guard
+                let sourceVideoTrack = sourceVideoTracks.first,
+                let videoOnlyCompositionTrack = composition.addMutableTrack(
+                    withMediaType: .video,
+                    preferredTrackID: kCMPersistentTrackID_Invalid
+                )
+            else {
+                return AVPlayerItem(url: url)
+            }
+
+            let duration = try await sourceAsset.load(.duration)
+            let preferredTransform = try await sourceVideoTrack.load(.preferredTransform)
+            let timeRange = CMTimeRange(start: .zero, duration: duration)
             try videoOnlyCompositionTrack.insertTimeRange(timeRange, of: sourceVideoTrack, at: .zero)
-            videoOnlyCompositionTrack.preferredTransform = sourceVideoTrack.preferredTransform
+            videoOnlyCompositionTrack.preferredTransform = preferredTransform
             return AVPlayerItem(asset: composition)
         } catch {
             return AVPlayerItem(url: url)
