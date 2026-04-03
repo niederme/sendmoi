@@ -1545,7 +1545,6 @@ private struct ContentView_Previews: PreviewProvider {
 }
 
 @MainActor
-@MainActor
 private final class LoopingVideoPlayerModel: ObservableObject {
     let player: AVQueuePlayer
     private var looper: AVPlayerLooper?

@@ -71,12 +71,14 @@ enum SharedContainer {
             return groupURL
         }
 
+        #if os(macOS)
         let manualGroupURL = fileManager.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Group Containers", isDirectory: true)
             .appendingPathComponent(appGroupID, isDirectory: true)
         if fileManager.fileExists(atPath: manualGroupURL.path()) {
             return manualGroupURL
         }
+        #endif
 
         return try applicationSupportBaseURL(fileManager: fileManager)
     }
