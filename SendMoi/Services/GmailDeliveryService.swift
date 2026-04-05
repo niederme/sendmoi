@@ -861,7 +861,7 @@ final class GmailDeliveryService {
             sourceBlock = """
                           <tr>
                             <td class="mm-card-pad mm-card-bottom" style="padding: 15px 50px 50px 50px; font-family: \(fontFamily); font-size: 14px; line-height: 17px; color: #111111;">
-                              <span>Source: </span><a href="\(escapeHTMLAttribute(urlString))" style="color: #111111; text-decoration: underline;">\(escapeHTML(urlString))</a>
+                              <span>Source: </span><a href="\(escapeHTMLAttribute(urlString))" style="color: #111111; text-decoration: underline; word-break: break-all; overflow-wrap: break-word; word-wrap: break-word;">\(escapeHTML(urlString))</a>
                             </td>
                           </tr>
                           """
