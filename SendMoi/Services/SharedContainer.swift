@@ -66,9 +66,17 @@ enum SharedContainer {
     }
 
     private static func preferredBaseURL(fileManager: FileManager) throws -> URL {
-        if let groupURL = fileManager.containerURL(forSecurityApplicationGroupIdentifier: appGroupID),
-           groupURL.path.contains("/Library/Group Containers/") {
+        if let groupURL = fileManager.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
+            #if os(macOS)
+            // On macOS, the Catalyst/sandbox runtime can return a wrong path; only
+            // trust it if it's actually inside the expected Group Containers location.
+            if groupURL.path.contains("/Library/Group Containers/") {
+                return groupURL
+            }
+            #else
+            // On iOS the system always returns the correct shared container path.
             return groupURL
+            #endif
         }
 
         #if os(macOS)

@@ -251,19 +251,33 @@ final class GmailDeliveryService {
                 fallbackImageURLStrings: fallbackImageURLStrings,
                 for: url
             )
+
+        // Respect the user's title and excerpt from the share sheet over re-fetched URL metadata.
+        // A title that equals the URL hostname was auto-generated, not user-typed.
+        let urlHostname = url.host?.replacingOccurrences(of: "www.", with: "") ?? ""
+        let fallbackTitleIsUserContent = !fallbackTitle.isEmpty &&
+            fallbackTitle.caseInsensitiveCompare(urlHostname) != .orderedSame
+
+        // Excerpt: user's content always wins when present.
         let resolvedExcerpt: String
-        if shouldPreferParsedSocialShare, !sanitizedFallbackExcerpt.isEmpty {
+        if !sanitizedFallbackExcerpt.isEmpty {
             resolvedExcerpt = sanitizedFallbackExcerpt
         } else {
-            resolvedExcerpt = metadata.excerpt ?? sanitizedFallbackExcerpt
+            resolvedExcerpt = metadata.excerpt ?? ""
         }
 
-        let preferredFetchedTitle = metadata.title ?? socialFallbackTitle
+        // Title: use the item's title if it looks like real content the user wrote or edited.
+        // Fall back to fetched metadata only when the item has no meaningful title.
         let resolvedTitle: String
-        if Self.shouldUseSocialFallbackTitle(preferredFetchedTitle, resolvedURLString: resolvedURLString) {
-            resolvedTitle = socialFallbackTitle
+        if fallbackTitleIsUserContent {
+            resolvedTitle = fallbackTitle
         } else {
-            resolvedTitle = preferredFetchedTitle
+            let preferredFetchedTitle = metadata.title ?? socialFallbackTitle
+            if Self.shouldUseSocialFallbackTitle(preferredFetchedTitle, resolvedURLString: resolvedURLString) {
+                resolvedTitle = socialFallbackTitle
+            } else {
+                resolvedTitle = preferredFetchedTitle
+            }
         }
 
         return EmailContent(

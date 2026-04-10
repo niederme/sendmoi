@@ -1312,10 +1312,12 @@ struct ContentView: View {
     }
 
     private var attributionSection: some View {
-        Section {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
+        return Section {
             EmptyView()
         } footer: {
-            Text("SendMoi by John Niedermeyer, with a little help from Codex, Claude Code and friends.")
+            Text("SendMoi by John Niedermeyer, with a little help from Codex, Claude Code and friends.\nv\(version) (\(build))")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -1555,6 +1557,11 @@ private final class LoopingVideoPlayerModel: ObservableObject {
         queuePlayer.isMuted = true
         queuePlayer.actionAtItemEnd = .none
         self.player = queuePlayer
+        #if canImport(UIKit)
+        // Prevent the silent demo video from activating the audio session
+        // and interrupting system audio playback
+        try? AVAudioSession.sharedInstance().setCategory(.ambient, options: [.mixWithOthers])
+        #endif
 
         guard let url = Bundle.main.url(forResource: resource, withExtension: ext) else {
             return

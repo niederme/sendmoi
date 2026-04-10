@@ -103,7 +103,7 @@ struct ShareView: View {
                     Button(sendButtonTitle) {
                         model.queueAndComplete()
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.bordered)
                     .disabled(sendButtonDisabled)
                 }
                 .controlSize(.large)
@@ -121,42 +121,33 @@ struct ShareView: View {
     private var macOSFormContent: some View {
         Section {
             // To
-            VStack(alignment: .leading, spacing: 4) {
-                Text("To")
-                    .font(fieldLabelFont)
-                    .foregroundStyle(.secondary)
-                TextField("Email address", text: $model.toEmail)
-                    .focused($focusedField, equals: .recipient)
-                if let recipientInlineMessage = model.recipientInlineMessage {
-                    Text(recipientInlineMessage)
-                        .font(.caption2)
-                        .foregroundStyle(model.recipientInlineMessageIsError ? .red : .secondary)
-                }
-                if !recentRecipientSuggestions.isEmpty {
-                    recentRecipientsView
+            LabeledContent("To") {
+                VStack(alignment: .leading, spacing: 4) {
+                    TextField("", text: $model.toEmail)
+                        .focused($focusedField, equals: .recipient)
+                    if let recipientInlineMessage = model.recipientInlineMessage {
+                        Text(recipientInlineMessage)
+                            .font(.caption2)
+                            .foregroundStyle(model.recipientInlineMessageIsError ? .red : .secondary)
+                    }
+                    // Recent recipients omitted on macOS — default recipient fills the field automatically
                 }
             }
 
             // Title
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Title")
-                    .font(fieldLabelFont)
-                    .foregroundStyle(.secondary)
+            LabeledContent("Title") {
                 HStack(alignment: .top, spacing: 10) {
                     if previewImageURL != nil || model.isRefreshingPreview {
                         previewThumbnail
                     }
-                    titleInputField(lineLimit: 2)
+                    titleInputField(lineLimit: 2, placeholder: "")
                 }
             }
 
-            // Description — compact multi-line field, no tall TextEditor
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Description")
-                    .font(fieldLabelFont)
-                    .foregroundStyle(.secondary)
+            // Description — compact multi-line field
+            LabeledContent("Description") {
                 ZStack(alignment: .topLeading) {
-                    TextField("Description", text: $model.excerpt, axis: .vertical)
+                    TextField("", text: $model.excerpt, axis: .vertical)
                         .lineLimit(3, reservesSpace: true)
                     if descriptionIsLoading {
                         fieldLoadingIndicator(topPadding: 4)
@@ -165,11 +156,8 @@ struct ShareView: View {
             }
 
             // Link
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Link (Optional)")
-                    .font(fieldLabelFont)
-                    .foregroundStyle(.secondary)
-                TextField("https://example.com", text: $model.urlString)
+            LabeledContent("Link") {
+                TextField("", text: $model.urlString)
             }
         }
     }
@@ -277,7 +265,11 @@ struct ShareView: View {
                 }
             }
         }
+        #if os(macOS)
+        .frame(width: 72, height: 72)
+        #else
         .frame(width: 56, height: 56)
+        #endif
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .overlay(alignment: .bottomTrailing) {
             #if os(iOS)
@@ -294,13 +286,15 @@ struct ShareView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Group {
+            ZStack(alignment: .topLeading) {
                 if model.isRefreshingPreview && model.summary.isEmpty {
                     ProgressView()
                         .controlSize(.small)
+                        .padding(.top, 8)
                 } else {
-                    Text(model.summary)
+                    TextEditor(text: $model.summary)
                         .font(.footnote)
+                        .frame(minHeight: 56)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -375,9 +369,9 @@ struct ShareView: View {
         model.isRefreshingPreview || !model.summary.isEmpty
     }
 
-    private func titleInputField(lineLimit: Int) -> some View {
+    private func titleInputField(lineLimit: Int, placeholder: String = "Title") -> some View {
         ZStack(alignment: .topLeading) {
-            TextField(titleIsLoading ? "" : "Title", text: $model.title, axis: .vertical)
+            TextField(titleIsLoading ? "" : placeholder, text: $model.title, axis: .vertical)
                 .lineLimit(lineLimit, reservesSpace: true)
 
             if titleIsLoading {
