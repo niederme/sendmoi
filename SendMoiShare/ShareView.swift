@@ -186,9 +186,12 @@ struct ShareView: View {
             if shouldShowInlineStatusMessage {
                 statusMessageView
             }
-
-            #if os(macOS)
-            Section {
+        }
+        .disabled(model.isSaving || model.isConnectingGmail)
+        #if os(macOS)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(spacing: 0) {
+                Divider()
                 HStack {
                     Spacer()
                     Button(sendButtonTitle) {
@@ -197,11 +200,13 @@ struct ShareView: View {
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
                     .disabled(sendButtonDisabled)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
                 }
+                .background(.bar)
             }
-            #endif
         }
-        .disabled(model.isSaving || model.isConnectingGmail)
+        #endif
     }
 
     private var previewThumbnail: some View {
