@@ -82,106 +82,11 @@ struct ShareView: View {
 
     private var editorView: some View {
         Form {
-            Section {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("To")
-                        .font(fieldLabelFont)
-                        .foregroundStyle(.secondary)
-                    #if os(iOS)
-                    TextField("Email address", text: $model.toEmail)
-                        .focused($focusedField, equals: .recipient)
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.emailAddress)
-                        .autocorrectionDisabled()
-                    #else
-                    TextField("Email address", text: $model.toEmail)
-                        .focused($focusedField, equals: .recipient)
-                    #endif
-                    if let recipientInlineMessage = model.recipientInlineMessage {
-                        Text(recipientInlineMessage)
-                            .font(.caption2)
-                            .foregroundStyle(model.recipientInlineMessageIsError ? .red : .secondary)
-                    }
-                    if !recentRecipientSuggestions.isEmpty {
-                        recentRecipientsView
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Title")
-                        .font(fieldLabelFont)
-                        .foregroundStyle(.secondary)
-                    #if os(iOS)
-                    HStack(alignment: .top, spacing: 10) {
-                        if previewImageURL != nil || model.isRefreshingPreview {
-                            previewThumbnail
-                        }
-
-                        titleInputField(lineLimit: 2)
-                    }
-
-                    if previewImageCount > 1 {
-                        Text("\(previewImageCount) photos attached")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                    #else
-                    HStack(alignment: .top, spacing: 10) {
-                        if previewImageURL != nil || model.isRefreshingPreview {
-                            previewThumbnail
-                        }
-
-                        titleInputField(lineLimit: 3)
-                    }
-
-                    if previewImageCount > 1 {
-                        Text("\(previewImageCount) photos attached")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                    #endif
-                }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Description")
-                        .font(fieldLabelFont)
-                        .foregroundStyle(.secondary)
-                    ZStack(alignment: .topLeading) {
-                        TextEditor(text: $model.excerpt)
-                            .frame(minHeight: 72)
-
-                        if descriptionIsLoading {
-                            fieldLoadingIndicator(topPadding: 8)
-                        }
-                    }
-                }
-
-                if shouldShowSummarySection {
-                    previewMetadataSection
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Link (Optional)")
-                        .font(fieldLabelFont)
-                        .foregroundStyle(.secondary)
-                    #if os(iOS)
-                    TextField("https://example.com", text: $model.urlString)
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.URL)
-                        .autocorrectionDisabled()
-                    #else
-                    TextField("https://example.com", text: $model.urlString)
-                    #endif
-                }
-            } header: {
-                Text("Send Email")
-            } footer: {
-                Text(
-                    model.autoSendEnabled
-                        ? "SendMoi sends immediately when it can. If you're offline or Gmail is unavailable, it saves to the offline queue."
-                        : "SendMoi pre-fills these fields from the shared item and waits for you to tap Send. If you're offline or Gmail is unavailable, it saves to the offline queue."
-                )
-            }
+            #if os(macOS)
+            macOSFormContent
+            #else
+            iOSFormContent
+            #endif
 
             if shouldShowInlineStatusMessage {
                 statusMessageView
@@ -207,6 +112,143 @@ struct ShareView: View {
             }
         }
         #endif
+    }
+
+    // MARK: - macOS compact form (fits browser share sheet height)
+
+    @ViewBuilder
+    private var macOSFormContent: some View {
+        Section {
+            // To
+            VStack(alignment: .leading, spacing: 4) {
+                Text("To")
+                    .font(fieldLabelFont)
+                    .foregroundStyle(.secondary)
+                TextField("Email address", text: $model.toEmail)
+                    .focused($focusedField, equals: .recipient)
+                if let recipientInlineMessage = model.recipientInlineMessage {
+                    Text(recipientInlineMessage)
+                        .font(.caption2)
+                        .foregroundStyle(model.recipientInlineMessageIsError ? .red : .secondary)
+                }
+                if !recentRecipientSuggestions.isEmpty {
+                    recentRecipientsView
+                }
+            }
+
+            // Title
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Title")
+                    .font(fieldLabelFont)
+                    .foregroundStyle(.secondary)
+                HStack(alignment: .top, spacing: 10) {
+                    if previewImageURL != nil || model.isRefreshingPreview {
+                        previewThumbnail
+                    }
+                    titleInputField(lineLimit: 2)
+                }
+            }
+
+            // Description — compact multi-line field, no tall TextEditor
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Description")
+                    .font(fieldLabelFont)
+                    .foregroundStyle(.secondary)
+                ZStack(alignment: .topLeading) {
+                    TextField("Description", text: $model.excerpt, axis: .vertical)
+                        .lineLimit(3, reservesSpace: true)
+                    if descriptionIsLoading {
+                        fieldLoadingIndicator(topPadding: 4)
+                    }
+                }
+            }
+
+            // Link
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Link (Optional)")
+                    .font(fieldLabelFont)
+                    .foregroundStyle(.secondary)
+                TextField("https://example.com", text: $model.urlString)
+            }
+        }
+    }
+
+    // MARK: - iOS full form
+
+    @ViewBuilder
+    private var iOSFormContent: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("To")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                TextField("Email address", text: $model.toEmail)
+                    .focused($focusedField, equals: .recipient)
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.emailAddress)
+                    .autocorrectionDisabled()
+                if let recipientInlineMessage = model.recipientInlineMessage {
+                    Text(recipientInlineMessage)
+                        .font(.caption2)
+                        .foregroundStyle(model.recipientInlineMessageIsError ? .red : .secondary)
+                }
+                if !recentRecipientSuggestions.isEmpty {
+                    recentRecipientsView
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Title")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                HStack(alignment: .top, spacing: 10) {
+                    if previewImageURL != nil || model.isRefreshingPreview {
+                        previewThumbnail
+                    }
+                    titleInputField(lineLimit: 2)
+                }
+                if previewImageCount > 1 {
+                    Text("\(previewImageCount) photos attached")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Description")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                ZStack(alignment: .topLeading) {
+                    TextEditor(text: $model.excerpt)
+                        .frame(minHeight: 72)
+                    if descriptionIsLoading {
+                        fieldLoadingIndicator(topPadding: 8)
+                    }
+                }
+            }
+
+            if shouldShowSummarySection {
+                previewMetadataSection
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Link (Optional)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                TextField("https://example.com", text: $model.urlString)
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.URL)
+                    .autocorrectionDisabled()
+            }
+        } header: {
+            Text("Send Email")
+        } footer: {
+            Text(
+                model.autoSendEnabled
+                    ? "SendMoi sends immediately when it can. If you're offline or Gmail is unavailable, it saves to the offline queue."
+                    : "SendMoi pre-fills these fields from the shared item and waits for you to tap Send. If you're offline or Gmail is unavailable, it saves to the offline queue."
+            )
+        }
     }
 
     private var previewThumbnail: some View {
@@ -246,7 +288,7 @@ struct ShareView: View {
     private var previewMetadataSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("AI Summary")
-                .font(fieldLabelFont)
+                .font(.caption)
                 .foregroundStyle(.secondary)
 
             Group {
