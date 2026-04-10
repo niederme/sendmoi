@@ -68,7 +68,15 @@ struct ShareView: View {
             Text("SendMoi is not connected to Gmail on this device yet. Sign in now to send from this share sheet, or choose Not Now and this share will stay queued until you connect Gmail later.")
         }
         #if os(macOS)
-        .frame(minWidth: 480, idealWidth: 520, minHeight: 420, idealHeight: 460)
+        .frame(minWidth: 480, idealWidth: 520, minHeight: 480, idealHeight: 540)
+        #endif
+    }
+
+    private var fieldLabelFont: Font {
+        #if os(macOS)
+        return .callout
+        #else
+        return .caption
         #endif
     }
 
@@ -77,7 +85,7 @@ struct ShareView: View {
             Section {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("To")
-                        .font(.caption)
+                        .font(fieldLabelFont)
                         .foregroundStyle(.secondary)
                     #if os(iOS)
                     TextField("Email address", text: $model.toEmail)
@@ -101,7 +109,7 @@ struct ShareView: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Title")
-                        .font(.caption)
+                        .font(fieldLabelFont)
                         .foregroundStyle(.secondary)
                     #if os(iOS)
                     HStack(alignment: .top, spacing: 10) {
@@ -136,7 +144,7 @@ struct ShareView: View {
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Description")
-                        .font(.caption)
+                        .font(fieldLabelFont)
                         .foregroundStyle(.secondary)
                     ZStack(alignment: .topLeading) {
                         TextEditor(text: $model.excerpt)
@@ -154,7 +162,7 @@ struct ShareView: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Link (Optional)")
-                        .font(.caption)
+                        .font(fieldLabelFont)
                         .foregroundStyle(.secondary)
                     #if os(iOS)
                     TextField("https://example.com", text: $model.urlString)
@@ -178,6 +186,20 @@ struct ShareView: View {
             if shouldShowInlineStatusMessage {
                 statusMessageView
             }
+
+            #if os(macOS)
+            Section {
+                HStack {
+                    Spacer()
+                    Button(sendButtonTitle) {
+                        model.queueAndComplete()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .disabled(sendButtonDisabled)
+                }
+            }
+            #endif
         }
         .disabled(model.isSaving || model.isConnectingGmail)
     }
@@ -219,7 +241,7 @@ struct ShareView: View {
     private var previewMetadataSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("AI Summary")
-                .font(.caption)
+                .font(fieldLabelFont)
                 .foregroundStyle(.secondary)
 
             Group {
