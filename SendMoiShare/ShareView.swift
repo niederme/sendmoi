@@ -175,6 +175,7 @@ struct ShareView: View {
 
     // MARK: - iOS full form
 
+    #if os(iOS)
     @ViewBuilder
     private var iOSFormContent: some View {
         Section {
@@ -250,6 +251,7 @@ struct ShareView: View {
             )
         }
     }
+    #endif
 
     private var previewThumbnail: some View {
         Group {
