@@ -206,7 +206,7 @@ struct ContentView: View {
                         .onboardingSecondaryButtonStyle()
                         .buttonBorderShape(.circle)
                         .controlSize(.large)
-                        .frame(width: 46, height: 46)
+                        .frame(width: 56, height: 56)
                     }
 
                     if onboardingStep < 2 {
@@ -218,7 +218,7 @@ struct ContentView: View {
                         .onboardingPrimaryButtonStyle(tint: onboardingBrandAccent)
                         .buttonBorderShape(.circle)
                         .controlSize(.large)
-                        .frame(width: 46, height: 46)
+                        .frame(width: 56, height: 56)
                     } else if onboardingStep == 2 && model.session == nil {
                         Button {
                         } label: {
@@ -227,7 +227,7 @@ struct ContentView: View {
                         .onboardingSecondaryButtonStyle()
                         .buttonBorderShape(.circle)
                         .controlSize(.large)
-                        .frame(width: 46, height: 46)
+                        .frame(width: 56, height: 56)
                         .disabled(true)
                         .accessibilityLabel("Next unavailable")
                         .accessibilityHint("Connect Gmail with the button above, or tap Skip.")
@@ -1661,11 +1661,39 @@ private struct LoopingVideoPlayerNativeView: UIViewRepresentable {
     }
 }
 #else
-private struct LoopingVideoPlayerNativeView: View {
+private final class LoopingVideoPlayerContainerNSView: NSView {
+    let playerLayer = AVPlayerLayer()
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+        playerLayer.videoGravity = .resizeAspectFill
+        layer?.addSublayer(playerLayer)
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func layout() {
+        super.layout()
+        playerLayer.frame = bounds
+    }
+}
+
+private struct LoopingVideoPlayerNativeView: NSViewRepresentable {
     let player: AVQueuePlayer
 
-    var body: some View {
-        Color.black
+    func makeNSView(context: Context) -> LoopingVideoPlayerContainerNSView {
+        let view = LoopingVideoPlayerContainerNSView()
+        view.playerLayer.player = player
+        return view
+    }
+
+    func updateNSView(_ nsView: LoopingVideoPlayerContainerNSView, context: Context) {
+        nsView.playerLayer.player = player
+    }
+
+    static func dismantleNSView(_ nsView: LoopingVideoPlayerContainerNSView, coordinator: ()) {
+        nsView.playerLayer.player = nil
     }
 }
 #endif
