@@ -17,12 +17,26 @@ final class ShareViewController: PlatformViewController {
     private lazy var gmailAuthenticator = ShareExtensionGoogleAuthenticator(presentingViewController: self)
 
     #if os(macOS)
-    private let preferredExtensionSize = NSSize(width: 520, height: 460)
+    private let preferredExtensionSize = NSSize(width: 520, height: 540)
     #endif
 
     #if os(macOS)
     override func loadView() {
         view = NSView(frame: NSRect(origin: .zero, size: preferredExtensionSize))
+    }
+
+    override func keyDown(with event: NSEvent) {
+        // Escape
+        if event.keyCode == 53 {
+            model.cancel()
+            return
+        }
+        // ⌘W
+        if event.modifierFlags.contains(.command) && event.characters == "w" {
+            model.cancel()
+            return
+        }
+        super.keyDown(with: event)
     }
     #endif
 
