@@ -35,14 +35,12 @@ struct ShareView: View {
             .onChange(of: model.urlString) { _, _ in
                 model.schedulePreviewRefresh()
             }
+            #if os(iOS)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         model.cancel()
                     }
-                    #if os(macOS)
-                    .keyboardShortcut(.cancelAction)
-                    #endif
                 }
 
                 if showsSendToolbarItem {
@@ -52,12 +50,10 @@ struct ShareView: View {
                         }
                         .disabled(sendButtonDisabled)
                         .opacity(model.presentationMode == .editing ? 1 : 0.38)
-                        #if os(macOS)
-                        .keyboardShortcut(.defaultAction)
-                        #endif
                     }
                 }
             }
+            #endif
         }
         .alert("Connect Gmail in SendMoi", isPresented: $model.showsGmailConnectAlert) {
             Button("Sign In to Gmail") {
@@ -94,20 +90,25 @@ struct ShareView: View {
         }
         .disabled(model.isSaving || model.isConnectingGmail)
         #if os(macOS)
+        .formStyle(.grouped)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 0) {
                 Divider()
                 HStack {
+                    Button("Cancel") {
+                        model.cancel()
+                    }
+                    .keyboardShortcut(.cancelAction)
                     Spacer()
                     Button(sendButtonTitle) {
                         model.queueAndComplete()
                     }
                     .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
                     .disabled(sendButtonDisabled)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
                 }
+                .controlSize(.large)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
                 .background(.bar)
             }
         }
