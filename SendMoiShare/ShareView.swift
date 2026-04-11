@@ -77,18 +77,19 @@ struct ShareView: View {
     }
 
     private var editorView: some View {
-        #if os(macOS)
-        macEditorView
-        #endif
-        #if !os(macOS)
-        Form {
-            iOSFormContent
+        Group {
+            #if os(macOS)
+            macEditorView
+            #else
+            Form {
+                iOSFormContent
 
-            if shouldShowInlineStatusMessage {
-                statusMessageView
+                if shouldShowInlineStatusMessage {
+                    statusMessageView
+                }
             }
+            #endif
         }
-        #endif
         .disabled(model.isSaving || model.isConnectingGmail)
     }
 
