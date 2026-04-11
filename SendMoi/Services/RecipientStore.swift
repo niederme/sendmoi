@@ -11,19 +11,25 @@ enum RecipientStore {
 
     static func load() -> [String] {
         migrateLegacyDefaultsIfNeeded()
-        let values = SharedContainer.sharedDefaults.array(forKey: historyKey) as? [String] ?? []
+        let defaults = SharedContainer.sharedDefaults
+        defaults.synchronize()
+        let values = defaults.array(forKey: historyKey) as? [String] ?? []
         return values
     }
 
     static func loadDefault() -> String {
         migrateLegacyDefaultsIfNeeded()
-        return SharedContainer.sharedDefaults.string(forKey: defaultKey) ?? ""
+        let defaults = SharedContainer.sharedDefaults
+        defaults.synchronize()
+        return defaults.string(forKey: defaultKey) ?? ""
     }
 
     static func setDefault(_ recipient: String) {
         migrateLegacyDefaultsIfNeeded()
         let normalized = normalize(recipient)
-        SharedContainer.sharedDefaults.set(normalized, forKey: defaultKey)
+        let defaults = SharedContainer.sharedDefaults
+        defaults.set(normalized, forKey: defaultKey)
+        defaults.synchronize()
         guard !normalized.isEmpty else {
             return
         }
@@ -33,6 +39,7 @@ enum RecipientStore {
     static func loadShareSheetAutoSendEnabled() -> Bool {
         migrateLegacyDefaultsIfNeeded()
         let defaults = SharedContainer.sharedDefaults
+        defaults.synchronize()
         if defaults.object(forKey: shareSheetAutoSendKey) == nil {
             return false
         }
@@ -41,17 +48,23 @@ enum RecipientStore {
 
     static func setShareSheetAutoSendEnabled(_ isEnabled: Bool) {
         migrateLegacyDefaultsIfNeeded()
-        SharedContainer.sharedDefaults.set(isEnabled, forKey: shareSheetAutoSendKey)
+        let defaults = SharedContainer.sharedDefaults
+        defaults.set(isEnabled, forKey: shareSheetAutoSendKey)
+        defaults.synchronize()
     }
 
     static func loadHasCompletedOnboarding() -> Bool {
         migrateLegacyDefaultsIfNeeded()
-        return SharedContainer.sharedDefaults.bool(forKey: onboardingCompletedKey)
+        let defaults = SharedContainer.sharedDefaults
+        defaults.synchronize()
+        return defaults.bool(forKey: onboardingCompletedKey)
     }
 
     static func setHasCompletedOnboarding(_ hasCompleted: Bool) {
         migrateLegacyDefaultsIfNeeded()
-        SharedContainer.sharedDefaults.set(hasCompleted, forKey: onboardingCompletedKey)
+        let defaults = SharedContainer.sharedDefaults
+        defaults.set(hasCompleted, forKey: onboardingCompletedKey)
+        defaults.synchronize()
     }
 
     static func resetSetup() {
@@ -61,6 +74,7 @@ enum RecipientStore {
         defaults.removeObject(forKey: defaultKey)
         defaults.removeObject(forKey: shareSheetAutoSendKey)
         defaults.removeObject(forKey: onboardingCompletedKey)
+        defaults.synchronize()
     }
 
     static func record(_ recipient: String) {
@@ -73,7 +87,9 @@ enum RecipientStore {
         var current = load().filter { $0 != normalized }
         current.insert(normalized, at: 0)
         current = Array(current.prefix(maxCount))
-        SharedContainer.sharedDefaults.set(current, forKey: historyKey)
+        let defaults = SharedContainer.sharedDefaults
+        defaults.set(current, forKey: historyKey)
+        defaults.synchronize()
     }
 
     private static func normalize(_ recipient: String) -> String {
@@ -82,14 +98,18 @@ enum RecipientStore {
 
     private static func migrateLegacyDefaultsIfNeeded() {
         let defaults = SharedContainer.sharedDefaults
+        defaults.synchronize()
         if defaults.bool(forKey: legacyMigrationCompletedKey) {
             return
         }
+
+        var didMutateDefaults = false
 
         let legacyCandidates = legacyDefaultsCandidates()
         if defaults.object(forKey: defaultKey) == nil,
            let legacyDefault = firstLegacyString(forKey: defaultKey, in: legacyCandidates) {
             defaults.set(normalize(legacyDefault), forKey: defaultKey)
+            didMutateDefaults = true
         }
 
         if defaults.object(forKey: historyKey) == nil,
@@ -100,19 +120,27 @@ enum RecipientStore {
             var seen = Set<String>()
             let unique = normalized.filter { seen.insert($0).inserted }
             defaults.set(Array(unique.prefix(maxCount)), forKey: historyKey)
+            didMutateDefaults = true
         }
 
         if defaults.object(forKey: shareSheetAutoSendKey) == nil,
            let legacyAutoSend = firstLegacyBool(forKey: shareSheetAutoSendKey, in: legacyCandidates) {
             defaults.set(legacyAutoSend, forKey: shareSheetAutoSendKey)
+            didMutateDefaults = true
         }
 
         if defaults.object(forKey: onboardingCompletedKey) == nil,
            let legacyOnboarding = firstLegacyBool(forKey: onboardingCompletedKey, in: legacyCandidates) {
             defaults.set(legacyOnboarding, forKey: onboardingCompletedKey)
+            didMutateDefaults = true
         }
 
         defaults.set(true, forKey: legacyMigrationCompletedKey)
+        didMutateDefaults = true
+
+        if didMutateDefaults {
+            defaults.synchronize()
+        }
     }
 
     private static func legacyDefaultsCandidates() -> [UserDefaults] {

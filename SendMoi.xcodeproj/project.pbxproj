@@ -101,6 +101,7 @@
 		B20000010000000000000007 /* SendMoiShare-macOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "SendMoiShare-macOS.entitlements"; sourceTree = "<group>"; };
 		DC6FF07A2F55D5CB00415EAC /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		DC6FF07C2F55D5CB00415EAC /* Resources/sendmoi-demo-hero.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Resources/sendmoi-demo-hero.mp4"; sourceTree = "<group>"; };
+		DC72E4802F87144300F8A524 /* NoLiIa, NYC.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = "NoLiIa, NYC.gpx"; path = "../../Desktop/NoLiIa, NYC.gpx"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -124,6 +125,7 @@
 		A40000010000000000000001 = {
 			isa = PBXGroup;
 			children = (
+				DC72E4802F87144300F8A524 /* NoLiIa, NYC.gpx */,
 				A40000010000000000000002 /* SendMoi */,
 				B40000010000000000000002 /* SendMoiShare */,
 				A40000010000000000000003 /* Products */,
@@ -451,7 +453,7 @@
 				CODE_SIGN_ENTITLEMENTS = SendMoi/SendMoi.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "SendMoi/SendMoi-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 31;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 289GY9L343;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -481,7 +483,7 @@
 				CODE_SIGN_ENTITLEMENTS = SendMoi/SendMoi.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "SendMoi/SendMoi-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 31;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 289GY9L343;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -512,7 +514,7 @@
 				CODE_SIGN_ENTITLEMENTS = SendMoiShare/SendMoiShare.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "SendMoiShare/SendMoiShare-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 31;
 				DEVELOPMENT_TEAM = 289GY9L343;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SendMoiShare/Info.plist;
@@ -543,7 +545,7 @@
 				CODE_SIGN_ENTITLEMENTS = SendMoiShare/SendMoiShare.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "SendMoiShare/SendMoiShare-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 31;
 				DEVELOPMENT_TEAM = 289GY9L343;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;

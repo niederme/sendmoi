@@ -280,14 +280,36 @@ final class GmailDeliveryService {
             }
         }
 
+        let resolvedSummary = Self.resolvedSummary(
+            fallbackSummary: fallbackSummary,
+            fetchedSummary: metadata.summary
+        )
+
         return EmailContent(
             title: shouldPreferParsedSocialShare ? socialFallbackTitle : resolvedTitle,
             excerpt: resolvedExcerpt,
-            summary: metadata.summary ?? fallbackSummary,
+            summary: resolvedSummary,
             urlString: resolvedURLString,
             imageURLStrings: resolvedImageURLStrings,
             inlineImages: inlineImages
         )
+    }
+
+    private static func resolvedSummary(
+        fallbackSummary: String?,
+        fetchedSummary: String?
+    ) -> String? {
+        let trimmedFallbackSummary = fallbackSummary?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let trimmedFallbackSummary, !trimmedFallbackSummary.isEmpty {
+            return trimmedFallbackSummary
+        }
+
+        let trimmedFetchedSummary = fetchedSummary?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let trimmedFetchedSummary, !trimmedFetchedSummary.isEmpty {
+            return trimmedFetchedSummary
+        }
+
+        return nil
     }
 
     private static func resolvedContentURL(for rawURL: URL) async -> URL {
@@ -849,7 +871,11 @@ final class GmailDeliveryService {
             }
 
             let trimmed = imageURLString.trimmingCharacters(in: .whitespacesAndNewlines)
-            return trimmed.isEmpty ? nil : trimmed
+            guard !trimmed.isEmpty, isSupportedDisplayImageURLString(trimmed) else {
+                return nil
+            }
+
+            return trimmed
         }
     }
 
@@ -1202,18 +1228,31 @@ final class GmailDeliveryService {
 
     private static func extractPreferredImageURLString(fromHTML html: String, metaTags: [[String: String]], baseURL: URL) -> String? {
         let metaCandidates = [
+            ("property", "og:image:secure_url"),
             ("name", "twitter:image"),
             ("name", "twitter:image:src"),
             ("property", "og:image"),
-            ("property", "og:image:url"),
-            ("property", "og:image:secure_url")
+            ("property", "og:image:url")
         ]
+
+        var resolvedMetaCandidates: [String] = []
 
         for (attribute, value) in metaCandidates {
             if let content = metaTags.first(where: { $0[attribute]?.lowercased() == value })?["content"],
-               let resolved = resolvedURLString(content, relativeTo: baseURL) {
-                return resolved
+               let resolved = resolvedURLString(content, relativeTo: baseURL),
+               isSupportedDisplayImageURLString(resolved) {
+                resolvedMetaCandidates.append(resolved)
             }
+        }
+
+        if let secureCandidate = resolvedMetaCandidates.first(where: {
+            URL(string: $0)?.scheme?.lowercased() == "https"
+        }) {
+            return secureCandidate
+        }
+
+        if let firstResolvedMetaCandidate = resolvedMetaCandidates.first {
+            return firstResolvedMetaCandidate
         }
 
         if Self.shouldSkipSummary(for: baseURL) {
@@ -1683,15 +1722,62 @@ final class GmailDeliveryService {
             .first
 
         guard let sourceValue,
-              let resolved = resolvedURLString(sourceValue, relativeTo: baseURL) else {
+              let resolved = resolvedURLString(sourceValue, relativeTo: baseURL),
+              isSupportedDisplayImageURLString(resolved) else {
             return nil
         }
 
         let width = Int(attributes["width"] ?? "") ?? 0
         let height = Int(attributes["height"] ?? "") ?? 0
-        let score = max(width * height, 1)
+        let altText = normalizedDisplayText(attributes["alt"] ?? "")
+        let score = max(width * height, 1) + imageCandidateBoost(
+            urlString: resolved,
+            altText: altText
+        )
 
         return ImageCandidate(urlString: resolved, score: score)
+    }
+
+    private static func imageCandidateBoost(urlString: String, altText: String) -> Int {
+        let normalizedURL = urlString.lowercased()
+        let normalizedAlt = altText.lowercased()
+        var boost = 0
+
+        if normalizedURL.contains("/promo/") ||
+            normalizedURL.contains("/hero/") ||
+            normalizedURL.contains("/cover/") ||
+            normalizedURL.contains("/case-studies/") {
+            boost += 500
+        }
+
+        if normalizedAlt.contains("preview") ||
+            normalizedAlt.contains("cover") ||
+            normalizedAlt.contains("hero") ||
+            normalizedAlt.contains("screenshot") ||
+            normalizedAlt.contains("case study") {
+            boost += 500
+        }
+
+        if !normalizedAlt.isEmpty {
+            boost += 25
+        }
+
+        return boost
+    }
+
+    private static func isSupportedDisplayImageURLString(_ urlString: String) -> Bool {
+        let normalizedURL = urlString.lowercased()
+
+        if normalizedURL.hasSuffix(".svg") ||
+            normalizedURL.contains("/icons/") ||
+            normalizedURL.contains("/icon-") ||
+            normalizedURL.contains("/logo") ||
+            normalizedURL.contains("logo-") ||
+            normalizedURL.contains("favicon") {
+            return false
+        }
+
+        return true
     }
 
     private static func findInstagramMediaItem(in value: Any) -> [String: Any]? {
@@ -2021,7 +2107,13 @@ final class GmailDeliveryService {
             .map(collapseWhitespace(in:))
             .filter { !$0.isEmpty }
         let longLines = lines.filter { wordCount(in: $0) >= 12 }
-        let junkLines = lines.filter { looksLikeNonBodyLine($0) || looksLikeFeedOrPromoLine($0) || looksLikeCodeOrScript($0) }
+        let junkLines = lines.filter {
+            looksLikeNonBodyLine($0) ||
+            looksLikeFeedOrPromoLine($0) ||
+            looksLikeCodeOrScript($0) ||
+            looksLikeRuntimeErrorLine($0) ||
+            looksLikeCommerceChromeLine($0)
+        }
         let words = wordCount(in: lines.joined(separator: " "))
 
         return baseScore + (words * 2) + (longLines.count * 40) - (junkLines.count * 80)
@@ -2110,6 +2202,14 @@ final class GmailDeliveryService {
                     return nil
                 }
 
+                if looksLikeRuntimeErrorLine(collapsed) {
+                    return nil
+                }
+
+                if looksLikeCommerceChromeLine(collapsed) {
+                    return nil
+                }
+
                 if let excerptLower,
                    lowered == excerptLower {
                     return nil
@@ -2154,7 +2254,120 @@ final class GmailDeliveryService {
             return true
         }
 
+        let words = line.split(whereSeparator: \.isWhitespace)
+        let hasSentencePunctuation = line.contains(".") || line.contains("?") || line.contains("!")
+        let capitalizedWords = words.filter { word in
+            guard let first = word.first else {
+                return false
+            }
+            return first.isUppercase || first.isNumber
+        }.count
+
+        if !hasSentencePunctuation,
+           words.count > 0,
+           words.count <= 4,
+           line.count <= 48,
+           capitalizedWords >= max(1, words.count - 1) {
+            return true
+        }
+
         return false
+    }
+
+    private static func looksLikeRuntimeErrorLine(_ line: String) -> Bool {
+        let lowered = line.lowercased()
+        let words = wordCount(in: line)
+
+        if lowered.contains("unable to execute javascript") {
+            return true
+        }
+
+        let shortErrorMarkers = [
+            "an error occurred",
+            "something went wrong",
+            "please try again"
+        ]
+
+        if words <= 10,
+           shortErrorMarkers.contains(where: { lowered.contains($0) }) {
+            return true
+        }
+
+        if words <= 16,
+           lowered.contains("javascript"),
+           (lowered.contains("error") ||
+            lowered.contains("failed") ||
+            lowered.contains("disabled") ||
+            lowered.contains("enable")) {
+            return true
+        }
+
+        return false
+    }
+
+    private static func looksLikeCommerceChromeLine(_ line: String) -> Bool {
+        let lowered = line.lowercased()
+
+        let exactMarkers = [
+            "view in your space",
+            "add to cart",
+            "more",
+            "product overview",
+            "installation & shipping",
+            "included accessories",
+            "similar products"
+        ]
+
+        if exactMarkers.contains(lowered) {
+            return true
+        }
+
+        if lowered.hasPrefix("sku:") {
+            return true
+        }
+
+        if lowered.contains("see if you qualify") ||
+           lowered.contains(" with affirm") ||
+           lowered.contains("% apr") {
+            return true
+        }
+
+        if looksLikePriceLine(line) {
+            return true
+        }
+
+        if looksLikeUppercaseFeatureBullet(line) {
+            return true
+        }
+
+        return false
+    }
+
+    private static func looksLikePriceLine(_ line: String) -> Bool {
+        countMatches(
+            in: line,
+            pattern: #"^\$?\d[\d,]*(?:\.\d{2})?(?:\s+\$?\d[\d,]*(?:\.\d{2})?){0,2}$"#
+        ) == 1
+    }
+
+    private static func looksLikeUppercaseFeatureBullet(_ line: String) -> Bool {
+        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: #"^[•*\-]\s*"#, with: "", options: .regularExpression)
+        guard let separatorRange =
+            trimmed.range(of: " - ") ??
+            trimmed.range(of: ": ")
+        else {
+            return false
+        }
+
+        let lead = trimmed[..<separatorRange.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)
+        guard wordCount(in: lead) >= 2 else {
+            return false
+        }
+
+        let uppercaseLetters = lead.unicodeScalars.filter { CharacterSet.uppercaseLetters.contains($0) }.count
+        let lowercaseLetters = lead.unicodeScalars.filter { CharacterSet.lowercaseLetters.contains($0) }.count
+        return uppercaseLetters >= 8 && uppercaseLetters > max(lowercaseLetters * 3, 0)
     }
 
     private static func looksLikeFeedOrPromoLine(_ line: String) -> Bool {
@@ -2346,6 +2559,16 @@ final class GmailDeliveryService {
             return false
         }
 
+        let runtimeErrorLines = lines.filter { looksLikeRuntimeErrorLine($0) }
+        if !runtimeErrorLines.isEmpty {
+            return false
+        }
+
+        let commerceChromeLines = lines.filter { looksLikeCommerceChromeLine($0) }
+        if commerceChromeLines.count >= max(2, lines.count / 4) {
+            return false
+        }
+
         let lowered = text.lowercased()
         let titleLower = title.lowercased()
         if lowered.contains("sign up") && !titleLower.contains("sign up") {
@@ -2374,6 +2597,14 @@ final class GmailDeliveryService {
         }
 
         if looksLikeStructuredListingSummary(normalized) {
+            return false
+        }
+
+        if looksLikeRuntimeErrorLine(normalized) {
+            return false
+        }
+
+        if looksLikeCommerceChromeLine(normalized) {
             return false
         }
 

@@ -23,7 +23,10 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             rootContent
-                .navigationTitle("SendMoi")
+                .navigationTitle(usesDesktopLayout ? "SendMoi" : "")
+#if !os(macOS)
+                .toolbar(usesDesktopLayout ? .automatic : .hidden, for: .navigationBar)
+#endif
         }
         .sheet(isPresented: $model.shouldShowOnboarding, onDismiss: finalizeOnboardingSheetState) {
             onboardingContent
@@ -60,7 +63,7 @@ struct ContentView: View {
                 openSetupGuide: openSetupGuide,
                 showResetConfirmation: { showsResetConfirmation = true }
             )
-            .frame(minWidth: 980, minHeight: 600, alignment: .topLeading)
+            .frame(minWidth: 980, minHeight: 880, alignment: .topLeading)
         } else {
             mobileContent
         }
@@ -1007,25 +1010,34 @@ struct ContentView: View {
     }
 
     private var compactMobileContent: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        Form {
+            Section {
+                mobileIntroView
+                    .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 12, trailing: 20))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+
+            accountSection
+            defaultRecipientSection
+            shareSheetSection
+            queueSection
+            setupActionsSection
+            attributionSection
+        }
+        .sendMoiListSectionSpacing(24)
+    }
+
+    private var mobileIntroView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("SendMoi")
+                .font(.largeTitle.weight(.bold))
+
             Text("Send links to your Gmail inbox without losing them in tabs, bookmarks, or chats.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .lineSpacing(1.2)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
-                .padding(.bottom, 12)
-
-            Form {
-                accountSection
-                defaultRecipientSection
-                shareSheetSection
-                queueSection
-                setupActionsSection
-                attributionSection
-            }
-            .sendMoiListSectionSpacing(24)
         }
     }
 

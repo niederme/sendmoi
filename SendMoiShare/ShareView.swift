@@ -77,89 +77,150 @@ struct ShareView: View {
     }
 
     private var editorView: some View {
+        #if os(macOS)
+        macEditorView
+        #endif
+        #if !os(macOS)
         Form {
-            #if os(macOS)
-            macOSFormContent
-            #else
             iOSFormContent
-            #endif
 
             if shouldShowInlineStatusMessage {
                 statusMessageView
             }
         }
-        .disabled(model.isSaving || model.isConnectingGmail)
-        #if os(macOS)
-        .formStyle(.grouped)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            VStack(spacing: 0) {
-                Divider()
-                HStack {
-                    Button("Cancel") {
-                        model.cancel()
-                    }
-                    .keyboardShortcut(.cancelAction)
-                    Spacer()
-                    Button(sendButtonTitle) {
-                        model.queueAndComplete()
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(sendButtonDisabled)
-                }
-                .controlSize(.large)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(.bar)
-            }
-        }
         #endif
+        .disabled(model.isSaving || model.isConnectingGmail)
     }
 
     // MARK: - macOS compact form (fits browser share sheet height)
 
     @ViewBuilder
     private var macOSFormContent: some View {
-        Section {
-            // To
-            LabeledContent("To") {
-                VStack(alignment: .leading, spacing: 4) {
-                    TextField("", text: $model.toEmail)
-                        .focused($focusedField, equals: .recipient)
-                    if let recipientInlineMessage = model.recipientInlineMessage {
-                        Text(recipientInlineMessage)
-                            .font(.caption2)
-                            .foregroundStyle(model.recipientInlineMessageIsError ? .red : .secondary)
-                    }
-                    // Recent recipients omitted on macOS — default recipient fills the field automatically
+        macOSFieldRow("To") {
+            VStack(alignment: .leading, spacing: 4) {
+                TextField("", text: $model.toEmail)
+                    .focused($focusedField, equals: .recipient)
+                    .multilineTextAlignment(.leading)
+                    .textFieldStyle(.plain)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if let recipientInlineMessage = model.recipientInlineMessage {
+                    Text(recipientInlineMessage)
+                        .font(.caption2)
+                        .foregroundStyle(model.recipientInlineMessageIsError ? .red : .secondary)
                 }
             }
-
-            // Title
-            LabeledContent("Title") {
-                HStack(alignment: .top, spacing: 10) {
-                    if previewImageURL != nil || model.isRefreshingPreview {
-                        previewThumbnail
-                    }
-                    titleInputField(lineLimit: 2, placeholder: "")
-                }
-            }
-
-            // Description — compact multi-line field
-            LabeledContent("Description") {
-                ZStack(alignment: .topLeading) {
-                    TextField("", text: $model.excerpt, axis: .vertical)
-                        .lineLimit(3, reservesSpace: true)
-                    if descriptionIsLoading {
-                        fieldLoadingIndicator(topPadding: 4)
-                    }
-                }
-            }
-
-            // Link
-            LabeledContent("Link") {
-                TextField("", text: $model.urlString)
-            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+
+        Divider()
+
+        macOSFieldRow("Title") {
+            HStack(alignment: .top, spacing: 10) {
+                if shouldShowPreviewThumbnailSlot {
+                    previewThumbnail
+                }
+                titleInputField(lineLimit: 2, placeholder: "")
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+
+        Divider()
+
+        macOSFieldRow("Description") {
+            ZStack(alignment: .topLeading) {
+                TextField("", text: $model.excerpt, axis: .vertical)
+                    .lineLimit(3, reservesSpace: true)
+                    .multilineTextAlignment(.leading)
+                    .textFieldStyle(.plain)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if descriptionIsLoading {
+                    fieldLoadingIndicator(topPadding: 4)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+
+        Divider()
+
+        macOSFieldRow("Link") {
+            TextField("", text: $model.urlString)
+                .multilineTextAlignment(.leading)
+                .textFieldStyle(.plain)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    #if os(macOS)
+    private var macEditorView: some View {
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    macOSFieldCard
+
+                    if shouldShowInlineStatusMessage {
+                        statusMessageView
+                            .padding(.horizontal, 16)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 20)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+
+            Divider()
+
+            HStack {
+                Button("Cancel") {
+                    model.cancel()
+                }
+                .keyboardShortcut(.cancelAction)
+
+                Spacer()
+
+                Button(sendButtonTitle) {
+                    model.queueAndComplete()
+                }
+                .buttonStyle(.bordered)
+                .disabled(sendButtonDisabled)
+            }
+            .controlSize(.large)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(.bar)
+        }
+    }
+
+    private var macOSFieldCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            macOSFormContent
+        }
+        .background(.quaternary.opacity(0.45), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.06), lineWidth: 1)
+        }
+    }
+    #endif
+
+    private func macOSFieldRow<Content: View>(
+        _ label: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text(label)
+                .font(fieldLabelFont)
+                .foregroundStyle(.secondary)
+                .frame(width: 76, alignment: .leading)
+                .padding(.top, 4)
+
+            content()
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - iOS full form
@@ -334,6 +395,10 @@ struct ShareView: View {
         ([model.previewImageURLString].compactMap { $0 } + model.additionalImageURLStrings).count
     }
 
+    private var shouldShowPreviewThumbnailSlot: Bool {
+        model.isRefreshingPreview || previewImageURL != nil
+    }
+
     private var imageCountBadge: some View {
         Text("+\(max(previewImageCount - 1, 1))")
             .font(.caption2)
@@ -371,13 +436,24 @@ struct ShareView: View {
 
     private func titleInputField(lineLimit: Int, placeholder: String = "Title") -> some View {
         ZStack(alignment: .topLeading) {
+            #if os(macOS)
             TextField(titleIsLoading ? "" : placeholder, text: $model.title, axis: .vertical)
                 .lineLimit(lineLimit, reservesSpace: true)
+                .multilineTextAlignment(.leading)
+                .textFieldStyle(.plain)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            #else
+            TextField(titleIsLoading ? "" : placeholder, text: $model.title, axis: .vertical)
+                .lineLimit(lineLimit, reservesSpace: true)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            #endif
 
             if titleIsLoading {
                 fieldLoadingIndicator(topPadding: 8)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func fieldLoadingIndicator(topPadding: CGFloat) -> some View {

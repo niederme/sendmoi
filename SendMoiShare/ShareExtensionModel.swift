@@ -49,6 +49,7 @@ final class ShareExtensionModel: ObservableObject {
     private let deliveryService = GmailDeliveryService()
     private var previewTask: Task<Void, Never>?
     private var sendTask: Task<Void, Never>?
+    private var recipientReloadTask: Task<Void, Never>?
     private var pendingPreviewApplication: PendingPreviewApplication?
     private var queuedPreviewEnrichmentItem: QueuedEmail?
     private var hasPromptedForGmailConnection = false
@@ -56,9 +57,8 @@ final class ShareExtensionModel: ObservableObject {
 
     func attach(extensionContext: NSExtensionContext?) {
         extensionContextRef = extensionContext
-        savedRecipients = RecipientStore.load()
-        toEmail = RecipientStore.loadDefault()
-        autoSendEnabled = RecipientStore.loadShareSheetAutoSendEnabled()
+        reloadRecipientPreferences()
+        scheduleRecipientReloadIfNeeded()
     }
 
     func loadInitialContent() {
@@ -78,10 +78,12 @@ final class ShareExtensionModel: ObservableObject {
     }
 
     func useSavedRecipient(_ recipient: String) {
+        recipientReloadTask?.cancel()
         toEmail = recipient
     }
 
     func cancel() {
+        recipientReloadTask?.cancel()
         let error = NSError(
             domain: NSCocoaErrorDomain,
             code: NSUserCancelledError,
@@ -92,6 +94,7 @@ final class ShareExtensionModel: ObservableObject {
 
     func queueAndComplete() {
         guard !isSaving else { return }
+        recipientReloadTask?.cancel()
 
         let draft = currentDraft()
         let shouldAllowAutoSendEditWindow = presentationMode == .processing
@@ -208,6 +211,45 @@ final class ShareExtensionModel: ObservableObject {
             previewImageURLString: previewImageURLString,
             additionalImageURLStrings: additionalImageURLStrings
         )
+    }
+
+    private func reloadRecipientPreferences(preserveTypedRecipient: Bool = false) {
+        savedRecipients = RecipientStore.load()
+        autoSendEnabled = RecipientStore.loadShareSheetAutoSendEnabled()
+
+        let defaultRecipient = RecipientStore.loadDefault()
+        guard !preserveTypedRecipient || toEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return
+        }
+
+        toEmail = defaultRecipient
+    }
+
+    private func scheduleRecipientReloadIfNeeded() {
+        recipientReloadTask?.cancel()
+        guard toEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return
+        }
+
+        recipientReloadTask = Task { [weak self] in
+            guard let self else { return }
+            for _ in 0..<4 {
+                do {
+                    try await Task.sleep(nanoseconds: 250_000_000)
+                } catch {
+                    return
+                }
+
+                guard self.toEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                    return
+                }
+
+                self.reloadRecipientPreferences(preserveTypedRecipient: true)
+                guard self.toEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                    return
+                }
+            }
+        }
     }
 
     private func makeQueuedEmail(
@@ -333,6 +375,7 @@ final class ShareExtensionModel: ObservableObject {
 
         let titleSnapshot = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let excerptSnapshot = excerpt.trimmingCharacters(in: .whitespacesAndNewlines)
+        let summarySnapshot = summary.trimmingCharacters(in: .whitespacesAndNewlines)
         isRefreshingPreview = true
 
         previewTask = Task { [weak self] in
@@ -368,6 +411,7 @@ final class ShareExtensionModel: ObservableObject {
                     normalizedURLString: normalizedURLString,
                     titleSnapshot: titleSnapshot,
                     excerptSnapshot: excerptSnapshot,
+                    summarySnapshot: summarySnapshot,
                     metadata: metadata
                 )
                 self.pendingPreviewApplication = application
@@ -389,7 +433,10 @@ final class ShareExtensionModel: ObservableObject {
         try Task.checkCancellation()
         try QueueStore.append(item)
         queuedPreviewEnrichmentItem = item
-        extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
+        let extensionContext = extensionContextRef
+        defer {
+            extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
+        }
 
         let refreshedItem: QueuedEmail
         if waitForPreview {
@@ -500,7 +547,12 @@ final class ShareExtensionModel: ObservableObject {
             excerpt = previewDescription
         }
 
-        summary = application.metadata?.summary ?? ""
+        if Self.shouldApplyPreviewSummary(
+            currentSummary: summary,
+            summarySnapshot: application.summarySnapshot
+        ) {
+            summary = application.metadata?.summary ?? ""
+        }
         if !SharedContainer.isManagedMediaURLString(previewImageURLString),
            let previewImageURLString = application.metadata?.imageURLString {
             self.previewImageURLString = previewImageURLString
@@ -533,7 +585,12 @@ final class ShareExtensionModel: ObservableObject {
             updatedDraft.excerpt = previewDescription
         }
 
-        updatedDraft.summary = pendingPreviewApplication.metadata?.summary ?? ""
+        if Self.shouldApplyPreviewSummary(
+            currentSummary: updatedDraft.summary,
+            summarySnapshot: pendingPreviewApplication.summarySnapshot
+        ) {
+            updatedDraft.summary = pendingPreviewApplication.metadata?.summary ?? ""
+        }
         if !SharedContainer.isManagedMediaURLString(updatedDraft.previewImageURLString),
            let previewImageURLString = pendingPreviewApplication.metadata?.imageURLString {
             updatedDraft.previewImageURLString = previewImageURLString
@@ -673,6 +730,11 @@ final class ShareExtensionModel: ObservableObject {
         return loweredTitle == host || loweredTitle == condensedHost
     }
 
+    private static func shouldApplyPreviewSummary(currentSummary: String, summarySnapshot: String) -> Bool {
+        currentSummary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        summarySnapshot.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     private static func shouldAttemptSocialImageFallback(for urlString: String) -> Bool {
         guard let host = URL(string: urlString)?.host?.lowercased() else {
             return false
@@ -780,6 +842,7 @@ private struct PendingPreviewApplication {
     let normalizedURLString: String
     let titleSnapshot: String
     let excerptSnapshot: String
+    let summarySnapshot: String
     let metadata: DraftPreviewMetadata?
 }
 

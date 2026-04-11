@@ -5,3 +5,5 @@ build/
 .claude
 .worktrees/
 .deriveddata-local/
+.playwright/
+.playwright-cli/
