@@ -453,59 +453,70 @@ final class ShareExtensionModel: ObservableObject {
         waitForPreview: Bool
     ) async throws -> QueuedEmail {
         try Task.checkCancellation()
-        do {
-            try QueueStore.append(item)
-        } catch {
-            Self.persistDebugError("queue-append: \(error.localizedDescription)")
-            throw error
-        }
         queuedPreviewEnrichmentItem = item
 
+        // Enrich with preview data if the preview is still loading.
+        // We do this before touching the queue so the main app can't race us.
         let refreshedItem: QueuedEmail
         do {
-            if waitForPreview {
-                refreshedItem = try await waitForPreviewAndRefreshQueuedItem(item)
-            } else {
-                refreshedItem = item
-            }
+            refreshedItem = waitForPreview
+                ? try await waitForPreviewAndEnrichItem(item)
+                : item
         } catch {
-            // Cancellation during preview wait — close the sheet, item is already queued.
+            // Cancellation during preview wait — close the sheet without queuing.
             extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
             throw error
         }
 
         do {
             guard let session = try SharedSessionStore.load() else {
-                // No session at all — surface as a reconnect error (item is queued on disk).
+                // No session — queue for main app delivery and show reconnect prompt.
+                try QueueStore.append(refreshedItem)
                 throw GmailAPIError.credentialsInvalid("No Gmail session found. Please connect your account.")
             }
             try Task.checkCancellation()
             let validSession = try await deliveryService.ensureValidSession(session)
             try Task.checkCancellation()
-            // Snapshot queue state before attempting send for diagnostics
-            let queueBeforeSend = (try? QueueStore.load()) ?? []
-            let queuePath = (try? SharedContainer.appDirectoryURL().path) ?? "path-error"
-            let didSendItem = try await sendQueuedEmailIfPresent(refreshedItem, using: validSession)
-            try await flushQueuedEmails(using: validSession)
+
+            // Send directly — do NOT queue first so the main app can't steal the item.
+            try await deliveryService.sendEmail(using: validSession, item: refreshedItem)
+            let diag = GmailDeliveryService.lastSendDiagnostic ?? "no-diag"
+            Self.persistDebugError("✅ sent \"\(refreshedItem.title)\" to \(refreshedItem.toEmail) [\(diag)]")
+
+            // Flush any backlog the main app left behind (best-effort).
+            try? await flushQueuedEmails(using: validSession)
             try SharedSessionStore.save(validSession)
-            let diag = GmailDeliveryService.lastSendDiagnostic ?? "no-send-recorded"
-            let queueIDs = queueBeforeSend.map { $0.id.uuidString.prefix(8) }.joined(separator: ",")
-            Self.persistDebugError("didSendItem:\(didSendItem) \(diag) | queueCount:\(queueBeforeSend.count) ids:[\(queueIDs)] searchID:\(refreshedItem.id.uuidString.prefix(8)) path:\(queuePath)")
             extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
             return refreshedItem
         } catch is CancellationError {
             extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
             throw CancellationError()
         } catch let error as GmailAPIError where error.requiresReconnect {
-            // Auth error — keep the sheet open so the user can reconnect.
+            // Auth error — queue for retry, keep the sheet open for reconnect.
+            try? QueueStore.append(refreshedItem)
             Self.persistDebugError("auth: \(error.localizedDescription)")
             throw error
         } catch {
-            // Other delivery error — close the sheet; item is queued for retry.
+            // Other delivery error — queue for retry, close the sheet.
+            try? QueueStore.append(refreshedItem)
             Self.persistDebugError("delivery: \(error.localizedDescription)")
             extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
             return refreshedItem
         }
+    }
+
+    // Preview-enriches an item without requiring it to be in the queue first.
+    private func waitForPreviewAndEnrichItem(_ item: QueuedEmail) async throws -> QueuedEmail {
+        let didFinishPreviewInTime = try await waitForPreviewToFinish(
+            upTo: Self.manualSendPreviewWaitLimitNanoseconds
+        )
+        guard didFinishPreviewInTime else { return item }
+
+        let draft = draftApplyingPendingPreview(to: currentDraft())
+        guard draft.isValidForQueue else { return item }
+
+        let enriched = makeQueuedEmail(from: draft, id: item.id, createdAt: item.createdAt, lastError: item.lastError)
+        return enriched != item ? enriched : item
     }
 
     private static func persistDebugError(_ message: String) {
@@ -525,40 +536,6 @@ final class ShareExtensionModel: ObservableObject {
             .appendingPathComponent("share-extension-last-error.txt", isDirectory: false)
     }
 
-    private func waitForPreviewAndRefreshQueuedItem(_ item: QueuedEmail) async throws -> QueuedEmail {
-        let didFinishPreviewInTime = try await waitForPreviewToFinish(
-            upTo: Self.manualSendPreviewWaitLimitNanoseconds
-        )
-        guard didFinishPreviewInTime else {
-            return item
-        }
-
-        let draft = draftApplyingPendingPreview(to: currentDraft())
-        guard draft.isValidForQueue else {
-            return item
-        }
-
-        let refreshedItem = makeQueuedEmail(
-            from: draft,
-            id: item.id,
-            createdAt: item.createdAt,
-            lastError: item.lastError
-        )
-
-        guard refreshedItem != item else {
-            return item
-        }
-
-        do {
-            let didReplace = try QueueStore.replace(refreshedItem)
-            if didReplace {
-                removeManagedMediaRemoved(from: item, comparedTo: refreshedItem)
-            }
-            return didReplace ? refreshedItem : item
-        } catch {
-            return item
-        }
-    }
 
     private func waitForPreviewToFinish(upTo timeoutNanoseconds: UInt64) async throws -> Bool {
         guard let previewTask else {
