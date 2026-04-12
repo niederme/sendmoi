@@ -38,6 +38,9 @@ struct MacQueuePane: View {
         if model.requiresGmailReconnect {
             return "Reconnect Gmail to restore send permission, then retry the queue."
         }
+        if model.session == nil {
+            return "Sign in to Gmail to send queued items from this Mac."
+        }
         return model.isOnline
             ? "SendMoi retries automatically when the network and Gmail session are healthy."
             : "Items stay here until the app can reach the network again."
@@ -46,7 +49,7 @@ struct MacQueuePane: View {
     @ViewBuilder
     private var actionButtons: some View {
         HStack(spacing: 10) {
-            if model.requiresGmailReconnect {
+            if showsReconnectButton {
                 Button("Reconnect Gmail") {
                     Task { await model.signIn() }
                 }
@@ -54,14 +57,34 @@ struct MacQueuePane: View {
                 .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
             }
 
-            if !model.queuedEmails.isEmpty {
+            if showsSignInButton {
+                Button("Sign In With Google") {
+                    Task { await model.signIn() }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
+            }
+
+            if showsRetryAllButton {
                 Button("Retry All") {
                     retryQueue()
                 }
-                .buttonStyle(model.requiresGmailReconnect ? .bordered : .borderedProminent)
-                .disabled(model.isBusy || model.requiresGmailReconnect)
+                .buttonStyle(.borderedProminent)
+                .disabled(model.isBusy)
             }
         }
+    }
+
+    private var showsReconnectButton: Bool {
+        model.requiresGmailReconnect
+    }
+
+    private var showsSignInButton: Bool {
+        model.session == nil && !model.queuedEmails.isEmpty
+    }
+
+    private var showsRetryAllButton: Bool {
+        !model.queuedEmails.isEmpty && model.session != nil && !model.requiresGmailReconnect
     }
 
     private func retryQueue() {

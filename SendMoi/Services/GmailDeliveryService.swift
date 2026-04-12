@@ -407,7 +407,9 @@ final class GmailDeliveryService {
         let canonicalURL = Self.canonicalizedTweetURL(url)
         let cacheKey = canonicalURL.absoluteString
         if let cachedMetadata = await Self.previewMetadataCache.metadata(for: cacheKey) {
-            return cachedMetadata.materialized(fallbackTitle: fallbackTitle, requestURLString: cacheKey)
+            if cachedMetadata.summary != nil || Self.shouldSkipSummary(for: canonicalURL) {
+                return cachedMetadata.materialized(fallbackTitle: fallbackTitle, requestURLString: cacheKey)
+            }
         }
 
         guard let cachedMetadata = await fetchAndCacheArticleMetadata(for: canonicalURL) else {
@@ -458,7 +460,15 @@ final class GmailDeliveryService {
                     responseURL.host ?? "Shared Item",
                     urlString: responseURL.absoluteString
                 )
-                summary = await Self.generateSummary(fromHTML: html, title: summaryTitle, excerpt: excerpt)
+                if let generatedSummary = await Self.generateSummary(
+                    fromHTML: html,
+                    title: summaryTitle,
+                    excerpt: excerpt
+                ) {
+                    summary = generatedSummary
+                } else {
+                    summary = await Self.generateSummaryFromExcerpt(excerpt, title: summaryTitle)
+                }
             }
             let instagramImageURLStrings = instagramMetadata?.imageURLStrings ?? []
             let imageURLString = instagramImageURLStrings.first ?? Self.extractPreferredImageURLString(fromHTML: html, metaTags: metaTags, baseURL: responseURL)
@@ -646,7 +656,7 @@ final class GmailDeliveryService {
     private static func makeRawMimeMessage(from: String, to: String, subject: String, content: EmailContent) throws -> String {
         let boundary = "SendMoi-\(UUID().uuidString)"
         let subjectHeader = "=?UTF-8?B?\(Data(subject.utf8).base64EncodedString())?="
-        let footer = "Sent with SendMoi"
+        let footer = "Sent with SendMoi      Report an Issue"
         let textBody = makePlainTextBody(content: content, footer: footer)
         let htmlBody = makeHTMLBody(content: content, footer: footer)
         let message: String
@@ -815,7 +825,7 @@ final class GmailDeliveryService {
                         </td>
                       </tr>
                       <tr>
-                        <td class="mm-attribution" align="center" bgcolor="#ffffff" style="padding: 52px 12px 0 12px; background-color: #ffffff; font-family: \(fontFamily); font-size: 14px; line-height: 17px; color: #111111;">
+                        <td class="mm-attribution" align="center" bgcolor="#ffffff" style="padding: 52px 12px 0 12px; background-color: #ffffff; font-family: \(fontFamily); font-size: 14px; line-height: 17px; color: #888888;">
                           \(footerMarkup)
                         </td>
                       </tr>
@@ -939,14 +949,20 @@ final class GmailDeliveryService {
 
     private static func makeFooterMarkup(footer: String, fontFamily: String) -> String {
         let linkedBrand = """
-                          <a href="https://send.moi" style="font-family: \(fontFamily); color: #111111; text-decoration: underline;">SendMoi</a>
+                          <a href="https://send.moi" style="font-family: \(fontFamily); color: #888888; text-decoration: underline;">SendMoi</a>
                           """
+        let reportSubject = "SendMoi%20Issue%20Report"
+        let reportBody = "Describe%20the%20issue%20you%20encountered%3A%0A%0A"
+        let reportHref = "mailto:help@send.moi?subject=\(reportSubject)&body=\(reportBody)"
+        let linkedReport = """
+                           <a href="\(reportHref)" style="font-family: \(fontFamily); color: #888888; text-decoration: underline;">Report an Issue</a>
+                           """
 
-        guard footer == "Sent with SendMoi" else {
+        guard footer.hasPrefix("Sent with SendMoi") else {
             return escapeHTML(footer)
         }
 
-        return "Sent with \(linkedBrand)"
+        return "Sent with \(linkedBrand) &nbsp;&nbsp;&nbsp; \(linkedReport)"
     }
 
     private static func escapeHTML(_ string: String) -> String {
@@ -2019,6 +2035,54 @@ final class GmailDeliveryService {
             cleanedText,
             minWords: summaryWordRange.minWords,
             maxWords: summaryWordRange.maxWords
+        ) else {
+            return nil
+        }
+
+        let normalized = stripSummaryPreamble(from: fallbackSummary, title: title)
+        return passesSummaryOutputQualityGate(normalized) ? normalized : nil
+    }
+
+    private static func generateSummaryFromExcerpt(_ excerpt: String?, title: String) async -> String? {
+        guard let excerpt else {
+            return nil
+        }
+
+        let cleanedExcerpt = collapseWhitespace(
+            in: normalizedDisplayText(stripTrailingURLs(from: excerpt))
+        )
+        guard wordCount(in: cleanedExcerpt) >= 20 else {
+            return nil
+        }
+
+        guard !looksLikeFeedOrPromoLine(cleanedExcerpt),
+              !looksLikeCodeOrScript(cleanedExcerpt),
+              !looksLikeRuntimeErrorLine(cleanedExcerpt),
+              !looksLikeCommerceChromeLine(cleanedExcerpt) else {
+            return nil
+        }
+
+        let maxWords = min(40, max(24, wordCount(in: cleanedExcerpt)))
+
+        if let aiSummary = await summarizeWithFoundationModels(
+            cleanedExcerpt,
+            title: title,
+            minWords: 20,
+            maxWords: maxWords
+        ) {
+            let normalized = stripSummaryPreamble(from: aiSummary, title: title)
+            return passesSummaryOutputQualityGate(normalized) ? normalized : nil
+        }
+
+        if wordCount(in: cleanedExcerpt) <= maxWords {
+            let normalized = stripSummaryPreamble(from: cleanedExcerpt, title: title)
+            return passesSummaryOutputQualityGate(normalized) ? normalized : nil
+        }
+
+        guard let fallbackSummary = summarize(
+            cleanedExcerpt,
+            minWords: 20,
+            maxWords: maxWords
         ) else {
             return nil
         }

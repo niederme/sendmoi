@@ -312,12 +312,6 @@ struct ShareView: View {
             }
         } header: {
             Text("Send Email")
-        } footer: {
-            Text(
-                model.autoSendEnabled
-                    ? "SendMoi sends immediately when it can. If you're offline or Gmail is unavailable, it saves to the offline queue."
-                    : "SendMoi pre-fills these fields from the shared item and waits for you to tap Send. If you're offline or Gmail is unavailable, it saves to the offline queue."
-            )
         }
     }
     #endif

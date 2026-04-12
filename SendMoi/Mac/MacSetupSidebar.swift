@@ -21,19 +21,21 @@ struct MacSetupSidebar: View {
             title: "Gmail",
             subtitle: model.requiresGmailReconnect
                 ? "Reconnect Gmail to restore send permission for queued items."
-                : "Use the connected account for queued delivery on this Mac."
+                : (model.session == nil
+                    ? "Connect Gmail so SendMoi can send queued items from this Mac."
+                    : "Use the connected account for queued delivery on this Mac.")
         ) {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .center, spacing: 12) {
-                    Image(systemName: model.session == nil ? "person.crop.circle.badge.xmark" : "checkmark.shield.fill")
+                    Image(systemName: gmailIcon)
                         .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(model.session == nil ? .orange : .accentColor)
+                        .foregroundStyle(gmailIconTint)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text(model.session?.emailAddress ?? "No Gmail account connected")
                             .font(.headline)
 
-                        Text(model.session == nil ? "SendMoi needs Gmail to send queued items." : "Ready for queued delivery on this Mac.")
+                        Text(gmailStatusDetail)
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
@@ -136,6 +138,30 @@ struct MacSetupSidebar: View {
 
     private func saveDefaultRecipient() {
         model.setDefaultRecipient(model.defaultRecipient)
+    }
+
+    private var gmailStatusDetail: String {
+        if model.requiresGmailReconnect {
+            return "Reconnect Gmail to resume queued delivery."
+        }
+        if model.session == nil {
+            return "SendMoi needs Gmail to send queued items."
+        }
+        return "Ready for queued delivery on this Mac."
+    }
+
+    private var gmailIcon: String {
+        if model.requiresGmailReconnect {
+            return "exclamationmark.triangle.fill"
+        }
+        return model.session == nil ? "person.crop.circle.badge.xmark" : "checkmark.shield.fill"
+    }
+
+    private var gmailIconTint: Color {
+        if model.requiresGmailReconnect || model.session == nil {
+            return .orange
+        }
+        return .accentColor
     }
 }
 

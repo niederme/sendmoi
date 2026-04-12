@@ -41,8 +41,8 @@ struct MacStatusHeader: View {
         statusPill(
             title: "Account",
             value: model.session?.emailAddress ?? "Not Connected",
-            systemImage: model.session == nil ? "person.crop.circle.badge.xmark" : "person.crop.circle.badge.checkmark",
-            tint: model.session == nil ? .orange : .accentColor
+            systemImage: accountSystemImage,
+            tint: accountTint
         )
     }
 
@@ -64,6 +64,20 @@ struct MacStatusHeader: View {
             systemImage: count == 0 ? "tray" : "tray.full",
             tint: hasIssue ? .orange : .secondary
         )
+    }
+
+    private var accountSystemImage: String {
+        if model.requiresGmailReconnect {
+            return "exclamationmark.triangle.fill"
+        }
+        return model.session == nil ? "person.crop.circle.badge.xmark" : "person.crop.circle.badge.checkmark"
+    }
+
+    private var accountTint: Color {
+        if model.requiresGmailReconnect || model.session == nil {
+            return .orange
+        }
+        return .accentColor
     }
 
     private func statusPill(
