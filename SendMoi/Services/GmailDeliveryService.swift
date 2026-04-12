@@ -407,7 +407,9 @@ final class GmailDeliveryService {
         let canonicalURL = Self.canonicalizedTweetURL(url)
         let cacheKey = canonicalURL.absoluteString
         if let cachedMetadata = await Self.previewMetadataCache.metadata(for: cacheKey) {
-            return cachedMetadata.materialized(fallbackTitle: fallbackTitle, requestURLString: cacheKey)
+            if cachedMetadata.summary != nil || Self.shouldSkipSummary(for: canonicalURL) {
+                return cachedMetadata.materialized(fallbackTitle: fallbackTitle, requestURLString: cacheKey)
+            }
         }
 
         guard let cachedMetadata = await fetchAndCacheArticleMetadata(for: canonicalURL) else {
@@ -458,7 +460,15 @@ final class GmailDeliveryService {
                     responseURL.host ?? "Shared Item",
                     urlString: responseURL.absoluteString
                 )
-                summary = await Self.generateSummary(fromHTML: html, title: summaryTitle, excerpt: excerpt)
+                if let generatedSummary = await Self.generateSummary(
+                    fromHTML: html,
+                    title: summaryTitle,
+                    excerpt: excerpt
+                ) {
+                    summary = generatedSummary
+                } else {
+                    summary = await Self.generateSummaryFromExcerpt(excerpt, title: summaryTitle)
+                }
             }
             let instagramImageURLStrings = instagramMetadata?.imageURLStrings ?? []
             let imageURLString = instagramImageURLStrings.first ?? Self.extractPreferredImageURLString(fromHTML: html, metaTags: metaTags, baseURL: responseURL)
@@ -2025,6 +2035,54 @@ final class GmailDeliveryService {
             cleanedText,
             minWords: summaryWordRange.minWords,
             maxWords: summaryWordRange.maxWords
+        ) else {
+            return nil
+        }
+
+        let normalized = stripSummaryPreamble(from: fallbackSummary, title: title)
+        return passesSummaryOutputQualityGate(normalized) ? normalized : nil
+    }
+
+    private static func generateSummaryFromExcerpt(_ excerpt: String?, title: String) async -> String? {
+        guard let excerpt else {
+            return nil
+        }
+
+        let cleanedExcerpt = collapseWhitespace(
+            in: normalizedDisplayText(stripTrailingURLs(from: excerpt))
+        )
+        guard wordCount(in: cleanedExcerpt) >= 20 else {
+            return nil
+        }
+
+        guard !looksLikeFeedOrPromoLine(cleanedExcerpt),
+              !looksLikeCodeOrScript(cleanedExcerpt),
+              !looksLikeRuntimeErrorLine(cleanedExcerpt),
+              !looksLikeCommerceChromeLine(cleanedExcerpt) else {
+            return nil
+        }
+
+        let maxWords = min(40, max(24, wordCount(in: cleanedExcerpt)))
+
+        if let aiSummary = await summarizeWithFoundationModels(
+            cleanedExcerpt,
+            title: title,
+            minWords: 20,
+            maxWords: maxWords
+        ) {
+            let normalized = stripSummaryPreamble(from: aiSummary, title: title)
+            return passesSummaryOutputQualityGate(normalized) ? normalized : nil
+        }
+
+        if wordCount(in: cleanedExcerpt) <= maxWords {
+            let normalized = stripSummaryPreamble(from: cleanedExcerpt, title: title)
+            return passesSummaryOutputQualityGate(normalized) ? normalized : nil
+        }
+
+        guard let fallbackSummary = summarize(
+            cleanedExcerpt,
+            minWords: 20,
+            maxWords: maxWords
         ) else {
             return nil
         }
