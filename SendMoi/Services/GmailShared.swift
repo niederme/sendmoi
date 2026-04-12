@@ -8,6 +8,7 @@ enum GmailAPIError: LocalizedError {
     case invalidState
     case signInCanceled
     case insufficientAuthenticationScopes
+    case credentialsInvalid(String)
     case authorizationFailed(String)
     case rateLimitExceeded(String)
     case transport(Error)
@@ -29,6 +30,8 @@ enum GmailAPIError: LocalizedError {
             return "Google sign-in was canceled."
         case .insufficientAuthenticationScopes:
             return "Reconnect Gmail to grant send permission."
+        case .credentialsInvalid(let message):
+            return message
         case .authorizationFailed(let message):
             return message
         case .rateLimitExceeded(let message):
@@ -42,7 +45,7 @@ enum GmailAPIError: LocalizedError {
 
     var requiresReconnect: Bool {
         switch self {
-        case .insufficientAuthenticationScopes:
+        case .insufficientAuthenticationScopes, .credentialsInvalid:
             return true
         default:
             return false
@@ -54,6 +57,10 @@ enum GmailAPIError: LocalizedError {
 
         return normalized.localizedCaseInsensitiveContains("insufficient authentication scopes")
             || normalized.localizedCaseInsensitiveContains("grant send permission")
+            || normalized.localizedCaseInsensitiveContains("credentials have expired")
+            || normalized.localizedCaseInsensitiveContains("invalid_grant")
+            || normalized.localizedCaseInsensitiveContains("token has been expired")
+            || normalized.localizedCaseInsensitiveContains("token has been revoked")
     }
 }
 

@@ -45,6 +45,7 @@ final class ShareExtensionModel: ObservableObject {
     @Published var savedRecipients: [String] = []
     @Published var presentationMode: PresentationMode = .processing
     @Published var showsGmailConnectAlert = false
+    @Published private(set) var shouldCloseAfterReconnect = false
     @Published private(set) var showsMissingRecipientValidation = false
     @Published private(set) var recipientFocusRequest = 0
 
@@ -142,6 +143,11 @@ final class ShareExtensionModel: ObservableObject {
                 RecipientStore.record(completedItem.toEmail)
             } catch is CancellationError {
                 return
+            } catch let error as GmailAPIError where error.requiresReconnect {
+                self.shouldCloseAfterReconnect = true
+                self.statusMessage = "Your share is queued. Reconnect Gmail to send it."
+                self.showsGmailConnectAlert = true
+                self.presentationMode = .editing
             } catch {
                 self.statusMessage = "Could not send or save this share item: \(error.localizedDescription)"
                 self.presentationMode = .editing
@@ -178,14 +184,27 @@ final class ShareExtensionModel: ObservableObject {
 
                 let session = try await requestGmailConnection()
                 try SharedSessionStore.save(session)
-                statusMessage = "Connected as \(session.emailAddress ?? "your Gmail account")."
-                autoSendIfPossible()
+
+                if shouldCloseAfterReconnect {
+                    // Item is already queued — close the sheet; the main app will send it.
+                    statusMessage = "Reconnected as \(session.emailAddress ?? "your Gmail account"). Your queued item will send shortly."
+                    extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
+                } else {
+                    statusMessage = "Connected as \(session.emailAddress ?? "your Gmail account")."
+                    autoSendIfPossible()
+                }
             } catch GmailAPIError.signInCanceled {
-                statusMessage = Self.connectGmailStatusMessage
+                statusMessage = shouldCloseAfterReconnect
+                    ? "Your share is queued. Open SendMoi to reconnect Gmail and send it."
+                    : Self.connectGmailStatusMessage
             } catch {
                 statusMessage = "Could not connect Gmail: \(error.localizedDescription)"
             }
         }
+    }
+
+    func dismissAndComplete() {
+        extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
     }
 
     var recipientInlineMessage: String? {
@@ -441,22 +460,24 @@ final class ShareExtensionModel: ObservableObject {
             throw error
         }
         queuedPreviewEnrichmentItem = item
-        let extensionContext = extensionContextRef
-        defer {
-            extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
-        }
 
         let refreshedItem: QueuedEmail
-        if waitForPreview {
-            refreshedItem = try await waitForPreviewAndRefreshQueuedItem(item)
-        } else {
-            refreshedItem = item
+        do {
+            if waitForPreview {
+                refreshedItem = try await waitForPreviewAndRefreshQueuedItem(item)
+            } else {
+                refreshedItem = item
+            }
+        } catch {
+            // Cancellation during preview wait — close the sheet, item is already queued.
+            extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
+            throw error
         }
 
         do {
             guard let session = try SharedSessionStore.load() else {
-                Self.persistDebugError("no-session: SharedSessionStore returned nil")
-                return refreshedItem
+                // No session at all — surface as a reconnect error (item is queued on disk).
+                throw GmailAPIError.credentialsInvalid("No Gmail session found. Please connect your account.")
             }
             try Task.checkCancellation()
             let validSession = try await deliveryService.ensureValidSession(session)
@@ -465,11 +486,19 @@ final class ShareExtensionModel: ObservableObject {
             try await flushQueuedEmails(using: validSession)
             try SharedSessionStore.save(validSession)
             Self.clearDebugError()
+            extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
             return refreshedItem
         } catch is CancellationError {
+            extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
             throw CancellationError()
+        } catch let error as GmailAPIError where error.requiresReconnect {
+            // Auth error — keep the sheet open so the user can reconnect.
+            Self.persistDebugError("auth: \(error.localizedDescription)")
+            throw error
         } catch {
+            // Other delivery error — close the sheet; item is queued for retry.
             Self.persistDebugError("delivery: \(error.localizedDescription)")
+            extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
             return refreshedItem
         }
     }

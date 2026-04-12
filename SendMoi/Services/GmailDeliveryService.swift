@@ -115,8 +115,37 @@ final class GmailDeliveryService {
             }
 
             guard (200..<300).contains(httpResponse.statusCode) else {
-                if let message = Self.extractErrorMessage(from: data) {
-                    throw GmailAPIError.api(message)
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    // OAuth token endpoint: {"error": "invalid_grant", "error_description": "..."}
+                    if let oauthErrorCode = json["error"] as? String, oauthErrorCode == "invalid_grant" {
+                        let description = (json["error_description"] as? String) ?? "Gmail credentials have expired. Please reconnect your account."
+                        throw GmailAPIError.credentialsInvalid(description)
+                    }
+
+                    // Gmail API 401 Unauthorized
+                    if httpResponse.statusCode == 401 {
+                        let errorObj = json["error"] as? [String: Any]
+                        let message = (errorObj?["message"] as? String) ?? "Gmail credentials have expired. Please reconnect your account."
+                        throw GmailAPIError.credentialsInvalid(message)
+                    }
+
+                    // Other Gmail API errors: {"error": {"message": "...", "errors": [...]}}
+                    if let errorObj = json["error"] as? [String: Any] {
+                        if let message = errorObj["message"] as? String {
+                            throw GmailAPIError.api(message)
+                        }
+                        if let details = errorObj["errors"] as? [[String: Any]],
+                           let first = details.first,
+                           let message = first["message"] as? String {
+                            throw GmailAPIError.api(message)
+                        }
+                    }
+
+                    // OAuth other errors: {"error": "...", "error_description": "..."}
+                    if let oauthErrorCode = json["error"] as? String {
+                        let description = (json["error_description"] as? String) ?? oauthErrorCode
+                        throw GmailAPIError.api(description)
+                    }
                 }
                 throw GmailAPIError.api("Google API returned status \(httpResponse.statusCode).")
             }
@@ -127,27 +156,6 @@ final class GmailDeliveryService {
         } catch {
             throw GmailAPIError.transport(error)
         }
-    }
-
-    private static func extractErrorMessage(from data: Data) -> String? {
-        guard
-            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-            let error = json["error"] as? [String: Any]
-        else {
-            return nil
-        }
-
-        if let message = error["message"] as? String {
-            return message
-        }
-
-        if let details = error["errors"] as? [[String: Any]],
-           let first = details.first,
-           let message = first["message"] as? String {
-            return message
-        }
-
-        return nil
     }
 
     private func buildEmailContent(from item: QueuedEmail) async -> EmailContent {
