@@ -1,4 +1,5 @@
 import SwiftUI
+import Translation
 
 struct ShareView: View {
     @ObservedObject var model: ShareExtensionModel
@@ -34,6 +35,15 @@ struct ShareView: View {
             }
             .onChange(of: model.urlString) { _, _ in
                 model.schedulePreviewRefresh()
+            }
+            .translationTask(model.translationConfiguration) { session in
+                guard !model.excerpt.isEmpty else { return }
+                let snapshot = model.excerpt
+                if let response = try? await session.translate(snapshot),
+                   model.excerpt == snapshot {
+                    model.excerpt = response.targetText
+                }
+                model.translationConfiguration = nil
             }
             #if os(iOS)
             .toolbar {

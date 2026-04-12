@@ -1,6 +1,8 @@
 import Foundation
 import LinkPresentation
+import NaturalLanguage
 import SwiftUI
+import Translation
 import UniformTypeIdentifiers
 #if canImport(UIKit)
 import UIKit
@@ -36,6 +38,7 @@ final class ShareExtensionModel: ObservableObject {
     @Published var additionalImageURLStrings: [String] = []
     @Published var statusMessage = "Preparing your email..."
     @Published private(set) var autoSendEnabled = true
+    @Published var translationConfiguration: TranslationSession.Configuration?
     @Published var isSaving = false
     @Published var isConnectingGmail = false
     @Published var isRefreshingPreview = false
@@ -545,6 +548,7 @@ final class ShareExtensionModel: ObservableObject {
            let previewDescription = application.metadata?.description,
            !previewDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             excerpt = previewDescription
+            scheduleExcerptTranslationIfNeeded()
         }
 
         if Self.shouldApplyPreviewSummary(
@@ -728,6 +732,25 @@ final class ShareExtensionModel: ObservableObject {
         let loweredTitle = trimmedTitle.lowercased()
         let condensedHost = host.replacingOccurrences(of: "www.", with: "")
         return loweredTitle == host || loweredTitle == condensedHost
+    }
+
+    private func scheduleExcerptTranslationIfNeeded() {
+        let text = excerpt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+
+        let recognizer = NLLanguageRecognizer()
+        recognizer.processString(text)
+
+        guard let detected = recognizer.dominantLanguage,
+              detected != .english,
+              detected != .undetermined,
+              let confidence = recognizer.languageHypotheses(withMaximum: 1)[detected],
+              confidence > 0.5 else { return }
+
+        translationConfiguration = TranslationSession.Configuration(
+            source: Locale.Language(identifier: detected.rawValue),
+            target: Locale.Language(languageCode: .english)
+        )
     }
 
     private static func shouldApplyPreviewSummary(currentSummary: String, summarySnapshot: String) -> Bool {
