@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import ProgressiveBlurHeader
 #if canImport(UIKit)
 import UIKit
 #endif
@@ -78,7 +79,18 @@ struct ContentView: View {
     }
 
     private var mobileContent: some View {
-        compactMobileContent
+        StickyBlurHeader {
+            HStack {
+                Text("SendMoi")
+                    .font(.headline.weight(.semibold))
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+        } content: {
+            compactMobileContent
+        }
+        .background(Color(.systemGroupedBackground))
     }
 
     private var onboardingContent: some View {
@@ -1010,22 +1022,54 @@ struct ContentView: View {
     }
 
     private var compactMobileContent: some View {
-        Form {
-            Section {
-                mobileIntroView
-                    .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 12, trailing: 20))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            }
+        LazyVStack(alignment: .leading, spacing: 0) {
+            mobileIntroView
+                .padding(EdgeInsets(top: 8, leading: 20, bottom: 28, trailing: 20))
 
-            accountSection
-            defaultRecipientSection
-            shareSheetSection
-            queueSection
-            setupActionsSection
-            attributionSection
+            mobileSectionLabel("Account")
+            GroupedCard { mobileAccountCardContent }
+            mobileSectionFooter(accountSectionFooterText)
+
+            mobileSectionLabel("Recipient")
+            GroupedCard { mobileRecipientCardContent }
+            mobileSectionFooter("Used as the default when starting from the share sheet.")
+
+            mobileSectionLabel("Share Sheet")
+            GroupedCard {
+                Toggle("Auto-send", isOn: Binding(
+                    get: { model.shareSheetAutoSendEnabled },
+                    set: { model.setShareSheetAutoSendEnabled($0) }
+                ))
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+            }
+            mobileSectionFooter(shareSheetFooterText)
+
+            mobileSectionLabel("Offline Queue")
+            GroupedCard { mobileQueueCardContent }
+            mobileSectionFooter(queueFooterText)
+
+            mobileSectionLabel("Setup")
+            GroupedCard {
+                Button("Open Setup Guide") { openSetupGuide() }
+                    .disabled(model.isBusy)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                Divider().padding(.leading, 20)
+                Button("Clear Settings", role: .destructive) {
+                    showsResetConfirmation = true
+                }
+                .disabled(model.isBusy)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+            }
+            mobileSectionFooter("Open Setup Guide keeps your current account. Clear Settings disconnects Gmail and resets SendMoi to first launch.")
+
+            mobileAttributionFooter
         }
-        .sendMoiListSectionSpacing(24)
+        .padding(.bottom, 40)
     }
 
     private var mobileIntroView: some View {
@@ -1039,6 +1083,239 @@ struct ContentView: View {
                 .lineSpacing(1.2)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    private func mobileSectionLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .textCase(.uppercase)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 36)
+            .padding(.top, 24)
+            .padding(.bottom, 8)
+    }
+
+    private func mobileSectionFooter(_ text: String) -> some View {
+        Text(text)
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 36)
+            .padding(.top, 8)
+    }
+
+    private var mobileAccountCardContent: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    model.isAccountSectionExpanded.toggle()
+                }
+            } label: {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(accountSummaryTitle)
+                        Text(accountSummaryDetail)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 2)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .rotationEffect(model.isAccountSectionExpanded ? .degrees(90) : .zero)
+                        .animation(.easeInOut(duration: 0.2), value: model.isAccountSectionExpanded)
+                }
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+
+            if model.isAccountSectionExpanded {
+                if let session = model.session {
+                    Divider().padding(.leading, 20)
+                    LabeledContent("From", value: session.emailAddress ?? "Authenticated via Gmail")
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+
+                    if model.requiresGmailReconnect {
+                        Divider().padding(.leading, 20)
+                        Text("The saved Gmail session is missing send permission.")
+                            .font(.footnote)
+                            .foregroundStyle(.orange)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 8)
+                        Divider().padding(.leading, 20)
+                        Button("Reconnect Gmail") {
+                            Task { await model.signIn() }
+                        }
+                        .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                    }
+
+                    Divider().padding(.leading, 20)
+                    Button("Sign Out") { model.signOut() }
+                        .disabled(model.isBusy)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                } else {
+                    Divider().padding(.leading, 20)
+                    Text("No Gmail account connected.")
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                    Divider().padding(.leading, 20)
+                    Button("Sign In With Google") {
+                        Task { await model.signIn() }
+                    }
+                    .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                }
+
+                if !GoogleOAuthConfig.isConfigured {
+                    Divider().padding(.leading, 20)
+                    Text("Set `GoogleOAuthConfig.clientID` before signing in.")
+                        .font(.footnote)
+                        .foregroundStyle(.orange)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 8)
+                }
+            }
+        }
+    }
+
+    private var mobileRecipientCardContent: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Default Recipient")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                TextField("Email address", text: $model.defaultRecipient)
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.emailAddress)
+                    .autocorrectionDisabled()
+                    .submitLabel(.done)
+                    .focused($focusedField, equals: .defaultRecipient)
+                    .onSubmit(saveDefaultRecipient)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+
+            Divider().padding(.leading, 20)
+
+            Button {
+                saveDefaultRecipient()
+            } label: {
+                Text("Save Default Recipient")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+        }
+    }
+
+    private var mobileQueueCardContent: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    model.isQueueSectionExpanded.toggle()
+                }
+            } label: {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(queueSummaryTitle)
+                        Text(queueSummaryDetail)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 2)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .rotationEffect(model.isQueueSectionExpanded ? .degrees(90) : .zero)
+                        .animation(.easeInOut(duration: 0.2), value: model.isQueueSectionExpanded)
+                }
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+
+            if model.isQueueSectionExpanded {
+                if model.queuedEmails.isEmpty {
+                    Divider().padding(.leading, 20)
+                    Text("No pending emails.")
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                } else {
+                    ForEach(model.queuedEmails) { item in
+                        Divider().padding(.leading, 20)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(item.title).font(.headline)
+                            Text("To: \(item.toEmail)").font(.subheadline)
+                            Text(item.urlString).font(.footnote).foregroundStyle(.secondary)
+                            if let lastError = item.lastError {
+                                Text(lastError).font(.footnote).foregroundStyle(.orange)
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .contextMenu {
+                            Button("Delete", role: .destructive) {
+                                if let index = model.queuedEmails.firstIndex(where: { $0.id == item.id }) {
+                                    model.deleteQueuedEmails(at: IndexSet([index]))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if model.requiresGmailReconnect {
+                    Divider().padding(.leading, 20)
+                    Button {
+                        Task { await model.signIn() }
+                    } label: {
+                        Text("Reconnect Gmail").frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                }
+
+                Divider().padding(.leading, 20)
+                Button {
+                    Task { await model.retryNow() }
+                } label: {
+                    Text("Send Queued Now").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .disabled(model.isBusy || model.queuedEmails.isEmpty || model.requiresGmailReconnect)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+            }
+        }
+    }
+
+    private var mobileAttributionFooter: some View {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
+        return Text("SendMoi by John Niedermeyer, with a little help from Codex, Claude Code and friends.\nv\(version) (\(build))")
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 20)
+            .padding(.top, 24)
+            .padding(.bottom, 8)
     }
 
     private var accountSummaryTitle: String {
@@ -1058,112 +1335,6 @@ struct ContentView: View {
         return "Click to manage account"
         } else {
         return "Tap to manage account"
-        }
-    }
-
-    private var accountSection: some View {
-        Section {
-            DisclosureGroup(isExpanded: $model.isAccountSectionExpanded) {
-                if let session = model.session {
-                    LabeledContent("From", value: session.emailAddress ?? "Authenticated via Gmail")
-
-                    if model.requiresGmailReconnect {
-                        Text("The saved Gmail session is missing send permission.")
-                            .font(.footnote)
-                            .foregroundStyle(.orange)
-
-                        Button("Reconnect Gmail") {
-                            Task {
-                                await model.signIn()
-                            }
-                        }
-                        .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
-                    }
-
-                    Button("Sign Out") {
-                        model.signOut()
-                    }
-                    .disabled(model.isBusy)
-                } else {
-                    Text("No Gmail account connected.")
-                        .foregroundStyle(.secondary)
-                    Button("Sign In With Google") {
-                        Task {
-                            await model.signIn()
-                        }
-                    }
-                    .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
-                }
-
-                if !GoogleOAuthConfig.isConfigured {
-                    Text("Set `GoogleOAuthConfig.clientID` before signing in.")
-                        .font(.footnote)
-                        .foregroundStyle(.orange)
-                }
-            } label: {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(accountSummaryTitle)
-                    Text(accountSummaryDetail)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.vertical, 2)
-            }
-        } header: {
-            Text("Account")
-        } footer: {
-            Text(accountSectionFooterText)
-        }
-    }
-
-    private var defaultRecipientSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Default Recipient")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                #if os(iOS)
-                TextField("Email address", text: $model.defaultRecipient)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.emailAddress)
-                    .autocorrectionDisabled()
-                    .submitLabel(.done)
-                    .focused($focusedField, equals: .defaultRecipient)
-                    .onSubmit(saveDefaultRecipient)
-                #else
-                TextField("Email address", text: $model.defaultRecipient)
-                    .onSubmit(saveDefaultRecipient)
-                #endif
-            }
-
-            Button {
-                saveDefaultRecipient()
-            } label: {
-                Text("Save Default Recipient")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-        } header: {
-            Text("Recipient")
-        } footer: {
-            Text("Used as the default when starting from the share sheet.")
-        }
-    }
-
-    private var shareSheetSection: some View {
-        Section {
-            Toggle(
-                "Auto-send",
-                isOn: Binding(
-                    get: { model.shareSheetAutoSendEnabled },
-                    set: { model.setShareSheetAutoSendEnabled($0) }
-                )
-            )
-        } header: {
-            Text("Share Sheet")
-        } footer: {
-            Text(shareSheetFooterText)
         }
     }
 
@@ -1237,104 +1408,18 @@ struct ContentView: View {
         onboardingRecipientConfirmed = true
     }
 
-    private var queueSection: some View {
-        Section {
-            DisclosureGroup(isExpanded: $model.isQueueSectionExpanded) {
-                if model.queuedEmails.isEmpty {
-                    Text("No pending emails.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(model.queuedEmails) { item in
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(item.title)
-                                .font(.headline)
-                            Text("To: \(item.toEmail)")
-                                .font(.subheadline)
-                            Text(item.urlString)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                            if let lastError = item.lastError {
-                                Text(lastError)
-                                    .font(.footnote)
-                                    .foregroundStyle(.orange)
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    }
-                    .onDelete(perform: model.deleteQueuedEmails)
-                }
+}
 
-                if model.requiresGmailReconnect {
-                    Button {
-                        Task {
-                            await model.signIn()
-                        }
-                    } label: {
-                        Text("Reconnect Gmail")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
-                }
+private struct GroupedCard<Content: View>: View {
+    @ViewBuilder let content: () -> Content
 
-                Button {
-                    Task {
-                        await model.retryNow()
-                    }
-                } label: {
-                    Text("Send Queued Now")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .disabled(model.isBusy || model.queuedEmails.isEmpty || model.requiresGmailReconnect)
-            } label: {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(queueSummaryTitle)
-                    Text(queueSummaryDetail)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.vertical, 2)
-            }
-        } header: {
-            Text("Offline Queue")
-        } footer: {
-            Text(queueFooterText)
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            content()
         }
-    }
-
-    private var setupActionsSection: some View {
-        Section {
-            Button("Open Setup Guide") {
-                openSetupGuide()
-            }
-            .disabled(model.isBusy)
-
-            Button("Clear Settings", role: .destructive) {
-                showsResetConfirmation = true
-            }
-            .disabled(model.isBusy)
-        } header: {
-            Text("Setup")
-        } footer: {
-            Text("Open Setup Guide keeps your current account. Clear Settings disconnects Gmail and resets SendMoi to first launch.")
-        }
-    }
-
-    private var attributionSection: some View {
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
-        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
-        return Section {
-            EmptyView()
-        } footer: {
-            Text("SendMoi by John Niedermeyer, with a little help from Codex, Claude Code and friends.\nv\(version) (\(build))")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: .infinity)
-        }
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(.horizontal, 16)
     }
 }
 
@@ -1343,15 +1428,6 @@ private extension View {
     func sendMoiPageTabViewStyle() -> some View {
         #if os(iOS) || targetEnvironment(macCatalyst)
         self.tabViewStyle(.page(indexDisplayMode: .never))
-        #else
-        self
-        #endif
-    }
-
-    @ViewBuilder
-    func sendMoiListSectionSpacing(_ spacing: CGFloat) -> some View {
-        #if os(iOS) || targetEnvironment(macCatalyst)
-        self.listSectionSpacing(spacing)
         #else
         self
         #endif
