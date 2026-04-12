@@ -475,17 +475,19 @@ final class ShareExtensionModel: ObservableObject {
     }
 
     private static func persistDebugError(_ message: String) {
+        guard let url = debugErrorFileURL() else { return }
         let timestamp = ISO8601DateFormatter().string(from: Date())
         let text = "[\(timestamp)] \(message)"
-        try? text.write(to: debugErrorFileURL(), atomically: true, encoding: .utf8)
+        try? text.write(to: url, atomically: true, encoding: .utf8)
     }
 
     private static func clearDebugError() {
-        try? FileManager.default.removeItem(at: debugErrorFileURL())
+        guard let url = debugErrorFileURL() else { return }
+        try? FileManager.default.removeItem(at: url)
     }
 
-    private static func debugErrorFileURL() throws -> URL {
-        try SharedContainer.appDirectoryURL()
+    private static func debugErrorFileURL() -> URL? {
+        try? SharedContainer.appDirectoryURL()
             .appendingPathComponent("share-extension-last-error.txt", isDirectory: false)
     }
 

@@ -50,14 +50,9 @@ final class AppModel: ObservableObject {
 
     #if os(macOS)
     private func checkForShareExtensionDebugError() {
-        let url: URL
-        do {
-            url = try SharedContainer.appDirectoryURL()
-                .appendingPathComponent("share-extension-last-error.txt", isDirectory: false)
-        } catch {
-            return
-        }
-        guard let text = try? String(contentsOf: url, encoding: .utf8) else {
+        guard let url = try? SharedContainer.appDirectoryURL()
+            .appendingPathComponent("share-extension-last-error.txt", isDirectory: false),
+              let text = try? String(contentsOf: url, encoding: .utf8) else {
             return
         }
         statusMessage = "⚠️ Last share attempt failed — \(text)"
