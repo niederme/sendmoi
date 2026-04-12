@@ -65,7 +65,9 @@ struct ContentView: View {
             )
             .frame(minWidth: 980, minHeight: 880, alignment: .topLeading)
         } else {
+            #if os(iOS)
             mobileContent
+            #endif
         }
     }
 
@@ -77,6 +79,7 @@ struct ContentView: View {
         #endif
     }
 
+    #if os(iOS)
     private var mobileContent: some View {
         ScrollView {
             compactMobileContent
@@ -94,6 +97,7 @@ struct ContentView: View {
             .background(.ultraThinMaterial)
         }
     }
+    #endif
 
     private var onboardingContent: some View {
         GeometryReader { proxy in
@@ -1023,6 +1027,7 @@ struct ContentView: View {
         model.resetSetup()
     }
 
+    #if os(iOS)
     private var compactMobileContent: some View {
         LazyVStack(alignment: .leading, spacing: 0) {
             mobileIntroView
@@ -1320,6 +1325,8 @@ struct ContentView: View {
             .padding(.bottom, 8)
     }
 
+    #endif // os(iOS)
+
     private var accountSummaryTitle: String {
         if let session = model.session {
             return session.emailAddress ?? "Connected to Gmail"
@@ -1412,6 +1419,7 @@ struct ContentView: View {
 
 }
 
+#if os(iOS)
 private struct GroupedCard<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
@@ -1424,6 +1432,7 @@ private struct GroupedCard<Content: View>: View {
         .padding(.horizontal, 16)
     }
 }
+#endif
 
 private extension View {
     @ViewBuilder
