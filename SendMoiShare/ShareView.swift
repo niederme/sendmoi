@@ -141,6 +141,24 @@ struct ShareView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
 
+        if shouldShowSummarySection {
+            Divider()
+
+            macOSFieldRow("AI Summary") {
+                ZStack(alignment: .topLeading) {
+                    TextField("", text: $model.summary, axis: .vertical)
+                        .lineLimit(4, reservesSpace: true)
+                        .multilineTextAlignment(.leading)
+                        .textFieldStyle(.plain)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if model.isRefreshingPreview && model.summary.isEmpty {
+                        fieldLoadingIndicator(topPadding: 4)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+
         Divider()
 
         macOSFieldRow("Link") {
@@ -310,29 +328,34 @@ struct ShareView: View {
                 AsyncImage(url: previewURL) { phase in
                     switch phase {
                     case .success(let image):
+                        #if os(macOS)
+                        image
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxHeight: 72, alignment: .leading)
+                        #else
                         image
                             .resizable()
                             .scaledToFill()
+                        #endif
                     default:
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.secondary.opacity(0.12))
+                        previewThumbnailPlaceholder
                     }
                 }
             } else {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.secondary.opacity(0.12))
-                    ProgressView()
-                        .controlSize(.small)
-                }
+                previewThumbnailPlaceholder
             }
         }
         #if os(macOS)
-        .frame(width: 72, height: 72)
+        .frame(maxWidth: 128, maxHeight: 72, alignment: .leading)
         #else
         .frame(width: 56, height: 56)
-        #endif
+        .background {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.secondary.opacity(0.12))
+        }
         .clipShape(RoundedRectangle(cornerRadius: 8))
+        #endif
         .overlay(alignment: .bottomTrailing) {
             #if os(iOS)
             if previewImageCount > 1 {
@@ -355,11 +378,19 @@ struct ShareView: View {
                         .padding(.top, 8)
                 } else {
                     TextEditor(text: $model.summary)
-                        .font(.footnote)
                         .frame(minHeight: 56)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var previewThumbnailPlaceholder: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.secondary.opacity(0.12))
+            ProgressView()
+                .controlSize(.small)
         }
     }
 
@@ -432,7 +463,11 @@ struct ShareView: View {
     }
 
     private var shouldShowSummarySection: Bool {
+        #if os(macOS)
+        return true
+        #else
         model.isRefreshingPreview || !model.summary.isEmpty
+        #endif
     }
 
     private func titleInputField(lineLimit: Int, placeholder: String = "Title") -> some View {
