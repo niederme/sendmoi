@@ -79,8 +79,7 @@
             ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
             <ActionContent
                title = "Increment Build Number"
-               scriptText = "zsh &quot;$SRCROOT/scripts/bump_build_number.sh&quot;
-">
+               scriptText = "zsh &quot;$SRCROOT/scripts/bump_build_number.sh&quot; ">
                <EnvironmentBuildable>
                   <BuildableReference
                      BuildableIdentifier = "primary"
@@ -93,5 +92,23 @@
             </ActionContent>
          </ExecutionAction>
       </PreActions>
+      <PostActions>
+         <ExecutionAction
+            ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
+            <ActionContent
+               title = "Sync Archive Build Number"
+               scriptText = "zsh &quot;$SRCROOT/scripts/sync_archive_build_number.sh&quot; &quot;$ARCHIVE_PATH&quot; ">
+               <EnvironmentBuildable>
+                  <BuildableReference
+                     BuildableIdentifier = "primary"
+                     BlueprintIdentifier = "A50000010000000000000001"
+                     BuildableName = "SendMoi.app"
+                     BlueprintName = "SendMoi"
+                     ReferencedContainer = "container:SendMoi.xcodeproj">
+                  </BuildableReference>
+               </EnvironmentBuildable>
+            </ActionContent>
+         </ExecutionAction>
+      </PostActions>
    </ArchiveAction>
 </Scheme>
