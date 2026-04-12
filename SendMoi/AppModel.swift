@@ -50,10 +50,17 @@ final class AppModel: ObservableObject {
 
     #if os(macOS)
     private func checkForShareExtensionDebugError() {
-        guard let error = SharedContainer.sharedDefaults.string(forKey: "debugLastShareExtensionError") else {
+        let url: URL
+        do {
+            url = try SharedContainer.appDirectoryURL()
+                .appendingPathComponent("share-extension-last-error.txt", isDirectory: false)
+        } catch {
             return
         }
-        statusMessage = "⚠️ Last share attempt failed — \(error)"
+        guard let text = try? String(contentsOf: url, encoding: .utf8) else {
+            return
+        }
+        statusMessage = "⚠️ Last share attempt failed — \(text)"
     }
     #endif
 
@@ -315,11 +322,11 @@ final class AppModel: ObservableObject {
         reloadSharedPreferences()
         reloadSessionFromDisk()
         reloadQueueFromDisk()
-        #if os(macOS)
-        checkForShareExtensionDebugError()
-        #endif
         Task {
             await processQueue()
+            #if os(macOS)
+            checkForShareExtensionDebugError()
+            #endif
         }
     }
 
