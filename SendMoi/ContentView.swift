@@ -2,7 +2,6 @@ import SwiftUI
 import AVFoundation
 #if canImport(UIKit)
 import UIKit
-import ProgressiveBlurHeader
 #endif
 
 struct ContentView: View {
@@ -79,8 +78,12 @@ struct ContentView: View {
     }
 
     private var mobileContent: some View {
-        #if canImport(UIKit)
-        StickyBlurHeader {
+        ScrollView {
+            compactMobileContent
+        }
+        .scrollIndicators(.hidden)
+        .background(Color(.systemGroupedBackground))
+        .safeAreaInset(edge: .top, spacing: 0) {
             HStack {
                 Text("SendMoi")
                     .font(.headline.weight(.semibold))
@@ -88,13 +91,8 @@ struct ContentView: View {
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
-        } content: {
-            compactMobileContent
+            .background(.ultraThinMaterial)
         }
-        .background(Color(.systemGroupedBackground))
-        #else
-        compactMobileContent
-        #endif
     }
 
     private var onboardingContent: some View {
