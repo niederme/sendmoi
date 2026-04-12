@@ -1,8 +1,8 @@
 import SwiftUI
 import AVFoundation
-import ProgressiveBlurHeader
 #if canImport(UIKit)
 import UIKit
+import ProgressiveBlurHeader
 #endif
 
 struct ContentView: View {
@@ -79,6 +79,7 @@ struct ContentView: View {
     }
 
     private var mobileContent: some View {
+        #if canImport(UIKit)
         StickyBlurHeader {
             HStack {
                 Text("SendMoi")
@@ -91,6 +92,9 @@ struct ContentView: View {
             compactMobileContent
         }
         .background(Color(.systemGroupedBackground))
+        #else
+        compactMobileContent
+        #endif
     }
 
     private var onboardingContent: some View {
