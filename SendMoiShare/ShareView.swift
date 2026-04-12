@@ -372,7 +372,6 @@ struct ShareView: View {
                         .padding(.top, 4)
                 } else {
                     TextField("", text: $model.summary, axis: .vertical)
-                        .textInputAutocapitalization(.sentences)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
