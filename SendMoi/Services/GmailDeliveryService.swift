@@ -646,7 +646,7 @@ final class GmailDeliveryService {
     private static func makeRawMimeMessage(from: String, to: String, subject: String, content: EmailContent) throws -> String {
         let boundary = "SendMoi-\(UUID().uuidString)"
         let subjectHeader = "=?UTF-8?B?\(Data(subject.utf8).base64EncodedString())?="
-        let footer = "Sent with SendMoi"
+        let footer = "Sent with SendMoi      Report an Issue"
         let textBody = makePlainTextBody(content: content, footer: footer)
         let htmlBody = makeHTMLBody(content: content, footer: footer)
         let message: String
@@ -815,7 +815,7 @@ final class GmailDeliveryService {
                         </td>
                       </tr>
                       <tr>
-                        <td class="mm-attribution" align="center" bgcolor="#ffffff" style="padding: 52px 12px 0 12px; background-color: #ffffff; font-family: \(fontFamily); font-size: 14px; line-height: 17px; color: #111111;">
+                        <td class="mm-attribution" align="center" bgcolor="#ffffff" style="padding: 52px 12px 0 12px; background-color: #ffffff; font-family: \(fontFamily); font-size: 14px; line-height: 17px; color: #888888;">
                           \(footerMarkup)
                         </td>
                       </tr>
@@ -939,14 +939,20 @@ final class GmailDeliveryService {
 
     private static func makeFooterMarkup(footer: String, fontFamily: String) -> String {
         let linkedBrand = """
-                          <a href="https://send.moi" style="font-family: \(fontFamily); color: #111111; text-decoration: underline;">SendMoi</a>
+                          <a href="https://send.moi" style="font-family: \(fontFamily); color: #888888; text-decoration: underline;">SendMoi</a>
                           """
+        let reportSubject = "SendMoi%20Issue%20Report"
+        let reportBody = "Describe%20the%20issue%20you%20encountered%3A%0A%0A"
+        let reportHref = "mailto:help@send.moi?subject=\(reportSubject)&body=\(reportBody)"
+        let linkedReport = """
+                           <a href="\(reportHref)" style="font-family: \(fontFamily); color: #888888; text-decoration: underline;">Report an Issue</a>
+                           """
 
-        guard footer == "Sent with SendMoi" else {
+        guard footer.hasPrefix("Sent with SendMoi") else {
             return escapeHTML(footer)
         }
 
-        return "Sent with \(linkedBrand)"
+        return "Sent with \(linkedBrand) &nbsp;&nbsp;&nbsp; \(linkedReport)"
     }
 
     private static func escapeHTML(_ string: String) -> String {
