@@ -1,0 +1,24 @@
+{
+  "originHash" : "eb626e88039317423164f2d56b16af20aa3cf029ef29a76bdf72f30df3c24b23",
+  "pins" : [
+    {
+      "identity" : "progressiveblurheader",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/dominikmartn/ProgressiveBlurHeader",
+      "state" : {
+        "branch" : "main",
+        "revision" : "0e8c29bc90d52e592fd63e034ca15b59095855f3"
+      }
+    },
+    {
+      "identity" : "variableblur",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/nikstar/VariableBlur",
+      "state" : {
+        "branch" : "main",
+        "revision" : "5073a0d9080e488a2d317e04859c001a57fbb3e8"
+      }
+    }
+  ],
+  "version" : 3
+}
