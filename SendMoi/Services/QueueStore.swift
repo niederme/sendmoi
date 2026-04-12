@@ -2,6 +2,7 @@ import Foundation
 
 enum QueueStore {
     private static let fileName = "queued-emails.json"
+    static let didChangeNotification = "com.niederme.SendMoi.queueDidChange"
 
     static func load() throws -> [QueuedEmail] {
         let url = try queueFileURL()
@@ -17,6 +18,7 @@ enum QueueStore {
         let url = try queueFileURL()
         let data = try JSONEncoder().encode(queue)
         try data.write(to: url, options: .atomic)
+        notifyQueueDidChange()
     }
 
     static func append(_ item: QueuedEmail) throws {
@@ -39,5 +41,15 @@ enum QueueStore {
 
     private static func queueFileURL() throws -> URL {
         try SharedContainer.appDirectoryURL().appendingPathComponent(fileName, isDirectory: false)
+    }
+
+    private static func notifyQueueDidChange() {
+        CFNotificationCenterPostNotification(
+            CFNotificationCenterGetDarwinNotifyCenter(),
+            CFNotificationName(rawValue: didChangeNotification as CFString),
+            nil,
+            nil,
+            true
+        )
     }
 }

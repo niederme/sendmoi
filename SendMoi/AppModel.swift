@@ -17,6 +17,8 @@ final class AppModel: ObservableObject {
 
     private let client = GmailAPIClient()
     private let monitor = NetworkMonitor()
+    private let queueChangeObserver = QueueChangeObserver()
+    private var shouldReprocessQueue = false
 
     init() {
         monitor.onStatusChange = { [weak self] online in
@@ -24,29 +26,20 @@ final class AppModel: ObservableObject {
                 self?.handleNetworkChange(online: online)
             }
         }
+        queueChangeObserver.onChange = { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.handleSharedQueueChange()
+            }
+        }
+        queueChangeObserver.start()
     }
 
     func startup() async {
-        defaultRecipient = RecipientStore.loadDefault()
-        shareSheetAutoSendEnabled = RecipientStore.loadShareSheetAutoSendEnabled()
+        reloadSharedPreferences()
         reloadQueueFromDisk()
-
-        do {
-            session = try KeychainStore.loadSession()
-            if session == nil {
-                session = try SharedSessionStore.load()
-            }
-            if let session {
-                self.session = session
-                try? SharedSessionStore.save(session)
-                statusMessage = "Signed in as \(session.emailAddress ?? "your Gmail account")."
-            }
-        } catch {
-            statusMessage = "Could not read saved Gmail credentials: \(error.localizedDescription)"
-        }
+        reloadSessionFromDisk()
 
         isAccountSectionExpanded = session == nil || !GoogleOAuthConfig.isConfigured
-        shouldShowOnboarding = !RecipientStore.loadHasCompletedOnboarding()
 
         await processQueue()
     }
@@ -96,7 +89,13 @@ final class AppModel: ObservableObject {
     }
 
     func processQueue() async {
-        guard !isBusy else { return }
+        guard !isBusy else {
+            shouldReprocessQueue = true
+            return
+        }
+
+        reloadSharedPreferences()
+        reloadSessionFromDisk()
         reloadQueueFromDisk()
         guard !queuedEmails.isEmpty else { return }
         guard let existingSession = session else {
@@ -105,7 +104,15 @@ final class AppModel: ObservableObject {
         }
 
         isBusy = true
-        defer { isBusy = false }
+        defer {
+            isBusy = false
+            if shouldReprocessQueue {
+                shouldReprocessQueue = false
+                Task {
+                    await processQueue()
+                }
+            }
+        }
 
         do {
             let validSession = try await client.ensureValidSession(existingSession)
@@ -170,7 +177,8 @@ final class AppModel: ObservableObject {
     }
 
     func retryNow() async {
-        defaultRecipient = RecipientStore.loadDefault()
+        reloadSharedPreferences()
+        reloadSessionFromDisk()
         reloadQueueFromDisk()
         await processQueue()
     }
@@ -263,6 +271,24 @@ final class AppModel: ObservableObject {
         }
     }
 
+    private func reloadSharedPreferences() {
+        defaultRecipient = RecipientStore.loadDefault()
+        shareSheetAutoSendEnabled = RecipientStore.loadShareSheetAutoSendEnabled()
+        shouldShowOnboarding = !RecipientStore.loadHasCompletedOnboarding()
+    }
+
+    private func reloadSessionFromDisk() {
+        do {
+            if let persistedSession = try KeychainStore.loadSession() ?? SharedSessionStore.load() {
+                session = persistedSession
+                try? SharedSessionStore.save(persistedSession)
+                return
+            }
+        } catch {
+            statusMessage = "Could not read saved Gmail credentials: \(error.localizedDescription)"
+        }
+    }
+
     private func handleNetworkChange(online: Bool) {
         isOnline = online
         if online {
@@ -272,7 +298,61 @@ final class AppModel: ObservableObject {
         }
     }
 
+    private func handleSharedQueueChange() {
+        reloadSharedPreferences()
+        reloadSessionFromDisk()
+        reloadQueueFromDisk()
+        Task {
+            await processQueue()
+        }
+    }
+
     private func removeManagedMedia(for item: QueuedEmail) {
         item.allImageURLStrings.forEach { SharedContainer.removeManagedMediaIfPresent(urlString: $0) }
+    }
+}
+
+private final class QueueChangeObserver {
+    var onChange: (() -> Void)?
+    private var isStarted = false
+
+    func start() {
+        guard !isStarted else { return }
+        isStarted = true
+
+        let center = CFNotificationCenterGetDarwinNotifyCenter()
+        let observer = UnsafeRawPointer(Unmanaged.passUnretained(self).toOpaque())
+        CFNotificationCenterAddObserver(
+            center,
+            observer,
+            { _, observer, _, _, _ in
+                guard let observer else { return }
+                let queueObserver = Unmanaged<QueueChangeObserver>
+                    .fromOpaque(observer)
+                    .takeUnretainedValue()
+                queueObserver.onChange?()
+            },
+            QueueStore.didChangeNotification as CFString,
+            nil,
+            .deliverImmediately
+        )
+    }
+
+    func stop() {
+        guard isStarted else { return }
+        isStarted = false
+
+        let center = CFNotificationCenterGetDarwinNotifyCenter()
+        let observer = UnsafeRawPointer(Unmanaged.passUnretained(self).toOpaque())
+        CFNotificationCenterRemoveObserver(
+            center,
+            observer,
+            CFNotificationName(rawValue: QueueStore.didChangeNotification as CFString),
+            nil
+        )
+    }
+
+    deinit {
+        stop()
     }
 }
