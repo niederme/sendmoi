@@ -12,13 +12,6 @@ warn() {
   echo "warning: $*" >&2
 }
 
-current_build="$(perl -ne 'if (/CURRENT_PROJECT_VERSION = ([0-9]+);/) { print "$1\n"; exit }' "$PROJECT_FILE")"
-
-if [[ -z "$current_build" ]]; then
-  warn "Could not read CURRENT_PROJECT_VERSION from $PROJECT_FILE"
-  exit 0
-fi
-
 find_latest_archive() {
   local archives_root="$HOME/Library/Developer/Xcode/Archives"
   local newest_path=""
@@ -54,6 +47,13 @@ archive_plist="$archive_path/Info.plist"
 app_plist="$archive_path/Products/Applications/$APP_NAME/Contents/Info.plist"
 share_plist="$archive_path/Products/Applications/$APP_NAME/Contents/PlugIns/$SHARE_NAME/Contents/Info.plist"
 
+archive_build="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$app_plist" 2>/dev/null || true)"
+
+if [[ ! "$archive_build" =~ ^[0-9]+$ ]]; then
+  warn "Could not read CFBundleVersion from $app_plist"
+  exit 0
+fi
+
 update_plist_value() {
   local plist_path="$1"
   local key_path="$2"
@@ -68,8 +68,8 @@ update_plist_value() {
   fi
 }
 
-update_plist_value "$archive_plist" ":ApplicationProperties:CFBundleVersion" "$current_build"
-update_plist_value "$app_plist" ":CFBundleVersion" "$current_build"
-update_plist_value "$share_plist" ":CFBundleVersion" "$current_build"
+update_plist_value "$archive_plist" ":ApplicationProperties:CFBundleVersion" "$archive_build"
+update_plist_value "$app_plist" ":CFBundleVersion" "$archive_build"
+update_plist_value "$share_plist" ":CFBundleVersion" "$archive_build"
 
-echo "Synced archive build number to $current_build at $archive_path"
+echo "Synced archive build number to $archive_build at $archive_path"
