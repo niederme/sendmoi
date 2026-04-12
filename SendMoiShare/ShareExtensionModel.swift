@@ -482,10 +482,11 @@ final class ShareExtensionModel: ObservableObject {
             try Task.checkCancellation()
             let validSession = try await deliveryService.ensureValidSession(session)
             try Task.checkCancellation()
-            _ = try await sendQueuedEmailIfPresent(refreshedItem, using: validSession)
+            let didSendItem = try await sendQueuedEmailIfPresent(refreshedItem, using: validSession)
             try await flushQueuedEmails(using: validSession)
             try SharedSessionStore.save(validSession)
-            Self.persistDebugError("✅ sent \"\(refreshedItem.title)\" to \(refreshedItem.toEmail) from \(validSession.emailAddress ?? "unknown")")
+            let diag = GmailDeliveryService.lastSendDiagnostic ?? "no-send-recorded"
+            Self.persistDebugError("didSendItem:\(didSendItem) \(diag)")
             extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
             return refreshedItem
         } catch is CancellationError {
