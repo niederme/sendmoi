@@ -41,6 +41,7 @@
 		B1000001000000000000000C /* SafariPreprocessor.js in Resources */ = {isa = PBXBuildFile; fileRef = B20000010000000000000006 /* SafariPreprocessor.js */; };
 		DC6FF07B2F55D5CB00415EAC /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = DC6FF07A2F55D5CB00415EAC /* AppIcon.icon */; };
 		DC6FF07D2F55D5CB00415EAC /* Resources/sendmoi-demo-hero.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = DC6FF07C2F55D5CB00415EAC /* Resources/sendmoi-demo-hero.mp4 */; };
+		DCC2304E2F8BFA8A000A6B17 /* ProgressiveBlurHeader in Frameworks */ = {isa = PBXBuildFile; productRef = DCC2304D2F8BFA8A000A6B17 /* ProgressiveBlurHeader */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -109,6 +110,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DCC2304E2F8BFA8A000A6B17 /* ProgressiveBlurHeader in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -220,6 +222,9 @@
 				B70000010000000000000001 /* PBXTargetDependency */,
 			);
 			name = SendMoi;
+			packageProductDependencies = (
+				DCC2304D2F8BFA8A000A6B17 /* ProgressiveBlurHeader */,
+			);
 			productName = SendMoi;
 			productReference = A20000010000000000000000 /* SendMoi.app */;
 			productType = "com.apple.product-type.application";
@@ -614,6 +619,14 @@
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		DCC2304D2F8BFA8A000A6B17 /* ProgressiveBlurHeader */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DCC2304C2F8BFA8A000A6B17 /* XCRemoteSwiftPackageReference "ProgressiveBlurHeader" */;
+			productName = ProgressiveBlurHeader;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A60000010000000000000001 /* Project object */;
 }
