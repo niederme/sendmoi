@@ -293,6 +293,11 @@ final class AppModel: ObservableObject {
     }
 
     private func reloadSessionFromDisk() {
+        // Skip the keychain read if a session is already live in memory.
+        // The keychain only needs to be consulted on cold start; after that
+        // the in-memory session is kept current by processQueue's token refresh.
+        guard session == nil else { return }
+
         do {
             if let persistedSession = try KeychainStore.loadSession() ?? SharedSessionStore.load() {
                 session = persistedSession
