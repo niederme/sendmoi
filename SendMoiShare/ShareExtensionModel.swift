@@ -482,11 +482,15 @@ final class ShareExtensionModel: ObservableObject {
             try Task.checkCancellation()
             let validSession = try await deliveryService.ensureValidSession(session)
             try Task.checkCancellation()
+            // Snapshot queue state before attempting send for diagnostics
+            let queueBeforeSend = (try? QueueStore.load()) ?? []
+            let queuePath = (try? SharedContainer.appDirectoryURL().path) ?? "path-error"
             let didSendItem = try await sendQueuedEmailIfPresent(refreshedItem, using: validSession)
             try await flushQueuedEmails(using: validSession)
             try SharedSessionStore.save(validSession)
             let diag = GmailDeliveryService.lastSendDiagnostic ?? "no-send-recorded"
-            Self.persistDebugError("didSendItem:\(didSendItem) \(diag)")
+            let queueIDs = queueBeforeSend.map { $0.id.uuidString.prefix(8) }.joined(separator: ",")
+            Self.persistDebugError("didSendItem:\(didSendItem) \(diag) | queueCount:\(queueBeforeSend.count) ids:[\(queueIDs)] searchID:\(refreshedItem.id.uuidString.prefix(8)) path:\(queuePath)")
             extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
             return refreshedItem
         } catch is CancellationError {
