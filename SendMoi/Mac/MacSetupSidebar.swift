@@ -7,18 +7,13 @@ struct MacSetupSidebar: View {
     let showResetConfirmation: () -> Void
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                gmailCard
-                recipientCard
-                shareBehaviorCard
-                setupCard
-            }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
+        VStack(alignment: .leading, spacing: 16) {
+            gmailCard
+            recipientCard
+            shareBehaviorCard
+            setupCard
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(.regularMaterial)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
     private var gmailCard: some View {
@@ -38,7 +33,7 @@ struct MacSetupSidebar: View {
                         Text(model.session?.emailAddress ?? "No Gmail account connected")
                             .font(.headline)
 
-                        Text(model.session == nil ? "SendMoi needs Gmail to send queued items." : "Signed in to Gmail")
+                        Text(model.session == nil ? "SendMoi needs Gmail to send queued items." : "Ready for queued delivery on this Mac.")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
@@ -46,15 +41,10 @@ struct MacSetupSidebar: View {
                     Spacer(minLength: 0)
                 }
 
-                if let session = model.session {
-                    LabeledContent("Signed in as", value: session.emailAddress ?? "Authenticated via Gmail")
-                        .font(.footnote)
-
+                if model.session != nil {
                     if model.requiresGmailReconnect {
                         Button("Reconnect Gmail") {
-                            Task {
-                                await model.signIn()
-                            }
+                            Task { await model.signIn() }
                         }
                         .buttonStyle(.borderedProminent)
                         .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
@@ -67,9 +57,7 @@ struct MacSetupSidebar: View {
                     .disabled(model.isBusy)
                 } else {
                     Button("Sign In With Google") {
-                        Task {
-                            await model.signIn()
-                        }
+                        Task { await model.signIn() }
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
@@ -97,7 +85,7 @@ struct MacSetupSidebar: View {
                 Button("Save Default Recipient") {
                     saveDefaultRecipient()
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.bordered)
                 .disabled(model.isBusy)
             }
         }
@@ -131,10 +119,6 @@ struct MacSetupSidebar: View {
             subtitle: "Reopen the guide or reset SendMoi to first launch."
         ) {
             VStack(alignment: .leading, spacing: 12) {
-                Text(model.statusMessage)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-
                 Button("Open Setup Guide") {
                     openSetupGuide()
                 }
@@ -155,7 +139,7 @@ struct MacSetupSidebar: View {
     }
 }
 
-private struct MacSidebarCard<Content: View>: View {
+struct MacSidebarCard<Content: View>: View {
     let title: String
     let subtitle: String
     @ViewBuilder let content: Content
@@ -205,7 +189,8 @@ private struct MacSetupSidebar_Previews: PreviewProvider {
                     isOnline: true
                 )
             )
-            .frame(width: 340, height: 560)
+            .frame(width: 620, height: 560)
+            .padding(20)
             .previewDisplayName("Connected Setup")
 
             MacSetupSidebar(
@@ -221,7 +206,8 @@ private struct MacSetupSidebar_Previews: PreviewProvider {
                     isOnline: false
                 )
             )
-            .frame(width: 340, height: 560)
+            .frame(width: 620, height: 560)
+            .padding(20)
             .previewDisplayName("Needs Setup")
         }
     }

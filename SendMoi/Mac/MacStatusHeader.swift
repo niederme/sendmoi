@@ -4,76 +4,32 @@ struct MacStatusHeader: View {
     @EnvironmentObject private var model: AppModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .center, spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("SendMoi")
-                        .font(.title3.weight(.semibold))
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("SendMoi")
+                    .font(.title3.weight(.semibold))
 
-                    Text("Control Center")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer(minLength: 16)
-
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 10) {
-                        statusPill(
-                            title: "Account",
-                            value: accountStatus,
-                            systemImage: model.session == nil ? "person.crop.circle.badge.xmark" : "person.crop.circle.badge.checkmark"
-                        )
-
-                        statusPill(
-                            title: "Network",
-                            value: model.isOnline ? "Online" : "Offline",
-                            systemImage: model.isOnline ? "wifi" : "wifi.slash",
-                            tint: model.isOnline ? .green : .orange
-                        )
-
-                        statusPill(
-                            title: "Queue",
-                            value: "\(model.queuedEmails.count) queued",
-                            systemImage: "tray.full"
-                        )
-                    }
-
-                    VStack(alignment: .trailing, spacing: 8) {
-                        statusPill(
-                            title: "Account",
-                            value: accountStatus,
-                            systemImage: model.session == nil ? "person.crop.circle.badge.xmark" : "person.crop.circle.badge.checkmark"
-                        )
-
-                        HStack(spacing: 8) {
-                            statusPill(
-                                title: "Network",
-                                value: model.isOnline ? "Online" : "Offline",
-                                systemImage: model.isOnline ? "wifi" : "wifi.slash",
-                                tint: model.isOnline ? .green : .orange
-                            )
-
-                            statusPill(
-                                title: "Queue",
-                                value: "\(model.queuedEmails.count) queued",
-                                systemImage: "tray.full"
-                            )
-                        }
-                    }
-                }
+                Text("Settings")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
-            HStack(spacing: 8) {
-                if model.requiresGmailReconnect {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
+            Spacer(minLength: 16)
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) {
+                    accountPill
+                    networkPill
+                    queuePill
                 }
 
-                Text(model.statusMessage)
-                    .font(.footnote)
-                    .foregroundStyle(model.requiresGmailReconnect ? .orange : .secondary)
-                    .lineLimit(2)
+                VStack(alignment: .trailing, spacing: 8) {
+                    accountPill
+                    HStack(spacing: 8) {
+                        networkPill
+                        queuePill
+                    }
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -81,8 +37,33 @@ struct MacStatusHeader: View {
         .background(.thinMaterial)
     }
 
-    private var accountStatus: String {
-        model.session?.emailAddress ?? "Not Connected"
+    private var accountPill: some View {
+        statusPill(
+            title: "Account",
+            value: model.session?.emailAddress ?? "Not Connected",
+            systemImage: model.session == nil ? "person.crop.circle.badge.xmark" : "person.crop.circle.badge.checkmark",
+            tint: model.session == nil ? .orange : .accentColor
+        )
+    }
+
+    private var networkPill: some View {
+        statusPill(
+            title: "Network",
+            value: model.isOnline ? "Online" : "Offline",
+            systemImage: model.isOnline ? "wifi" : "wifi.slash",
+            tint: model.isOnline ? .green : .orange
+        )
+    }
+
+    private var queuePill: some View {
+        let count = model.queuedEmails.count
+        let hasIssue = model.requiresGmailReconnect || count > 0
+        return statusPill(
+            title: "Queue",
+            value: count == 0 ? "Clear" : "\(count) waiting",
+            systemImage: count == 0 ? "tray" : "tray.full",
+            tint: hasIssue ? .orange : .secondary
+        )
     }
 
     private func statusPill(
