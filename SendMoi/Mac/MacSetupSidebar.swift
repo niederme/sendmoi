@@ -5,22 +5,15 @@ struct MacSetupSidebar: View {
 
     let openSetupGuide: () -> Void
     let showResetConfirmation: () -> Void
-    var preferredMaxContentWidth: CGFloat? = nil
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                gmailCard
-                recipientCard
-                shareBehaviorCard
-                setupCard
-            }
-            .padding(16)
-            .frame(maxWidth: preferredMaxContentWidth ?? .infinity, alignment: .topLeading)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
+        VStack(alignment: .leading, spacing: 16) {
+            gmailCard
+            recipientCard
+            shareBehaviorCard
+            setupCard
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(.regularMaterial)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
     private var gmailCard: some View {
@@ -53,9 +46,7 @@ struct MacSetupSidebar: View {
                 if model.session != nil {
                     if model.requiresGmailReconnect {
                         Button("Reconnect Gmail") {
-                            Task {
-                                await model.signIn()
-                            }
+                            Task { await model.signIn() }
                         }
                         .buttonStyle(.borderedProminent)
                         .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
@@ -68,9 +59,7 @@ struct MacSetupSidebar: View {
                     .disabled(model.isBusy)
                 } else {
                     Button("Sign In With Google") {
-                        Task {
-                            await model.signIn()
-                        }
+                        Task { await model.signIn() }
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
@@ -155,11 +144,9 @@ struct MacSetupSidebar: View {
         if model.requiresGmailReconnect {
             return "Reconnect Gmail to resume queued delivery."
         }
-
         if model.session == nil {
             return "SendMoi needs Gmail to send queued items."
         }
-
         return "Ready for queued delivery on this Mac."
     }
 
@@ -167,7 +154,6 @@ struct MacSetupSidebar: View {
         if model.requiresGmailReconnect {
             return "exclamationmark.triangle.fill"
         }
-
         return model.session == nil ? "person.crop.circle.badge.xmark" : "checkmark.shield.fill"
     }
 
@@ -175,12 +161,11 @@ struct MacSetupSidebar: View {
         if model.requiresGmailReconnect || model.session == nil {
             return .orange
         }
-
         return .accentColor
     }
 }
 
-private struct MacSidebarCard<Content: View>: View {
+struct MacSidebarCard<Content: View>: View {
     let title: String
     let subtitle: String
     @ViewBuilder let content: Content
@@ -230,7 +215,8 @@ private struct MacSetupSidebar_Previews: PreviewProvider {
                     isOnline: true
                 )
             )
-            .frame(width: 340, height: 560)
+            .frame(width: 620, height: 560)
+            .padding(20)
             .previewDisplayName("Connected Setup")
 
             MacSetupSidebar(
@@ -246,7 +232,8 @@ private struct MacSetupSidebar_Previews: PreviewProvider {
                     isOnline: false
                 )
             )
-            .frame(width: 340, height: 560)
+            .frame(width: 620, height: 560)
+            .padding(20)
             .previewDisplayName("Needs Setup")
         }
     }

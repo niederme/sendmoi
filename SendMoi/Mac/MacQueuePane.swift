@@ -4,33 +4,26 @@ struct MacQueuePane: View {
     @EnvironmentObject private var model: AppModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            header
+        MacSidebarCard(
+            title: "Queue",
+            subtitle: cardSubtitle
+        ) {
+            VStack(alignment: .leading, spacing: 12) {
+                actionButtons
 
-            Divider()
-
-            if model.queuedEmails.isEmpty {
-                emptyState
-            } else {
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 14) {
-                        ForEach(displayedQueue) { item in
-                            MacQueueRow(
-                                item: item,
-                                isRetryCandidate: item.id == retryCandidateID,
-                                retryDisabled: model.isBusy || model.requiresGmailReconnect,
-                                onRetry: retryQueue,
-                                onDelete: {
-                                    model.deleteQueuedEmail(id: item.id)
-                                }
-                            )
+                ForEach(displayedQueue) { item in
+                    MacQueueRow(
+                        item: item,
+                        isRetryCandidate: item.id == retryCandidateID,
+                        retryDisabled: model.isBusy || model.requiresGmailReconnect,
+                        onRetry: retryQueue,
+                        onDelete: {
+                            model.deleteQueuedEmail(id: item.id)
                         }
-                    }
-                    .padding(20)
+                    )
                 }
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private var displayedQueue: [QueuedEmail] {
@@ -41,109 +34,49 @@ struct MacQueuePane: View {
         model.queuedEmails.last?.id
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 16) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Queue")
-                        .font(.system(size: 28, weight: .semibold))
-
-                    if let headerSummary {
-                        Text(headerSummary)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                Spacer(minLength: 12)
-
-                HStack(spacing: 10) {
-                    if showsReconnectButton {
-                        Button("Reconnect Gmail") {
-                            Task {
-                                await model.signIn()
-                            }
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
-                    }
-
-                    if showsSignInButton {
-                        Button("Sign In With Google") {
-                            Task {
-                                await model.signIn()
-                            }
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
-                    }
-
-                    if showsRetryAllButton {
-                        Button("Retry All") {
-                            retryQueue()
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(model.isBusy)
-                    }
-                }
-            }
-
-            if let statusBannerMessage {
-                Text(statusBannerMessage)
-                    .font(.footnote)
-                    .foregroundStyle(statusBannerTint)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.primary.opacity(0.04))
-                    )
-            }
-        }
-        .padding(20)
-    }
-
-    private var emptyState: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(emptyStateMessage)
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 18)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-
-    private var headerSummary: String? {
-        guard !model.queuedEmails.isEmpty else {
-            return nil
-        }
-
+    private var cardSubtitle: String {
         if model.requiresGmailReconnect {
-            return "Reconnect Gmail to restore send permission for these queued items."
+            return "Reconnect Gmail to restore send permission, then retry the queue."
         }
-
         if model.session == nil {
             return "Sign in to Gmail to send queued items from this Mac."
         }
-
         return model.isOnline
             ? "SendMoi retries automatically when the network and Gmail session are healthy."
             : "Items stay here until the app can reach the network again."
     }
 
-    private var emptyStateMessage: String {
-        model.isOnline
-            ? "Queue clear. Shared items that need attention will appear here."
-            : "Queue clear. If the network drops, shared items will wait here until SendMoi can retry."
+    @ViewBuilder
+    private var actionButtons: some View {
+        HStack(spacing: 10) {
+            if showsReconnectButton {
+                Button("Reconnect Gmail") {
+                    Task { await model.signIn() }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
+            }
+
+            if showsSignInButton {
+                Button("Sign In With Google") {
+                    Task { await model.signIn() }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
+            }
+
+            if showsRetryAllButton {
+                Button("Retry All") {
+                    retryQueue()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(model.isBusy)
+            }
+        }
     }
 
     private var showsReconnectButton: Bool {
-        model.requiresGmailReconnect && !model.queuedEmails.isEmpty
+        model.requiresGmailReconnect
     }
 
     private var showsSignInButton: Bool {
@@ -154,43 +87,8 @@ struct MacQueuePane: View {
         !model.queuedEmails.isEmpty && model.session != nil && !model.requiresGmailReconnect
     }
 
-    private var statusBannerMessage: String? {
-        let message = model.statusMessage.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !message.isEmpty else {
-            return nil
-        }
-
-        if message.hasPrefix("Signed in as ") {
-            return nil
-        }
-
-        if message == "Configure Google OAuth, sign in, then queue or send shared items." {
-            return nil
-        }
-
-        if model.requiresGmailReconnect && message.hasPrefix("Reconnect Gmail") {
-            return nil
-        }
-
-        if model.session == nil && !model.queuedEmails.isEmpty && message.contains("Sign in to Gmail") {
-            return nil
-        }
-
-        return message
-    }
-
-    private var statusBannerTint: Color {
-        if model.requiresGmailReconnect || model.statusMessage.contains("failed") || model.statusMessage.contains("Could not") {
-            return .orange
-        }
-
-        return .secondary
-    }
-
     private func retryQueue() {
-        Task {
-            await model.retryNow()
-        }
+        Task { await model.retryNow() }
     }
 }
 
@@ -267,10 +165,7 @@ private struct MacQueueRow: View {
     }
 
     private var sourceLabel: String? {
-        guard !item.urlString.isEmpty else {
-            return nil
-        }
-
+        guard !item.urlString.isEmpty else { return nil }
         return URL(string: item.urlString)?.host ?? item.urlString
     }
 }
@@ -291,22 +186,25 @@ private struct MacQueuePane_Previews: PreviewProvider {
                         isOnline: true
                     )
                 )
-                .frame(width: 760, height: 520)
+                .frame(width: 620, height: 400)
+                .padding(20)
                 .previewDisplayName("Queued Items")
 
             MacQueuePane()
                 .environmentObject(
                     SendMoiPreviewFixtures.appModel(
-                        queuedEmails: [],
+                        queuedEmails: SendMoiPreviewFixtures.reconnectQueue,
                         defaultRecipient: "ideas@sendmoi.app",
-                        shareSheetAutoSendEnabled: true,
+                        shareSheetAutoSendEnabled: false,
                         session: SendMoiPreviewFixtures.connectedSession,
-                        statusMessage: "Nothing is waiting right now.",
-                        isOnline: true
+                        statusMessage: "Reconnect Gmail to restore send permission.",
+                        isOnline: false,
+                        requiresGmailReconnect: true
                     )
                 )
-                .frame(width: 760, height: 520)
-                .previewDisplayName("Empty Queue")
+                .frame(width: 620, height: 400)
+                .padding(20)
+                .previewDisplayName("Reconnect Required")
         }
     }
 }

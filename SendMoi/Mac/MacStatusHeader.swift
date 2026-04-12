@@ -9,7 +9,7 @@ struct MacStatusHeader: View {
                 Text("SendMoi")
                     .font(.title3.weight(.semibold))
 
-                Text("Control Center")
+                Text("Settings")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -25,7 +25,6 @@ struct MacStatusHeader: View {
 
                 VStack(alignment: .trailing, spacing: 8) {
                     accountPill
-
                     HStack(spacing: 8) {
                         networkPill
                         queuePill
@@ -38,14 +37,10 @@ struct MacStatusHeader: View {
         .background(.thinMaterial)
     }
 
-    private var accountStatus: String {
-        model.session?.emailAddress ?? "Not Connected"
-    }
-
     private var accountPill: some View {
         statusPill(
             title: "Account",
-            value: accountStatus,
+            value: model.session?.emailAddress ?? "Not Connected",
             systemImage: accountSystemImage,
             tint: accountTint
         )
@@ -61,10 +56,13 @@ struct MacStatusHeader: View {
     }
 
     private var queuePill: some View {
-        statusPill(
+        let count = model.queuedEmails.count
+        let hasIssue = model.requiresGmailReconnect || count > 0
+        return statusPill(
             title: "Queue",
-            value: model.queuedEmails.isEmpty ? "Queue clear" : "\(model.queuedEmails.count) queued",
-            systemImage: model.queuedEmails.isEmpty ? "tray" : "tray.full"
+            value: count == 0 ? "Clear" : "\(count) waiting",
+            systemImage: count == 0 ? "tray" : "tray.full",
+            tint: hasIssue ? .orange : .secondary
         )
     }
 
@@ -72,7 +70,6 @@ struct MacStatusHeader: View {
         if model.requiresGmailReconnect {
             return "exclamationmark.triangle.fill"
         }
-
         return model.session == nil ? "person.crop.circle.badge.xmark" : "person.crop.circle.badge.checkmark"
     }
 
@@ -80,7 +77,6 @@ struct MacStatusHeader: View {
         if model.requiresGmailReconnect || model.session == nil {
             return .orange
         }
-
         return .accentColor
     }
 
