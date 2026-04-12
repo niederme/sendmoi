@@ -19,18 +19,37 @@ struct MacControlCenterView: View {
     }
 
     private var contentSplit: some View {
-        HStack(spacing: 0) {
-            MacQueuePane()
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        Group {
+            if model.queuedEmails.isEmpty {
+                HStack(spacing: 0) {
+                    MacSetupSidebar(
+                        openSetupGuide: openSetupGuide,
+                        showResetConfirmation: showResetConfirmation,
+                        preferredMaxContentWidth: 420
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
-            Divider()
+                    Divider()
 
-            MacSetupSidebar(
-                openSetupGuide: openSetupGuide,
-                showResetConfirmation: showResetConfirmation
-            )
-            .frame(width: 340)
-            .frame(maxHeight: .infinity, alignment: .topLeading)
+                    MacQueuePane()
+                        .frame(width: 320)
+                        .frame(maxHeight: .infinity, alignment: .topLeading)
+                }
+            } else {
+                HStack(spacing: 0) {
+                    MacQueuePane()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+
+                    Divider()
+
+                    MacSetupSidebar(
+                        openSetupGuide: openSetupGuide,
+                        showResetConfirmation: showResetConfirmation
+                    )
+                    .frame(width: 340)
+                    .frame(maxHeight: .infinity, alignment: .topLeading)
+                }
+            }
         }
     }
 }
