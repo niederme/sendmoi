@@ -434,7 +434,12 @@ final class ShareExtensionModel: ObservableObject {
         waitForPreview: Bool
     ) async throws -> QueuedEmail {
         try Task.checkCancellation()
-        try QueueStore.append(item)
+        do {
+            try QueueStore.append(item)
+        } catch {
+            Self.persistDebugError("queue-append: \(error.localizedDescription)")
+            throw error
+        }
         queuedPreviewEnrichmentItem = item
         let extensionContext = extensionContextRef
         defer {
@@ -449,22 +454,33 @@ final class ShareExtensionModel: ObservableObject {
         }
 
         do {
-            if let session = try SharedSessionStore.load() {
-                try Task.checkCancellation()
-                let validSession = try await deliveryService.ensureValidSession(session)
-                try Task.checkCancellation()
-                _ = try await sendQueuedEmailIfPresent(refreshedItem, using: validSession)
-                try await flushQueuedEmails(using: validSession)
-                try SharedSessionStore.save(validSession)
+            guard let session = try SharedSessionStore.load() else {
+                Self.persistDebugError("no-session: SharedSessionStore returned nil")
                 return refreshedItem
             }
+            try Task.checkCancellation()
+            let validSession = try await deliveryService.ensureValidSession(session)
+            try Task.checkCancellation()
+            _ = try await sendQueuedEmailIfPresent(refreshedItem, using: validSession)
+            try await flushQueuedEmails(using: validSession)
+            try SharedSessionStore.save(validSession)
+            Self.clearDebugError()
+            return refreshedItem
         } catch is CancellationError {
             throw CancellationError()
         } catch {
+            Self.persistDebugError("delivery: \(error.localizedDescription)")
             return refreshedItem
         }
+    }
 
-        return refreshedItem
+    private static func persistDebugError(_ message: String) {
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        SharedContainer.sharedDefaults.set("[\(timestamp)] \(message)", forKey: "debugLastShareExtensionError")
+    }
+
+    private static func clearDebugError() {
+        SharedContainer.sharedDefaults.removeObject(forKey: "debugLastShareExtensionError")
     }
 
     private func waitForPreviewAndRefreshQueuedItem(_ item: QueuedEmail) async throws -> QueuedEmail {

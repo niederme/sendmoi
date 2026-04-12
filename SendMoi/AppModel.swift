@@ -41,8 +41,21 @@ final class AppModel: ObservableObject {
 
         isAccountSectionExpanded = session == nil || !GoogleOAuthConfig.isConfigured
 
+        #if os(macOS)
+        checkForShareExtensionDebugError()
+        #endif
+
         await processQueue()
     }
+
+    #if os(macOS)
+    private func checkForShareExtensionDebugError() {
+        guard let error = SharedContainer.sharedDefaults.string(forKey: "debugLastShareExtensionError") else {
+            return
+        }
+        statusMessage = "⚠️ Last share attempt failed — \(error)"
+    }
+    #endif
 
     @discardableResult
     func signIn() async -> Bool {
@@ -302,6 +315,9 @@ final class AppModel: ObservableObject {
         reloadSharedPreferences()
         reloadSessionFromDisk()
         reloadQueueFromDisk()
+        #if os(macOS)
+        checkForShareExtensionDebugError()
+        #endif
         Task {
             await processQueue()
         }
