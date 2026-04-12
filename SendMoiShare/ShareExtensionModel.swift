@@ -485,7 +485,7 @@ final class ShareExtensionModel: ObservableObject {
             _ = try await sendQueuedEmailIfPresent(refreshedItem, using: validSession)
             try await flushQueuedEmails(using: validSession)
             try SharedSessionStore.save(validSession)
-            Self.clearDebugError()
+            Self.persistDebugError("✅ sent \"\(refreshedItem.title)\" to \(refreshedItem.toEmail) from \(validSession.emailAddress ?? "unknown")")
             extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
             return refreshedItem
         } catch is CancellationError {
