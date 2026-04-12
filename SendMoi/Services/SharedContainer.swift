@@ -66,25 +66,27 @@ enum SharedContainer {
     }
 
     private static func preferredBaseURL(fileManager: FileManager) throws -> URL {
-        if let groupURL = fileManager.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
-            #if os(macOS)
-            // On macOS, the Catalyst/sandbox runtime can return a wrong path; only
-            // trust it if it's actually inside the expected Group Containers location.
-            if groupURL.path.contains("/Library/Group Containers/") {
-                return groupURL
-            }
-            #else
-            // On iOS the system always returns the correct shared container path.
-            return groupURL
-            #endif
-        }
-
         #if os(macOS)
         let manualGroupURL = fileManager.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Group Containers", isDirectory: true)
             .appendingPathComponent(appGroupID, isDirectory: true)
+
+        // Prefer the real shared group container on macOS. Sandboxed Catalyst
+        // builds can fall back to a private Application Support directory, which
+        // makes the app miss the share extension's queue file.
         if fileManager.fileExists(atPath: manualGroupURL.path()) {
             return manualGroupURL
+        }
+
+        if let groupURL = fileManager.containerURL(forSecurityApplicationGroupIdentifier: appGroupID)?
+            .standardizedFileURL,
+           !groupURL.path.contains("/Library/Containers/") {
+            return groupURL
+        }
+        #else
+        if let groupURL = fileManager.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
+            // On iOS the system always returns the correct shared container path.
+            return groupURL
         }
         #endif
 
