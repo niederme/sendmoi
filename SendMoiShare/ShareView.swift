@@ -360,7 +360,7 @@ struct ShareView: View {
     }
 
     private var previewMetadataSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             Text("AI Summary")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -369,10 +369,10 @@ struct ShareView: View {
                 if model.isRefreshingPreview && model.summary.isEmpty {
                     ProgressView()
                         .controlSize(.small)
-                        .padding(.top, 8)
+                        .padding(.top, 4)
                 } else {
-                    TextEditor(text: $model.summary)
-                        .frame(minHeight: 56)
+                    TextField("", text: $model.summary, axis: .vertical)
+                        .textInputAutocapitalization(.sentences)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -457,11 +457,7 @@ struct ShareView: View {
     }
 
     private var shouldShowSummarySection: Bool {
-        #if os(macOS)
-        return true
-        #else
         model.isRefreshingPreview || !model.summary.isEmpty
-        #endif
     }
 
     private func titleInputField(lineLimit: Int, placeholder: String = "Title") -> some View {
