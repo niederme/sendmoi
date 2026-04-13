@@ -5,14 +5,8 @@ struct MacStatusHeader: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("SendMoi")
-                    .font(.title3.weight(.semibold))
-
-                Text("Settings")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+            Text("SendMoi")
+                .font(.title2.weight(.semibold))
 
             Spacer(minLength: 16)
 
