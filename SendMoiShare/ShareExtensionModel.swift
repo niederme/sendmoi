@@ -580,7 +580,7 @@ final class ShareExtensionModel: ObservableObject {
             title = previewTitle
         }
 
-        if application.excerptSnapshot.isEmpty,
+        if (application.excerptSnapshot.isEmpty || Self.looksTruncatedSocialExcerpt(application.excerptSnapshot)),
            let previewDescription = application.metadata?.description,
            !previewDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             excerpt = previewDescription
@@ -619,7 +619,7 @@ final class ShareExtensionModel: ObservableObject {
             updatedDraft.title = previewTitle
         }
 
-        if pendingPreviewApplication.excerptSnapshot.isEmpty,
+        if (pendingPreviewApplication.excerptSnapshot.isEmpty || Self.looksTruncatedSocialExcerpt(pendingPreviewApplication.excerptSnapshot)),
            let previewDescription = pendingPreviewApplication.metadata?.description,
            !previewDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             updatedDraft.excerpt = previewDescription
