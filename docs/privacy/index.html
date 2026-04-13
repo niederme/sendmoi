@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#ebe9e3" />
+    <title>SendMoi Privacy Policy</title>
+    <meta name="description" content="Privacy Policy for SendMoi by John Niedermeyer." />
+    <link rel="canonical" href="https://send.moi/privacy/" />
+    <link rel="icon" type="image/png" href="../assets/images/sendmoi/app-icon-light.png?v=20260312-1" />
+    <link rel="icon" type="image/png" href="../assets/images/sendmoi/app-icon-dark.png?v=20260312-1" media="(prefers-color-scheme: dark)" />
+    <link rel="apple-touch-icon" href="../assets/images/sendmoi/app-icon-light.png?v=20260312-1" />
+
+    <script>
+      (() => {
+        try {
+          const storedTheme = localStorage.getItem("sendmoi-theme");
+          if (storedTheme === "light" || storedTheme === "dark") {
+            document.documentElement.dataset.theme = storedTheme;
+          }
+        } catch {}
+      })();
+    </script>
+
+    <style>
+      @font-face {
+        font-family: "Sohne";
+        src: url("../assets/fonts/soehne-leicht.woff2") format("woff2");
+        font-weight: 300;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Sohne";
+        src: url("../assets/fonts/soehne-buch.woff2") format("woff2");
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Sohne";
+        src: url("../assets/fonts/soehne-halbfett.woff2") format("woff2");
+        font-weight: 700;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      :root {
+        --ink: #090909;
+        --muted: #5d606a;
+        --line: rgba(12, 14, 22, 0.1);
+        --line-strong: rgba(12, 14, 22, 0.14);
+        --card: rgba(255, 255, 255, 0.84);
+        --card-solid: rgba(255, 255, 255, 0.64);
+        --blue: #2b7fff;
+        --violet: #9810fa;
+        --pink: #9810fa;
+        --page-background:
+          radial-gradient(circle at 16% 14%, rgba(255, 255, 255, 0.9), transparent 24%),
+          radial-gradient(circle at 38% 18%, rgba(255, 255, 255, 0.72), transparent 18%),
+          radial-gradient(circle at 62% 24%, rgba(255, 255, 255, 0.56), transparent 16%),
+          linear-gradient(180deg, #f0eee9 0%, #ebe9e3 42%, #e8e6df 100%);
+        --shadow-lg: 0 24px 72px rgba(34, 39, 63, 0.14);
+        --shadow-md: 0 16px 40px rgba(34, 39, 63, 0.1);
+        --theme-toggle-bg: rgba(255, 255, 255, 0.62);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --ink: #f6f7fb;
+          --muted: #a6adbf;
+          --line: rgba(255, 255, 255, 0.08);
+          --line-strong: rgba(255, 255, 255, 0.12);
+          --card: rgba(21, 24, 34, 0.78);
+          --card-solid: rgba(28, 32, 44, 0.72);
+          --page-background:
+            radial-gradient(circle at 18% 14%, rgba(43, 127, 255, 0.12), transparent 22%),
+            radial-gradient(circle at 62% 18%, rgba(152, 16, 250, 0.12), transparent 18%),
+            linear-gradient(180deg, #0b0f18 0%, #0a0d14 42%, #080a10 100%);
+          --shadow-lg: 0 28px 72px rgba(0, 0, 0, 0.34);
+          --shadow-md: 0 16px 40px rgba(0, 0, 0, 0.24);
+          --theme-toggle-bg: rgba(24, 28, 40, 0.72);
+        }
+      }
+
+      html[data-theme="light"] {
+        --ink: #090909;
+        --muted: #5d606a;
+        --line: rgba(12, 14, 22, 0.1);
+        --line-strong: rgba(12, 14, 22, 0.14);
+        --card: rgba(255, 255, 255, 0.84);
+        --card-solid: rgba(255, 255, 255, 0.64);
+        --page-background:
+          radial-gradient(circle at 16% 14%, rgba(255, 255, 255, 0.9), transparent 24%),
+          radial-gradient(circle at 38% 18%, rgba(255, 255, 255, 0.72), transparent 18%),
+          radial-gradient(circle at 62% 24%, rgba(255, 255, 255, 0.56), transparent 16%),
+          linear-gradient(180deg, #f0eee9 0%, #ebe9e3 42%, #e8e6df 100%);
+        --shadow-lg: 0 24px 72px rgba(34, 39, 63, 0.14);
+        --shadow-md: 0 16px 40px rgba(34, 39, 63, 0.1);
+        --theme-toggle-bg: rgba(255, 255, 255, 0.62);
+      }
+
+      html[data-theme="dark"] {
+        --ink: #f6f7fb;
+        --muted: #a6adbf;
+        --line: rgba(255, 255, 255, 0.08);
+        --line-strong: rgba(255, 255, 255, 0.12);
+        --card: rgba(21, 24, 34, 0.78);
+        --card-solid: rgba(28, 32, 44, 0.72);
+        --page-background:
+          radial-gradient(circle at 18% 14%, rgba(43, 127, 255, 0.12), transparent 22%),
+          radial-gradient(circle at 62% 18%, rgba(152, 16, 250, 0.12), transparent 18%),
+          linear-gradient(180deg, #0b0f18 0%, #0a0d14 42%, #080a10 100%);
+        --shadow-lg: 0 28px 72px rgba(0, 0, 0, 0.34);
+        --shadow-md: 0 16px 40px rgba(0, 0, 0, 0.24);
+        --theme-toggle-bg: rgba(24, 28, 40, 0.72);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: var(--page-background);
+      }
+
+      body {
+        color: var(--ink);
+        font-family: "Sohne", "SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Helvetica Neue",
+          "Arial Nova", "Arial", sans-serif;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      img {
+        display: block;
+        max-width: 100%;
+      }
+
+      .page {
+        width: min(980px, calc(100vw - 40px));
+        margin: 0 auto;
+        padding: 20px 0 72px;
+      }
+
+      .page-top {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 14px;
+      }
+
+      .theme-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--theme-toggle-bg);
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1;
+        cursor: pointer;
+        transition:
+          color 0.2s ease,
+          border-color 0.2s ease,
+          background 0.2s ease;
+      }
+
+      .theme-toggle:hover,
+      .theme-toggle:focus-visible {
+        color: var(--ink);
+        border-color: var(--line-strong);
+        outline: none;
+      }
+
+      .theme-toggle-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--blue), var(--violet));
+      }
+
+      .hero,
+      .doc-shell {
+        border: 1px solid var(--line-strong);
+        border-radius: 30px;
+        background: var(--card);
+        backdrop-filter: blur(18px);
+        box-shadow: var(--shadow-lg);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 18px;
+        align-items: center;
+        padding: 20px;
+        margin-bottom: 18px;
+      }
+
+      .hero-icon {
+        width: clamp(56px, 7vw, 74px);
+        height: clamp(56px, 7vw, 74px);
+      }
+
+      .hero-icon-image {
+        width: 100%;
+        height: 100%;
+        border-radius: 20px;
+        box-shadow: var(--shadow-md);
+      }
+
+      .hero-icon-image--dark {
+        display: none;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .hero-icon-image--light {
+          display: none;
+        }
+
+        .hero-icon-image--dark {
+          display: block;
+        }
+      }
+
+      html[data-theme="light"] .hero-icon-image--light {
+        display: block;
+      }
+
+      html[data-theme="light"] .hero-icon-image--dark {
+        display: none;
+      }
+
+      html[data-theme="dark"] .hero-icon-image--light {
+        display: none;
+      }
+
+      html[data-theme="dark"] .hero-icon-image--dark {
+        display: block;
+      }
+
+      .eyebrow {
+        margin: 0 0 8px;
+        color: var(--blue);
+        font-size: 12px;
+        line-height: 1;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(38px, 7vw, 72px);
+        line-height: 0.92;
+        font-weight: 700;
+        letter-spacing: -0.032em;
+        text-wrap: balance;
+      }
+
+      .gradient-title {
+        display: inline-block;
+        padding-bottom: 0.085em;
+        margin-bottom: -0.085em;
+        background: linear-gradient(135deg, #2B7FFF 0%, #8722FB 37%, #9810FA 47%, #8722FB 58%, #6C3DFC 67%, #2B7FFF 89%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: transparent;
+      }
+
+      .subhead {
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: 16px;
+        line-height: 1.4;
+        text-wrap: pretty;
+      }
+
+      .doc-shell {
+        padding: clamp(18px, 2.2vw, 28px);
+      }
+
+      .lede {
+        margin: 0 0 18px;
+        padding: 16px 18px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--card-solid);
+        color: var(--muted);
+        text-wrap: pretty;
+      }
+
+      h2 {
+        margin: 26px 0 10px;
+        padding-top: 18px;
+        border-top: 1px solid var(--line);
+        font-size: 24px;
+        line-height: 1.12;
+        font-weight: 700;
+        letter-spacing: -0.015em;
+        text-wrap: balance;
+      }
+
+      h2:first-of-type {
+        margin-top: 0;
+        padding-top: 0;
+        border-top: none;
+      }
+
+      p,
+      li {
+        margin: 0 0 14px;
+        color: var(--muted);
+        font-size: 17px;
+        line-height: 1.52;
+        font-weight: 300;
+        text-wrap: pretty;
+      }
+
+      strong {
+        color: var(--ink);
+        font-weight: 700;
+      }
+
+      ul {
+        margin: 0 0 14px 20px;
+        padding: 0;
+      }
+
+      .doc-shell a {
+        color: var(--blue);
+        text-decoration-thickness: 0.08em;
+        text-underline-offset: 0.16em;
+      }
+
+      .footer {
+        margin-top: 88px;
+        padding-top: 18px;
+        border-top: none;
+        text-align: center;
+      }
+
+      .footer-meta {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+        display: flex;
+        justify-content: center;
+      }
+
+      .footer-meta p,
+      .footer-links a {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+        font-weight: 300;
+      }
+
+      .footer-meta a {
+        color: var(--ink);
+        text-decoration: underline;
+        text-underline-offset: 0.16em;
+        text-decoration-color: rgba(43, 127, 255, 0.45);
+      }
+
+      .footer-meta a:hover,
+      .footer-meta a:focus-visible,
+      .footer-links a:hover,
+      .footer-links a:focus-visible {
+        color: var(--ink);
+      }
+
+      .footer-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        align-items: center;
+        justify-content: center;
+        margin-top: 10px;
+      }
+
+      .footer-links a {
+        color: var(--ink);
+        font-size: 12px;
+        line-height: 1.4;
+        text-decoration: underline;
+        text-underline-offset: 0.16em;
+        text-decoration-color: rgba(43, 127, 255, 0.45);
+        transition: color 0.2s ease;
+      }
+
+      @media (max-width: 700px) {
+        .page {
+          width: min(980px, calc(100vw - 24px));
+          padding-top: 16px;
+          padding-bottom: 56px;
+        }
+
+        .hero,
+        .doc-shell {
+          border-radius: 24px;
+        }
+
+        .hero {
+          grid-template-columns: auto 1fr;
+          gap: 12px;
+          padding: 16px;
+          align-items: center;
+        }
+
+        .hero-icon {
+          width: 56px;
+          height: 56px;
+        }
+
+        .doc-shell {
+          padding: 16px;
+        }
+
+        .lede,
+        p,
+        li,
+        .subhead {
+          font-size: 15px;
+        }
+
+        h2 {
+          font-size: 22px;
+        }
+
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <div class="page-top">
+        <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle light and dark mode">
+          <span class="theme-toggle-dot" aria-hidden="true"></span>
+          <span data-theme-toggle-label>Light mode</span>
+        </button>
+      </div>
+
+      <section class="hero" aria-labelledby="privacy-title">
+        <div class="hero-icon">
+          <img
+            class="hero-icon-image hero-icon-image--light"
+            src="../assets/images/sendmoi/app-icon-light.png?v=20260312-1"
+            alt="SendMoi app icon"
+            width="1024"
+            height="1024"
+          />
+          <img
+            class="hero-icon-image hero-icon-image--dark"
+            src="../assets/images/sendmoi/app-icon-dark.png?v=20260312-1"
+            alt="SendMoi app icon"
+            width="1024"
+            height="1024"
+          />
+        </div>
+        <div>
+          <p class="eyebrow">SendMoi</p>
+          <h1 id="privacy-title" class="gradient-title">Privacy Policy</h1>
+          <p class="subhead">Last updated: March 13, 2026</p>
+        </div>
+      </section>
+
+      <section class="doc-shell">
+        <p class="lede">SendMoi is a local-first app that helps you send shared links as emails through your own Gmail account. This policy explains what SendMoi handles, where that data goes, and what stays on your device.</p>
+
+        <h2>What SendMoi Accesses</h2>
+        <p>SendMoi may access the following information when you use the app:</p>
+        <ul>
+          <li>Your Gmail account email address.</li>
+          <li>OAuth tokens used to keep you signed in to Gmail.</li>
+          <li>Email recipients you enter or save as defaults or recent recipients.</li>
+          <li>The title, excerpt, and URL of content you share into the app.</li>
+          <li>Queued email content that has not been sent yet.</li>
+        </ul>
+        <p>If you share a web link, SendMoi may also fetch the linked page and its preview image to improve the outgoing email with:</p>
+        <ul>
+          <li>A better title.</li>
+          <li>Excerpt text.</li>
+          <li>A short summary.</li>
+          <li>An inline preview image.</li>
+        </ul>
+
+        <h2>How Your Data Is Used</h2>
+        <p>SendMoi uses this information only to provide its core features:</p>
+        <ul>
+          <li>Sign you in with Google.</li>
+          <li>Send email through the Gmail API on your behalf.</li>
+          <li>Remember your default and recent recipients.</li>
+          <li>Queue emails offline and retry them later.</li>
+          <li>Enrich shared links before sending when metadata is available.</li>
+        </ul>
+        <p>SendMoi does not use your data for advertising, analytics, profiling, or sale to third parties.</p>
+
+        <h2>Where Data Is Stored</h2>
+        <p>SendMoi stores data locally on your device, including:</p>
+        <ul>
+          <li>Gmail session information used to keep you signed in.</li>
+          <li>Your saved default and recent recipients.</li>
+          <li>Any queued emails waiting to be sent.</li>
+        </ul>
+        <p>This local storage may be kept in standard app storage, the system keychain, and shared app container storage used by the SendMoi Share Extension.</p>
+
+        <h2>What Is Sent Off Your Device</h2>
+        <p>SendMoi does not run its own backend service. When network requests happen, they are sent directly from your device to the services needed for the feature you are using:</p>
+        <ul>
+          <li>Google authentication endpoints, to sign you in and refresh your Gmail session.</li>
+          <li>Gmail API endpoints, to send email through your Gmail account.</li>
+          <li>The websites you share, when SendMoi fetches page metadata or preview images to improve the outgoing email.</li>
+        </ul>
+        <p>If summary generation is available on your device through Apple system frameworks, SendMoi may use those on-device capabilities to create a short article summary before sending. SendMoi does not send article text to a SendMoi-operated server for summarization.</p>
+
+        <h2>Third Parties</h2>
+        <p>SendMoi relies on third-party services only where necessary to provide the app:</p>
+        <ul>
+          <li>Google, for authentication and Gmail delivery.</li>
+          <li>The websites whose links you choose to share, for metadata and preview retrieval.</li>
+          <li>Apple system frameworks and platform services used to run the app and its Share Extension.</li>
+        </ul>
+        <p>Those services operate under their own privacy terms and policies.</p>
+
+        <h2>Sharing, Transfer, And Disclosure Of Google User Data</h2>
+        <p>SendMoi does not sell Google user data.</p>
+        <p>SendMoi does not share, transfer, or disclose Google user data to third parties except in the limited situations described below:</p>
+        <ul>
+          <li>To Google, when your device communicates directly with Google authentication endpoints and Gmail API endpoints to sign you in, refresh your session, identify the connected account, and send email you requested.</li>
+          <li>To the recipient you choose, when SendMoi sends an email from your Gmail account on your behalf.</li>
+          <li>To the websites whose links you choose to share, when your device fetches page metadata or preview images needed to build the outgoing email.</li>
+          <li>To Apple platform services used to run the app, the Share Extension, local storage, and on-device system capabilities.</li>
+          <li>When required by law, regulation, legal process, or enforceable governmental request.</li>
+          <li>When necessary to detect, prevent, or address fraud, security, or technical issues, or to protect the rights, property, or safety of users or the public.</li>
+        </ul>
+        <p>SendMoi does not operate its own backend for Google user data processing. Google user data is handled on your device and sent directly from your device to Google services needed for the feature you use.</p>
+        <p>The use of information received from Google APIs will adhere to the Google API Services User Data Policy, including the Limited Use requirements.</p>
+
+        <h2>How Google User Data Is Protected</h2>
+        <p>SendMoi uses the following protections for Google user data and other sensitive data:</p>
+        <ul>
+          <li>OAuth session data, including Gmail access and refresh tokens, is stored in the operating system keychain rather than in ordinary app preferences.</li>
+          <li>Network requests to Google authentication endpoints, Gmail API endpoints, and OpenID user info endpoints are sent over HTTPS.</li>
+          <li>Data stored on-device is kept inside the app sandbox or the app group container used by the SendMoi Share Extension.</li>
+          <li>SendMoi does not send Google user data to a SendMoi-operated backend server for storage, processing, analytics, or advertising.</li>
+          <li>Locally queued emails and recipient settings remain on the device unless and until you choose to send an email through your Gmail account.</li>
+          <li>Metadata retrieval uses direct requests from your device and disables HTTP cookie handling in the app's metadata-fetching session.</li>
+        </ul>
+        <p>No method of transmission or storage is perfectly secure, but SendMoi is designed to minimize the amount of Google user data it handles and to keep that data on-device wherever possible.</p>
+
+        <h2>Your Choices</h2>
+        <p>You can control your data in several ways:</p>
+        <ul>
+          <li>Sign out of Gmail from within SendMoi to remove the saved Gmail session used by the app.</li>
+          <li>Delete queued emails from the app before they are sent.</li>
+          <li>Change or clear the default recipient at any time.</li>
+          <li>Stop sharing links into SendMoi if you do not want page metadata to be fetched.</li>
+        </ul>
+
+        <h2>Children's Privacy</h2>
+        <p>SendMoi is not directed to children under 13 and is not designed to knowingly collect personal information from children.</p>
+
+        <h2>Changes To This Policy</h2>
+        <p>This policy may be updated as SendMoi changes. The "Last updated" date at the top of this document reflects the latest revision.</p>
+
+        <h2>Contact</h2>
+        <p>For privacy questions, contact <a href="mailto:help@send.moi?subject=SendMoi%20Issue%20Report&amp;body=Describe%20the%20issue%20you%20encountered%3A%0A%0A">&#104;&#101;&#108;&#112;&#64;&#115;&#101;&#110;&#100;&#46;&#109;&#111;&#105;</a></p>
+
+      </section>
+
+      <footer class="footer">
+        <div class="footer-meta">
+          <p>
+            <a href="https://nieder.me/">&copy; John Niedermeyer</a>
+            <span aria-hidden="true"> | </span>
+            Need Help? Email
+            <a href="mailto:help@send.moi?subject=SendMoi%20Issue%20Report&amp;body=Describe%20the%20issue%20you%20encountered%3A%0A%0A">&#104;&#101;&#108;&#112;&#64;&#115;&#101;&#110;&#100;&#46;&#109;&#111;&#105;</a>
+          </p>
+        </div>
+        <div class="footer-links">
+          <a href="/privacy/">Privacy Policy</a>
+          <a href="/terms/">Terms of Service</a>
+          <a href="/accessibility/">Accessibility</a>
+        </div>
+      </footer>
+    </main>
+
+    <script>
+      (() => {
+        const storageKey = "sendmoi-theme";
+        const root = document.documentElement;
+        const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+        const button = document.querySelector("[data-theme-toggle]");
+        const label = document.querySelector("[data-theme-toggle-label]");
+        const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+        function systemTheme() {
+          return darkQuery.matches ? "dark" : "light";
+        }
+
+        function activeTheme() {
+          const explicit = root.dataset.theme;
+          if (explicit === "light" || explicit === "dark") {
+            return explicit;
+          }
+          return systemTheme();
+        }
+
+        function syncButton(theme) {
+          if (!label) {
+            return;
+          }
+          label.textContent = theme === "dark" ? "Light mode" : "Dark mode";
+        }
+
+        function syncThemeColor(theme) {
+          if (!themeColorMeta) {
+            return;
+          }
+          themeColorMeta.setAttribute("content", theme === "dark" ? "#090b11" : "#ebe9e3");
+        }
+
+        function applyTheme(theme, persist) {
+          root.dataset.theme = theme;
+          syncButton(theme);
+          syncThemeColor(theme);
+          if (!persist) {
+            return;
+          }
+          try {
+            localStorage.setItem(storageKey, theme);
+          } catch {}
+        }
+
+        syncButton(activeTheme());
+        syncThemeColor(activeTheme());
+
+        if (button) {
+          button.addEventListener("click", () => {
+            const nextTheme = activeTheme() === "dark" ? "light" : "dark";
+            applyTheme(nextTheme, true);
+          });
+        }
+
+        darkQuery.addEventListener("change", () => {
+          let storedTheme = null;
+          try {
+            storedTheme = localStorage.getItem(storageKey);
+          } catch {}
+          if (storedTheme === "light" || storedTheme === "dark") {
+            syncButton(storedTheme);
+            syncThemeColor(storedTheme);
+            return;
+          }
+          syncButton(systemTheme());
+          syncThemeColor(systemTheme());
+        });
+      })();
+    </script>
+  </body>
+</html>

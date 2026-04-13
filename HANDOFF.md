@@ -1,10 +1,10 @@
 # SendMoi Handoff
 
-Last updated: March 27, 2026
+Last updated: April 13, 2026
 
 ## Current State
 
-- Repo: `codex/reconnect-gmail-scope` (based on `origin/main`)
+- Repo: `codex/fold-send-moi-site` (based on `origin/main`)
 - Latest intended app version: `0.3`
 - Recent shipped commits:
   - `ec40844` `Use Icon Composer .icon file as app icon source, drop legacy PNG appiconset (#33)`
@@ -15,12 +15,18 @@ Last updated: March 27, 2026
 
 1. `git clone https://github.com/niederme/sendmoi.git`
 2. `cd sendmoi`
-3. `git checkout codex/guard-remote-branch-delete`
+3. `git checkout codex/fold-send-moi-site`
 4. `git pull --rebase origin main`
-5. Open `SendMoi.xcodeproj` in Xcode and continue from `codex/guard-remote-branch-delete`.
+5. Open `SendMoi.xcodeproj` in Xcode and continue from `codex/fold-send-moi-site`.
 
 ## What Changed Recently
 
+- Folded the former standalone `send.moi` marketing repo into this repo:
+  - public site now lives in `docs/`
+  - preview commands now live in the repo-root `Makefile` (`make dev`, `make dev-thread`, `make dev-local`, plus live-reload variants)
+  - deploy now runs from `./scripts/deploy-site.sh`
+  - the imported site pages are `docs/index.html`, `docs/privacy/index.html`, `docs/terms/index.html`, and `docs/accessibility/index.html`
+  - app/site shared assets now live together in this repo instead of syncing across two separate repos
 - `AGENTS.md` post-merge cleanup now marks remote branch deletion as conditional (`git push origin --delete codex/<short-slug> (if remote branch exists)`) to avoid noisy errors when GitHub already removed the branch.
 - Gmail queue recovery now detects the Gmail API `insufficient authentication scopes` failure, keeps the item in the offline queue, and surfaces explicit `Reconnect Gmail` actions in both the queue and account UI so users can repair stale/under-scoped sessions without guessing.
 - `AGENTS.md` now uses a faster documentation cadence: keep doc updates lightweight during implementation, then require one full `README.md` + `HANDOFF.md` reconciliation pass right before opening a PR (plus recheck after rebase/conflict resolution).
@@ -93,19 +99,21 @@ Last updated: March 27, 2026
 4. Confirm App Store Connect metadata versions match the code version:
    - project is now `0.3`
    - App Store Connect screenshot previously showed macOS app version `1.0`
-5. Publish stable public URLs for both the privacy policy and terms page on `nieder.me`, then attach those URLs to the Google OAuth consent screen so the blue missing-policy banner disappears.
-6. Share a photo directly from Photos (without a URL) and confirm it can be queued, sent, and removed without leaving orphaned files in the App Group container.
-7. Share an X/Twitter post (including `t.co` and `/video/`/`/photo/` variants) and an Overcast episode and confirm title, source URL, summary, and preview image behavior all look intentional rather than noisy.
-8. Run the macOS target and confirm the desktop card layout feels right at common window sizes, especially queue deletion and account disclosure behavior.
-9. Run `./scripts/prepare_release.sh --version <next-version>` before the next archive, then verify App Store Connect accepts the `AppIcon` set for both iOS and macOS and shows the expected branded thumbnail.
-10. Confirm the next Xcode Cloud upload succeeds with build number `3`; the previous failure was `The bundle version must be higher than the previously uploaded version.`
-12. Launch the share sheet while signed out of Gmail and confirm the new connect alert appears, starts Google sign-in from the share sheet itself, and resumes sending without implying that auto-send already happened.
-13. Open the share sheet with no default recipient and confirm the initial helper text feels neutral, then tap `Send` and verify the red validation state appears and the `To` field becomes focused.
-14. Share a concise profile/homepage URL that includes a newsletter mention in body copy and confirm SendMoi still generates a short summary when the page has meaningful text.
-15. Confirm App Store Connect processing reports iOS compatibility as `iOS 18.0 or later` after uploading the next archive.
-16. Share a Zillow or Ticketmaster listing URL and confirm SendMoi omits low-quality structured summaries instead of sending scraped listing blobs, markdown artifacts, or generic "Here is a summary..." prefixes.
-17. On iPhone and iPad, verify the `Offline Queue` section now starts collapsed when the queue is empty, auto-expands when queued items exist, and still allows manual retry + deletion from the expanded state.
-18. Reproduce a stale or under-scoped Gmail session, confirm queued sends show `Reconnect Gmail`, complete reauth, and verify the queued items then send successfully.
+5. Preview the imported site from this repo with `make dev` or `make dev-thread`, then confirm `/`, `/privacy/`, `/terms/`, and `/accessibility/` all render correctly from `docs/`.
+6. Run `DRY_RUN=1 ./scripts/deploy-site.sh` and confirm the staged deploy still points at the correct canonical `https://send.moi` URLs.
+7. Publish stable public URLs for both the privacy policy and terms page on `send.moi`, then attach those URLs to the Google OAuth consent screen so the blue missing-policy banner disappears.
+8. Share a photo directly from Photos (without a URL) and confirm it can be queued, sent, and removed without leaving orphaned files in the App Group container.
+9. Share an X/Twitter post (including `t.co` and `/video/`/`/photo/` variants) and an Overcast episode and confirm title, source URL, summary, and preview image behavior all look intentional rather than noisy.
+10. Run the macOS target and confirm the desktop card layout feels right at common window sizes, especially queue deletion and account disclosure behavior.
+11. Run `./scripts/prepare_release.sh --version <next-version>` before the next archive, then verify App Store Connect accepts the `AppIcon` set for both iOS and macOS and shows the expected branded thumbnail.
+12. Confirm the next Xcode Cloud upload succeeds with build number `3`; the previous failure was `The bundle version must be higher than the previously uploaded version.`
+13. Launch the share sheet while signed out of Gmail and confirm the new connect alert appears, starts Google sign-in from the share sheet itself, and resumes sending without implying that auto-send already happened.
+14. Open the share sheet with no default recipient and confirm the initial helper text feels neutral, then tap `Send` and verify the red validation state appears and the `To` field becomes focused.
+15. Share a concise profile/homepage URL that includes a newsletter mention in body copy and confirm SendMoi still generates a short summary when the page has meaningful text.
+16. Confirm App Store Connect processing reports iOS compatibility as `iOS 18.0 or later` after uploading the next archive.
+17. Share a Zillow or Ticketmaster listing URL and confirm SendMoi omits low-quality structured summaries instead of sending scraped listing blobs, markdown artifacts, or generic "Here is a summary..." prefixes.
+18. On iPhone and iPad, verify the `Offline Queue` section now starts collapsed when the queue is empty, auto-expands when queued items exist, and still allows manual retry + deletion from the expanded state.
+19. Reproduce a stale or under-scoped Gmail session, confirm queued sends show `Reconnect Gmail`, complete reauth, and verify the queued items then send successfully.
 
 ## Local Setup
 
