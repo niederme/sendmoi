@@ -5,7 +5,7 @@ struct MacStatusHeader: View {
 
     var body: some View {
         Text("SendMoi")
-            .font(.title2.weight(.semibold))
+            .font(.title.weight(.semibold))
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(18)
             .background(.thinMaterial)
