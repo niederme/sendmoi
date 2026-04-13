@@ -140,14 +140,11 @@ final class AppModel: ObservableObject {
             while let next = queuedEmails.last {
                 do {
                     try await client.sendEmail(using: validSession, item: next)
-                    let diag = GmailDeliveryService.lastSendDiagnostic ?? "no-diag"
-                    Self.persistAppDebugLog("main-app sent \"\(next.title)\" to \(next.toEmail): \(diag)")
                     removeManagedMedia(for: next)
                     removeQueuedEmail(id: next.id)
                     RecipientStore.record(next.toEmail)
                     statusMessage = "Sent \"\(next.title)\" to \(next.toEmail)."
                 } catch {
-                    Self.persistAppDebugLog("main-app send-error \"\(next.title)\": \(error.localizedDescription)")
                     if let gmailError = error as? GmailAPIError, gmailError.requiresReconnect {
                         requiresGmailReconnect = true
                         isAccountSectionExpanded = true
@@ -337,17 +334,6 @@ final class AppModel: ObservableObject {
         item.allImageURLStrings.forEach { SharedContainer.removeManagedMediaIfPresent(urlString: $0) }
     }
 
-    private static func persistAppDebugLog(_ message: String) {
-        guard let url = try? SharedContainer.appDirectoryURL()
-            .appendingPathComponent("main-app-send-log.txt", isDirectory: false) else { return }
-        let timestamp = ISO8601DateFormatter().string(from: Date())
-        let line = "[\(timestamp)] \(message)\n"
-        if let existing = try? String(contentsOf: url, encoding: .utf8) {
-            try? (existing + line).write(to: url, atomically: true, encoding: .utf8)
-        } else {
-            try? line.write(to: url, atomically: true, encoding: .utf8)
-        }
-    }
 }
 
 private final class QueueChangeObserver {

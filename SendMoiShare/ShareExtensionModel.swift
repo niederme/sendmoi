@@ -480,8 +480,7 @@ final class ShareExtensionModel: ObservableObject {
 
             // Send directly — do NOT queue first so the main app can't steal the item.
             try await deliveryService.sendEmail(using: validSession, item: refreshedItem)
-            let diag = GmailDeliveryService.lastSendDiagnostic ?? "no-diag"
-            Self.persistDebugError("✅ sent \"\(refreshedItem.title)\" to \(refreshedItem.toEmail) [\(diag)]")
+            Self.clearDebugError()
 
             // Flush any backlog the main app left behind (best-effort).
             try? await flushQueuedEmails(using: validSession)

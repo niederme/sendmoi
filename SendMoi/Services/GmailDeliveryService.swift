@@ -4,7 +4,6 @@ import FoundationModels
 #endif
 
 final class GmailDeliveryService {
-    static var lastSendDiagnostic: String?
     private static let previewMetadataCache = PreviewMetadataCache()
     private static let instagramDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -66,10 +65,8 @@ final class GmailDeliveryService {
         request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(GmailSendRequest(raw: raw))
-        let responseData = try await send(request)
-        let messageID = (try? JSONSerialization.jsonObject(with: responseData) as? [String: Any])?["id"] as? String
+        _ = try await send(request)
         SendRateLimiter.recordSuccessfulSend(for: session)
-        GmailDeliveryService.lastSendDiagnostic = "gmail-id:\(messageID ?? "nil") to:\(item.toEmail)"
     }
 
     func fetchDraftPreview(urlString: String, fallbackTitle: String) async -> DraftPreviewMetadata? {
