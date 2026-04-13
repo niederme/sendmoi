@@ -81,21 +81,63 @@ struct ContentView: View {
 
     #if os(iOS)
     private var mobileContent: some View {
-        ScrollView {
-            compactMobileContent
-        }
-        .scrollIndicators(.hidden)
-        .background(Color(.systemGroupedBackground))
-        .safeAreaInset(edge: .top, spacing: 0) {
-            HStack {
-                Text("SendMoi")
-                    .font(.headline.weight(.semibold))
-                Spacer()
+        GeometryReader { proxy in
+            let topBarHeight = mobileTopBarHeight(topInset: proxy.safeAreaInsets.top)
+
+            ScrollView {
+                compactMobileContent
+                    .padding(.top, topBarHeight + 12)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
-            .background(.ultraThinMaterial)
+            .scrollIndicators(.hidden)
+            .background(Color(.systemGroupedBackground))
+            .ignoresSafeArea(edges: .top)
+            .overlay(alignment: .top) {
+                mobileTopBar(topInset: proxy.safeAreaInsets.top)
+            }
         }
+    }
+
+    private func mobileTopBarHeight(topInset: CGFloat) -> CGFloat {
+        topInset + 56
+    }
+
+    private func mobileTopBar(topInset: CGFloat) -> some View {
+        let solidHeight = topInset + 18
+        let fadeHeight = mobileTopBarHeight(topInset: topInset) - solidHeight
+
+        return ZStack(alignment: .top) {
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .frame(height: mobileTopBarHeight(topInset: topInset))
+                .mask(alignment: .top) {
+                    VStack(spacing: 0) {
+                        Rectangle()
+                            .frame(height: solidHeight)
+
+                        LinearGradient(
+                            colors: [.black, .black.opacity(0.72), .clear],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .frame(height: fadeHeight)
+                    }
+                }
+
+            LinearGradient(
+                colors: [
+                    Color(.systemBackground).opacity(colorScheme == .dark ? 0.72 : 0.62),
+                    Color(.systemBackground).opacity(colorScheme == .dark ? 0.28 : 0.16),
+                    .clear
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: mobileTopBarHeight(topInset: topInset) + 8)
+            .allowsHitTesting(false)
+        }
+        .ignoresSafeArea(edges: .top)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
     #endif
 
