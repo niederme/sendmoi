@@ -82,6 +82,8 @@ SSH_CMD=(
 
 if [[ -n "$DEPLOY_IDENTITY_FILE" ]]; then
   SSH_CMD+=(-i "$DEPLOY_IDENTITY_FILE")
+elif [[ -f "${HOME}/.ssh/sendmoi_deploy" ]]; then
+  SSH_CMD+=(-i "${HOME}/.ssh/sendmoi_deploy")
 elif [[ -f "${HOME}/.ssh/aiquota_deploy_nopass" ]]; then
   SSH_CMD+=(-i "${HOME}/.ssh/aiquota_deploy_nopass")
 elif [[ -f "${HOME}/.ssh/aiquota_deploy" ]]; then
