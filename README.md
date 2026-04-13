@@ -173,7 +173,7 @@ DRY_RUN=1 ./scripts/deploy-site.sh
 
 Default deploy settings in [`scripts/deploy-site.sh`](scripts/deploy-site.sh):
 
-- `DEPLOY_HOST=suckahs.org`
+- `DEPLOY_HOST=ssh.suckahs.org`
 - `DEPLOY_USER=suckahs`
 - `DEPLOY_PATH=/home/suckahs/public_html/sendmoi`
 - `SITE_URL=https://send.moi`
@@ -182,6 +182,7 @@ Optional overrides:
 
 - `DEPLOY_PORT`
 - `DRY_RUN=1`
+- `DEPLOY_IDENTITY_FILE`
 
 ## App Development
 
