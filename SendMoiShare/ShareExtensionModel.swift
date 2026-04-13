@@ -895,6 +895,12 @@ final class ShareExtensionModel: ObservableObject {
         }
     }
 #endif
+
+    private static func looksTruncatedSocialExcerpt(_ excerpt: String) -> Bool {
+        let trimmed = excerpt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        return trimmed.contains("...") || trimmed.contains("…")
+    }
 }
 
 private struct PendingPreviewApplication {
@@ -1795,12 +1801,6 @@ private enum SharedItemExtractor {
 }
 
 private extension ShareExtensionModel {
-    static func looksTruncatedSocialExcerpt(_ excerpt: String) -> Bool {
-        let trimmed = excerpt.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return false }
-        return trimmed.contains("...") || trimmed.contains("…")
-    }
-
     var allImageURLStrings: [String] {
         ([previewImageURLString].compactMap { $0 } + additionalImageURLStrings)
             .reduce(into: [String]()) { result, next in
