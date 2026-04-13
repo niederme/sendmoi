@@ -2,6 +2,8 @@
 
 SendMoi is a native SwiftUI app for iPhone, iPad, and macOS that turns shared links, posts, and photos into polished, responsive emails. It uses Gmail OAuth, keeps a durable offline queue, and includes a native Share Extension so shares from the system sheet do not get dropped.
 
+The public marketing site for `send.moi` now lives in `docs/` inside this repo. Product-internal notes still live alongside it under `docs/superpowers` and `docs/content-copy-inventory.md`.
+
 Project legal docs:
 
 - Privacy Policy: [PRIVACY.md](/Users/niederme/~Repos/sendmoi/PRIVACY.md)
@@ -99,7 +101,96 @@ Before each archive, you can run:
 
 That command updates `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` across both targets, then prints the current signing team and bundle IDs so the release settings are easy to verify before uploading. If you only need the next build number, run `./scripts/prepare_release.sh` with no arguments.
 
-## Local Development
+## Website Preview
+
+The lightweight website for `send.moi` lives in `docs/`.
+
+From the repo root:
+
+```bash
+make
+```
+
+That serves `docs/` on all interfaces, opens the site locally, and prints:
+
+- a `.local` URL for this Mac
+- a LAN URL for other devices on the same network
+
+Default preview port is `8000`. If that port is already in use, `make dev` automatically picks the next available port.
+
+Localhost-only preview:
+
+```bash
+make dev-local
+```
+
+Worktree-friendly preview:
+
+```bash
+make dev-thread
+```
+
+`make dev-thread` starts from `8001` so the main checkout can keep `8000`.
+
+Project worktrees should live under repo-local `.worktrees/`.
+
+### Live Reload
+
+Use `make dev-live` for the standard live-reload preview. The underlying switch is `LIVE=1`, which is also available for the thread and local-only variants:
+
+```bash
+make dev-live
+make dev-live-thread
+make dev-local LIVE=1
+```
+
+Live reload watches:
+
+- `docs/**/*.html`
+- `docs/**/*.css`
+- `docs/**/*.js`
+- `docs/assets/**/*`
+
+Requirements for live reload:
+
+- Node.js with `npx` available
+- a Node runtime that supports `node:path`
+- recommended local version: Node 20
+
+### Website Deploy
+
+Pushing to `main` triggers the website deploy workflow automatically, and you can also run the same deploy manually with `workflow_dispatch` in GitHub Actions.
+
+For manual or local deploys, use:
+
+```bash
+./scripts/deploy-site.sh
+```
+
+Preview only:
+
+```bash
+DRY_RUN=1 ./scripts/deploy-site.sh
+```
+
+Default deploy settings in [`scripts/deploy-site.sh`](scripts/deploy-site.sh):
+
+- `DEPLOY_HOST=ssh.suckahs.org`
+- `DEPLOY_USER=suckahs`
+- `DEPLOY_PATH=/home/suckahs/public_html/sendmoi`
+- `SITE_URL=https://send.moi`
+
+Optional overrides:
+
+- `DEPLOY_PORT`
+- `DRY_RUN=1`
+- `DEPLOY_IDENTITY_FILE`
+
+GitHub Actions expects the repository secret `SSH_PRIVATE_KEY` to contain the deploy key for `suckahs@ssh.suckahs.org`.
+
+For local manual deploys, the script prefers `~/.ssh/sendmoi_deploy` automatically when present, then falls back to the older shared deploy keys unless `DEPLOY_IDENTITY_FILE` is set explicitly.
+
+## App Development
 
 For local development builds:
 
