@@ -315,6 +315,8 @@ final class ShareExtensionModel: ObservableObject {
             additionalImageURLStrings = content.additionalImageURLStrings
         }
 
+        scheduleExcerptTranslationIfNeeded()
+
         if title.isEmpty && excerpt.isEmpty && urlString.isEmpty && allImageURLStrings.isEmpty {
             statusMessage = "Nothing was extracted automatically. You can still fill it in manually."
             presentationMode = .editing
@@ -937,6 +939,31 @@ private enum SharedItemExtractor {
                     content.urlString = url.absoluteString
                 }
 
+                if let preprocessingContent = await loadJavaScriptPreprocessingContent(from: provider) {
+                    if content.title.isEmpty, !preprocessingContent.title.isEmpty {
+                        content.title = preprocessingContent.title
+                    }
+
+                    if shouldPreferRicherExcerptCandidate(
+                        preprocessingContent.excerpt,
+                        over: content.excerpt
+                    ) {
+                        content.excerpt = preprocessingContent.excerpt
+                    }
+
+                    if content.urlString.isEmpty, !preprocessingContent.urlString.isEmpty {
+                        content.urlString = preprocessingContent.urlString
+                    }
+
+                    if !preprocessingContent.title.isEmpty {
+                        textCandidates.append(preprocessingContent.title)
+                    }
+
+                    if !preprocessingContent.excerpt.isEmpty {
+                        textCandidates.append(preprocessingContent.excerpt)
+                    }
+                }
+
                 if let imageURLString = await loadStoredImageURLString(from: provider) {
                     content = appendImageURLString(imageURLString, to: content)
                 }
@@ -1214,6 +1241,18 @@ private enum SharedItemExtractor {
         }
     }
 
+    private static func loadJavaScriptPreprocessingContent(from provider: NSItemProvider) async -> SharedItemContent? {
+        guard provider.hasItemConformingToTypeIdentifier(UTType.propertyList.identifier) else {
+            return nil
+        }
+
+        return await withCheckedContinuation { continuation in
+            provider.loadItem(forTypeIdentifier: UTType.propertyList.identifier, options: nil) { item, _ in
+                continuation.resume(returning: javaScriptPreprocessingContent(fromPropertyList: item))
+            }
+        }
+    }
+
     private static func normalizeLoadedText(_ item: NSSecureCoding?, typeIdentifier: String) -> String? {
         if let string = item as? String {
             if typeIdentifier == UTType.html.identifier {
@@ -1375,6 +1414,51 @@ private enum SharedItemExtractor {
         }
     }
 
+    private static func javaScriptPreprocessingContent(fromPropertyList item: NSSecureCoding?) -> SharedItemContent? {
+        guard let dictionary = propertyListDictionary(from: item) else {
+            return nil
+        }
+
+        let preprocessingResults = propertyListDictionary(
+            from: dictionary["NSExtensionJavaScriptPreprocessingResultsKey"]
+        ) ?? dictionary
+
+        let title = normalized(preprocessingResults["title"] as? String) ?? ""
+        let excerpt =
+            normalized(preprocessingResults["excerpt"] as? String)
+            ?? normalized(preprocessingResults["selectedText"] as? String)
+            ?? ""
+        let urlString = normalized(preprocessingResults["url"] as? String) ?? ""
+
+        guard !title.isEmpty || !excerpt.isEmpty || !urlString.isEmpty else {
+            return nil
+        }
+
+        return SharedItemContent(
+            title: title,
+            excerpt: excerpt,
+            urlString: urlString,
+            previewImageURLString: nil,
+            additionalImageURLStrings: []
+        )
+    }
+
+    private static func propertyListDictionary(from value: Any?) -> [String: Any]? {
+        switch value {
+        case let dictionary as [String: Any]:
+            return dictionary
+        case let dictionary as NSDictionary:
+            var bridged: [String: Any] = [:]
+            dictionary.forEach { key, value in
+                guard let key = key as? String else { return }
+                bridged[key] = value
+            }
+            return bridged
+        default:
+            return nil
+        }
+    }
+
     private static func extractStrings(fromAny value: Any?) -> [String] {
         switch value {
         case let string as String:
@@ -1468,12 +1552,17 @@ private enum SharedItemExtractor {
         }
 
         let normalizedCandidates = expandedMarkdownCandidates(from: textCandidates)
-        if let socialShare = normalizedCandidates.compactMap(SharedPostTextParser.parseSocialPostShare(in:)).first {
+        if let socialShare = richestSocialShare(
+            from: normalizedCandidates.compactMap(SharedPostTextParser.parseSocialPostShare(in:))
+        ) {
             if normalizedContent.title.isEmpty {
                 normalizedContent.title = socialShare.title
             }
-            if normalizedContent.excerpt.isEmpty {
+            if shouldPreferRicherExcerptCandidate(socialShare.excerpt, over: normalizedContent.excerpt) {
                 normalizedContent.excerpt = socialShare.excerpt
+            }
+            if normalizedContent.urlString.isEmpty, let url = socialShare.url {
+                normalizedContent.urlString = url
             }
         }
 
@@ -1562,6 +1651,55 @@ private enum SharedItemExtractor {
             $0.caseInsensitiveCompare(title) != .orderedSame &&
             !looksLikeHost($0, host: host)
         }
+    }
+
+    private static func richestSocialShare(from candidates: [ParsedSocialPostShare]) -> ParsedSocialPostShare? {
+        candidates.max { lhs, rhs in
+            socialExcerptScore(lhs.excerpt) < socialExcerptScore(rhs.excerpt)
+        }
+    }
+
+    private static func shouldPreferRicherExcerptCandidate(_ candidate: String, over existing: String) -> Bool {
+        let trimmedCandidate = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedCandidate.isEmpty else {
+            return false
+        }
+
+        let trimmedExisting = existing.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedExisting.isEmpty else {
+            return true
+        }
+
+        guard trimmedCandidate.caseInsensitiveCompare(trimmedExisting) != .orderedSame else {
+            return false
+        }
+
+        let candidateScore = socialExcerptScore(trimmedCandidate)
+        let existingScore = socialExcerptScore(trimmedExisting)
+
+        if looksTruncatedSocialExcerpt(trimmedExisting) && candidateScore > existingScore {
+            return true
+        }
+
+        return candidateScore >= existingScore + 24
+    }
+
+    private static func socialExcerptScore(_ excerpt: String) -> Int {
+        let trimmed = excerpt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return 0
+        }
+
+        return trimmed.count + min(trimmed.filter(\.isWhitespace).count * 2, 20)
+    }
+
+    private static func looksTruncatedSocialExcerpt(_ excerpt: String) -> Bool {
+        let trimmed = excerpt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return false
+        }
+
+        return trimmed.contains("...") || trimmed.contains("…")
     }
 
     private static func looksLikeHost(_ value: String, host: String?) -> Bool {

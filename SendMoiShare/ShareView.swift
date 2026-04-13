@@ -1,9 +1,15 @@
 import SwiftUI
 import Translation
+#if os(macOS)
+import AppKit
+#endif
 
 struct ShareView: View {
     @ObservedObject var model: ShareExtensionModel
     @FocusState private var focusedField: Field?
+    #if os(macOS)
+    @State private var macDescriptionHeight: CGFloat = 72
+    #endif
 
     private enum Field: Hashable {
         case recipient
@@ -85,7 +91,7 @@ struct ShareView: View {
             }
         }
         #if os(macOS)
-        .frame(minWidth: 480, idealWidth: 520, minHeight: 480, idealHeight: 540)
+        .frame(minWidth: 480, idealWidth: 520, minHeight: 540, idealHeight: 620)
         #endif
     }
 
@@ -150,11 +156,7 @@ struct ShareView: View {
 
         macOSFieldRow("Description") {
             ZStack(alignment: .topLeading) {
-                TextField("", text: $model.excerpt, axis: .vertical)
-                    .lineLimit(3, reservesSpace: true)
-                    .multilineTextAlignment(.leading)
-                    .textFieldStyle(.plain)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                macDescriptionEditor
                 if descriptionIsLoading {
                     fieldLoadingIndicator(topPadding: 4)
                 }
@@ -187,6 +189,19 @@ struct ShareView: View {
                 .multilineTextAlignment(.leading)
                 .textFieldStyle(.plain)
                 .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var macDescriptionEditor: some View {
+        Group {
+            #if os(macOS)
+            AutoGrowingTextView(text: $model.excerpt, measuredHeight: $macDescriptionHeight)
+                .frame(minHeight: max(72, macDescriptionHeight), alignment: .topLeading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            #else
+            TextEditor(text: $model.excerpt)
+                .frame(minHeight: 72)
+            #endif
         }
     }
 
@@ -649,3 +664,148 @@ struct ShareView: View {
         #endif
     }
 }
+
+#if os(macOS)
+private struct AutoGrowingTextView: NSViewRepresentable {
+    @Binding var text: String
+    @Binding var measuredHeight: CGFloat
+
+    private static let font = NSFont.preferredFont(forTextStyle: .body)
+    private static let paragraphStyle: NSParagraphStyle = {
+        let style = NSMutableParagraphStyle()
+        style.alignment = .left
+        style.lineBreakMode = .byWordWrapping
+        return style
+    }()
+    private static let textAttributes: [NSAttributedString.Key: Any] = [
+        .font: font,
+        .foregroundColor: NSColor.labelColor,
+        .paragraphStyle: paragraphStyle
+    ]
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    func makeNSView(context: Context) -> NSTextView {
+        let textView = AutoGrowingEditorTextView()
+        textView.delegate = context.coordinator
+        textView.drawsBackground = false
+        textView.isRichText = false
+        textView.isEditable = true
+        textView.isSelectable = true
+        textView.importsGraphics = false
+        textView.isAutomaticQuoteSubstitutionEnabled = false
+        textView.isAutomaticDashSubstitutionEnabled = false
+        textView.isAutomaticTextReplacementEnabled = true
+        textView.isContinuousSpellCheckingEnabled = true
+        textView.font = Self.font
+        textView.textColor = .labelColor
+        textView.alignment = .left
+        textView.defaultParagraphStyle = Self.paragraphStyle
+        textView.typingAttributes = Self.textAttributes
+        textView.textContainerInset = NSSize(width: 0, height: 4)
+        textView.textContainer?.lineFragmentPadding = 0
+        textView.textContainer?.lineBreakMode = .byWordWrapping
+        textView.isHorizontallyResizable = false
+        textView.isVerticallyResizable = true
+        textView.autoresizingMask = [.width]
+        textView.minSize = NSSize(width: 0, height: 0)
+        textView.maxSize = NSSize(
+            width: CGFloat.greatestFiniteMagnitude,
+            height: CGFloat.greatestFiniteMagnitude
+        )
+        textView.textContainer?.widthTracksTextView = true
+        textView.textContainer?.heightTracksTextView = false
+        textView.textContainer?.containerSize = NSSize(
+            width: 0,
+            height: CGFloat.greatestFiniteMagnitude
+        )
+        context.coordinator.applyPlainText(text, to: textView)
+        textView.onFrameSizeChange = {
+            context.coordinator.recalculateHeight()
+        }
+
+        context.coordinator.textView = textView
+        context.coordinator.recalculateHeight()
+        return textView
+    }
+
+    func updateNSView(_ textView: NSTextView, context: Context) {
+        context.coordinator.parent = self
+        context.coordinator.applyPlainText(text, to: textView)
+        textView.textContainer?.containerSize = NSSize(
+            width: textView.bounds.width,
+            height: CGFloat.greatestFiniteMagnitude
+        )
+        context.coordinator.recalculateHeight()
+    }
+
+    final class Coordinator: NSObject, NSTextViewDelegate {
+        var parent: AutoGrowingTextView
+        weak var textView: NSTextView?
+
+        init(_ parent: AutoGrowingTextView) {
+            self.parent = parent
+        }
+
+        func textDidChange(_ notification: Notification) {
+            guard let textView else {
+                return
+            }
+
+            parent.text = textView.string
+            recalculateHeight()
+        }
+
+        func applyPlainText(_ text: String, to textView: NSTextView) {
+            guard textView.string != text else {
+                return
+            }
+
+            let selectedRange = textView.selectedRange()
+            let attributedText = NSAttributedString(
+                string: text,
+                attributes: AutoGrowingTextView.textAttributes
+            )
+            textView.textStorage?.setAttributedString(attributedText)
+            textView.typingAttributes = AutoGrowingTextView.textAttributes
+
+            let clampedLocation = min(selectedRange.location, attributedText.length)
+            let clampedLength = min(selectedRange.length, max(0, attributedText.length - clampedLocation))
+            textView.setSelectedRange(NSRange(location: clampedLocation, length: clampedLength))
+        }
+
+        func recalculateHeight() {
+            guard let textView,
+                  let layoutManager = textView.layoutManager,
+                  let textContainer = textView.textContainer else {
+                return
+            }
+
+            layoutManager.ensureLayout(for: textContainer)
+            let usedRect = layoutManager.usedRect(for: textContainer)
+            let nextHeight = ceil(usedRect.height + (textView.textContainerInset.height * 2))
+
+            if abs(parent.measuredHeight - nextHeight) > 0.5 {
+                DispatchQueue.main.async {
+                    self.parent.measuredHeight = nextHeight
+                }
+            }
+        }
+    }
+}
+
+private final class AutoGrowingEditorTextView: NSTextView {
+    var onFrameSizeChange: (() -> Void)?
+
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        onFrameSizeChange?()
+    }
+
+    override func scrollWheel(with event: NSEvent) {
+        nextResponder?.scrollWheel(with: event)
+    }
+}
+#endif

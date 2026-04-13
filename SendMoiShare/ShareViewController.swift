@@ -17,7 +17,7 @@ final class ShareViewController: PlatformViewController {
     private lazy var gmailAuthenticator = ShareExtensionGoogleAuthenticator(presentingViewController: self)
 
     #if os(macOS)
-    private let preferredExtensionSize = NSSize(width: 520, height: 540)
+    private let preferredExtensionSize = NSSize(width: 520, height: 620)
     #endif
 
     #if os(macOS)
