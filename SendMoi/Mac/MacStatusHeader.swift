@@ -4,31 +4,11 @@ struct MacStatusHeader: View {
     @EnvironmentObject private var model: AppModel
 
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            Text("SendMoi")
-                .font(.title2.weight(.semibold))
-
-            Spacer(minLength: 16)
-
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 10) {
-                    accountPill
-                    networkPill
-                    queuePill
-                }
-
-                VStack(alignment: .trailing, spacing: 8) {
-                    accountPill
-                    HStack(spacing: 8) {
-                        networkPill
-                        queuePill
-                    }
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
-        .background(.thinMaterial)
+        Text("SendMoi")
+            .font(.title2.weight(.semibold))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(18)
+            .background(.thinMaterial)
     }
 
     private var accountPill: some View {
