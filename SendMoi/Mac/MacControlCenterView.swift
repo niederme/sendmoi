@@ -5,6 +5,10 @@ struct MacControlCenterView: View {
     let openSetupGuide: () -> Void
     let showResetConfirmation: () -> Void
 
+    private let sidebarWidth: CGFloat = 300
+    private let columnSpacing: CGFloat = 16
+    private let sidebarLayoutThreshold: CGFloat = 980
+
     var body: some View {
         VStack(spacing: 0) {
             MacStatusHeader()
@@ -12,22 +16,39 @@ struct MacControlCenterView: View {
 
             Divider()
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    if !model.queuedEmails.isEmpty || model.requiresGmailReconnect {
-                        MacQueuePane()
-                    }
+            GeometryReader { proxy in
+                ScrollView {
+                    if usesSidebarLayout(for: proxy.size.width) {
+                        HStack(alignment: .top, spacing: columnSpacing) {
+                            setupColumn
+                                .frame(maxWidth: .infinity, alignment: .topLeading)
 
-                    MacSetupSidebar(
-                        openSetupGuide: openSetupGuide,
-                        showResetConfirmation: showResetConfirmation
-                    )
+                            MacQueuePane()
+                                .frame(width: sidebarWidth, alignment: .top)
+                        }
+                    } else {
+                        VStack(alignment: .leading, spacing: 16) {
+                            setupColumn
+                            MacQueuePane()
+                        }
+                    }
                 }
                 .padding(20)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.primary.opacity(0.02))
+    }
+
+    private var setupColumn: some View {
+        MacSetupSidebar(
+            openSetupGuide: openSetupGuide,
+            showResetConfirmation: showResetConfirmation
+        )
+    }
+
+    private func usesSidebarLayout(for width: CGFloat) -> Bool {
+        width >= sidebarLayoutThreshold
     }
 }
 

@@ -1,10 +1,18 @@
 import SwiftUI
+#if os(macOS)
+import AppKit
+#endif
 
 struct MacSetupSidebar: View {
     @EnvironmentObject private var model: AppModel
+    @FocusState private var focusedField: Field?
 
     let openSetupGuide: () -> Void
     let showResetConfirmation: () -> Void
+
+    private enum Field: Hashable {
+        case defaultRecipient
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -14,6 +22,9 @@ struct MacSetupSidebar: View {
             setupCard
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
+        .task {
+            clearInitialRecipientFocus()
+        }
     }
 
     private var gmailCard: some View {
@@ -82,6 +93,7 @@ struct MacSetupSidebar: View {
             VStack(alignment: .leading, spacing: 12) {
                 TextField("Email address", text: $model.defaultRecipient)
                     .textFieldStyle(.roundedBorder)
+                    .focused($focusedField, equals: .defaultRecipient)
                     .onSubmit(saveDefaultRecipient)
 
                 Button("Save Default Recipient") {
@@ -137,7 +149,18 @@ struct MacSetupSidebar: View {
     }
 
     private func saveDefaultRecipient() {
+        focusedField = nil
         model.setDefaultRecipient(model.defaultRecipient)
+    }
+
+    private func clearInitialRecipientFocus() {
+        focusedField = nil
+        #if os(macOS)
+        DispatchQueue.main.async {
+            NSApp.keyWindow?.makeFirstResponder(nil)
+            NSApp.mainWindow?.makeFirstResponder(nil)
+        }
+        #endif
     }
 
     private var gmailStatusDetail: String {

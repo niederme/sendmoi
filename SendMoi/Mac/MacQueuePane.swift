@@ -11,6 +11,12 @@ struct MacQueuePane: View {
             VStack(alignment: .leading, spacing: 12) {
                 actionButtons
 
+                if displayedQueue.isEmpty {
+                    Text(emptyStateMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+
                 ForEach(displayedQueue) { item in
                     MacQueueRow(
                         item: item,
@@ -38,12 +44,25 @@ struct MacQueuePane: View {
         if model.requiresGmailReconnect {
             return "Reconnect Gmail to restore send permission, then retry the queue."
         }
+        if model.queuedEmails.isEmpty {
+            return "Shared items that need attention will appear here."
+        }
         if model.session == nil {
             return "Sign in to Gmail to send queued items from this Mac."
         }
         return model.isOnline
             ? "SendMoi retries automatically when the network and Gmail session are healthy."
             : "Items stay here until the app can reach the network again."
+    }
+
+    private var emptyStateMessage: String {
+        if model.session == nil {
+            return "Queue is clear. Sign in to Gmail before sharing from this Mac."
+        }
+
+        return model.isOnline
+            ? "Queue is clear."
+            : "Queue is clear. New items will stay here until the Mac is back online."
     }
 
     @ViewBuilder
