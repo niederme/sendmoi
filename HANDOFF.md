@@ -26,6 +26,7 @@ Last updated: April 13, 2026
   - preview commands now live in the repo-root `Makefile` (`make dev`, `make dev-thread`, `make dev-local`, plus live-reload variants)
   - deploy now runs from `./scripts/deploy-site.sh`
   - deploy defaults now target `ssh.suckahs.org` and reuse the same deploy-key fallback pattern as AIQuota when `~/.ssh/aiquota_deploy_nopass` or `~/.ssh/aiquota_deploy` is present
+  - GitHub Actions deploy is now defined in `.github/workflows/deploy-site.yml` and expects the repo secret `SSH_PRIVATE_KEY`
   - the imported site pages are `docs/index.html`, `docs/privacy/index.html`, `docs/terms/index.html`, and `docs/accessibility/index.html`
   - app/site shared assets now live together in this repo instead of syncing across two separate repos
 - `AGENTS.md` post-merge cleanup now marks remote branch deletion as conditional (`git push origin --delete codex/<short-slug> (if remote branch exists)`) to avoid noisy errors when GitHub already removed the branch.

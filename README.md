@@ -159,6 +159,8 @@ Requirements for live reload:
 
 ### Website Deploy
 
+Pushing to `main` triggers the website deploy workflow automatically, and you can also run the same deploy manually with `workflow_dispatch` in GitHub Actions.
+
 For manual or local deploys, use:
 
 ```bash
@@ -183,6 +185,8 @@ Optional overrides:
 - `DEPLOY_PORT`
 - `DRY_RUN=1`
 - `DEPLOY_IDENTITY_FILE`
+
+GitHub Actions expects the repository secret `SSH_PRIVATE_KEY` to contain the deploy key for `suckahs@ssh.suckahs.org`.
 
 ## App Development
 
