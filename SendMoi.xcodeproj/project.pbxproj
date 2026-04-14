@@ -455,11 +455,12 @@
 				CODE_SIGN_ENTITLEMENTS = SendMoi/SendMoi.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "SendMoi/SendMoi-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 70;
+				CURRENT_PROJECT_VERSION = 78;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 289GY9L343;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SendMoi/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -485,12 +486,13 @@
 				CODE_SIGN_ENTITLEMENTS = SendMoi/SendMoi.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "SendMoi/SendMoi-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 70;
+				CURRENT_PROJECT_VERSION = 78;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 289GY9L343;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SendMoi/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -516,7 +518,7 @@
 				CODE_SIGN_ENTITLEMENTS = SendMoiShare/SendMoiShare.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "SendMoiShare/SendMoiShare-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 70;
+				CURRENT_PROJECT_VERSION = 78;
 				DEVELOPMENT_TEAM = 289GY9L343;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SendMoiShare/Info.plist;
@@ -547,7 +549,7 @@
 				CODE_SIGN_ENTITLEMENTS = SendMoiShare/SendMoiShare.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "SendMoiShare/SendMoiShare-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 70;
+				CURRENT_PROJECT_VERSION = 78;
 				DEVELOPMENT_TEAM = 289GY9L343;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -602,7 +604,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
 	};
 	rootObject = A60000010000000000000001 /* Project object */;
 }
