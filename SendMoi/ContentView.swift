@@ -545,7 +545,7 @@ struct ContentView: View {
                         .foregroundStyle(.secondary)
                         .textCase(.uppercase)
 
-                    HStack(alignment: .center, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 0) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(model.session?.emailAddress ?? "Signed in to Gmail")
                                 .font(.body.weight(.medium))
@@ -558,21 +558,22 @@ struct ContentView: View {
                                 .lineLimit(2)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+
+                        Divider()
 
                         Button {
                             showsOnboardingAccountSheet = true
                         } label: {
                             Text("Switch Account")
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.95)
+                                .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.bordered)
-                        .controlSize(.regular)
-                        .fixedSize(horizontal: true, vertical: false)
-                        .layoutPriority(2)
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.large)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
                     .background(
                         RoundedRectangle(cornerRadius: 14)
                             .fill(onboardingInsetCardFill)
