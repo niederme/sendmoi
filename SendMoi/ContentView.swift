@@ -14,7 +14,8 @@ struct ContentView: View {
     @State private var onboardingPulse = false
     @State private var onboardingPinSlide = 0
     @State private var showsResetConfirmation = false
-    @State private var showsOnboardingAccountSheet = false
+    @State private var onboardingIsSigningIn = false
+    @State private var onboardingSignInError: String?
 
     private enum Field: Hashable {
         case defaultRecipient
@@ -33,14 +34,6 @@ struct ContentView: View {
             #if os(macOS) || targetEnvironment(macCatalyst)
             .frame(minWidth: 680, minHeight: 720)
             #endif
-            .sheet(isPresented: $showsOnboardingAccountSheet) {
-                OnboardingGmailSheet {
-                    onboardingStep = 2
-                    onboardingRecipientDraft = model.defaultRecipient
-                    onboardingRecipientConfirmed = false
-                }
-                    .environmentObject(model)
-            }
         }
         .confirmationDialog(
             "Reset SendMoi?",
@@ -513,13 +506,28 @@ struct ContentView: View {
                 )
 
                 Button("Connect Gmail") {
-                    showsOnboardingAccountSheet = true
+                    beginOnboardingGoogleSignIn()
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                .disabled(!GoogleOAuthConfig.isConfigured)
+                .disabled(!GoogleOAuthConfig.isConfigured || onboardingIsBlockingActions)
                 .padding(.top, 4)
                 .accessibilityHint("Opens Google sign-in in a system sheet.")
+
+                if onboardingIsSigningIn {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                        Text("Opening Google...")
+                            .font(.footnote.weight(.medium))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if let onboardingSignInError {
+                    Text(onboardingSignInError)
+                        .font(.footnote)
+                        .foregroundStyle(.orange)
+                }
 
                 Text("Or tap Skip below and connect later from Account. · [Privacy Policy](https://send.moi/privacy)")
                     .font(.footnote)
@@ -560,7 +568,7 @@ struct ContentView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                         Button {
-                            showsOnboardingAccountSheet = true
+                            beginOnboardingGoogleSignIn()
                         } label: {
                             Text("Switch Account")
                                 .lineLimit(1)
@@ -568,6 +576,7 @@ struct ContentView: View {
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.regular)
+                        .disabled(onboardingIsBlockingActions)
                         .fixedSize(horizontal: true, vertical: false)
                         .layoutPriority(2)
                     }
@@ -1031,13 +1040,46 @@ struct ContentView: View {
             && onboardingRecipientDraftNormalized == normalizedSavedRecipient
     }
 
+    private var onboardingIsBlockingActions: Bool {
+        onboardingIsSigningIn || model.isBusy
+    }
+
     private func handleOnboardingPrimaryAction() {
+        guard !onboardingIsBlockingActions else {
+            return
+        }
+
         if onboardingStep < 2 {
             onboardingStep += 1
         } else if model.session == nil {
-            showsOnboardingAccountSheet = true
+            beginOnboardingGoogleSignIn()
         } else {
             finishOnboarding()
+        }
+    }
+
+    private func beginOnboardingGoogleSignIn() {
+        guard !onboardingIsBlockingActions, GoogleOAuthConfig.isConfigured else {
+            return
+        }
+
+        onboardingSignInError = nil
+        onboardingIsSigningIn = true
+
+        Task {
+            let didSignIn = await model.signIn()
+
+            await MainActor.run {
+                onboardingIsSigningIn = false
+
+                if didSignIn {
+                    onboardingStep = 2
+                    onboardingRecipientDraft = model.defaultRecipient
+                    onboardingRecipientConfirmed = false
+                } else {
+                    onboardingSignInError = model.statusMessage
+                }
+            }
         }
     }
 
@@ -1045,15 +1087,16 @@ struct ContentView: View {
         onboardingStep = 0
         onboardingRecipientDraft = model.defaultRecipient
         onboardingRecipientConfirmed = false
-        showsOnboardingAccountSheet = false
+        onboardingSignInError = nil
+        onboardingIsSigningIn = false
         model.shouldShowOnboarding = true
     }
 
     private func finalizeOnboardingSheetState() {
         onboardingStep = 0
-        showsOnboardingAccountSheet = false
         onboardingRecipientConfirmed = false
-        model.completeOnboarding()
+        onboardingSignInError = nil
+        onboardingIsSigningIn = false
     }
 
     private func finishOnboarding() {
@@ -1065,7 +1108,8 @@ struct ContentView: View {
         onboardingRecipientDraft = ""
         onboardingRecipientConfirmed = false
         onboardingPulse = false
-        showsOnboardingAccountSheet = false
+        onboardingSignInError = nil
+        onboardingIsSigningIn = false
         model.resetSetup()
     }
 

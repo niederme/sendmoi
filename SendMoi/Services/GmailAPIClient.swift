@@ -234,6 +234,8 @@ private final class OAuthCoordinator: NSObject, ASWebAuthenticationPresentationC
                 url: url,
                 callbackURLScheme: callbackScheme
             ) { callbackURL, error in
+                self.session = nil
+
                 if let callbackURL {
                     continuation.resume(returning: callbackURL)
                 } else if let error {
@@ -252,7 +254,14 @@ private final class OAuthCoordinator: NSObject, ASWebAuthenticationPresentationC
             session.prefersEphemeralWebBrowserSession = false
             session.presentationContextProvider = self
             self.session = session
-            session.start()
+
+            guard session.start() else {
+                self.session = nil
+                continuation.resume(
+                    throwing: GmailAPIError.authorizationFailed("Google sign-in could not start.")
+                )
+                return
+            }
         }
     }
 
