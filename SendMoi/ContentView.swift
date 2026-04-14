@@ -329,7 +329,7 @@ struct ContentView: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                         .multilineTextAlignment(.center)
 
-                    Text("SendMoi makes it easy to send links to your Gmail inbox without losing them in tabs, bookmarks, or chats.")
+                    Text("SendMoi sends links to Gmail as rich email cards, so they’re easy to find and act on later.")
                         .font(.system(size: onboardingFirstStepSubheadingFontSize, weight: .medium))
                         .foregroundStyle(.secondary)
                         .lineSpacing(1.5)
@@ -1127,7 +1127,7 @@ struct ContentView: View {
             Text("SendMoi")
                 .font(.largeTitle.weight(.bold))
 
-            Text("Send links to your Gmail inbox without losing them in tabs, bookmarks, or chats.")
+            Text("SendMoi sends links to Gmail as rich email cards, so they’re easy to find and act on later.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .lineSpacing(1.2)
