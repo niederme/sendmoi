@@ -36,7 +36,8 @@ The app is built entirely with Apple-native frameworks, including `SwiftUI`, `Au
 Deployment compatibility:
 
 - iOS minimum deployment target is `18.0` for both `SendMoi` and `SendMoiShare`.
-- Foundation Models summary generation is availability-gated and only runs on supported newer OS versions; older supported OS versions fall back to the built-in non-AI summarizer.
+- macOS minimum deployment target is `15.0` (Sequoia) for both `SendMoi` and `SendMoiShare`.
+- Foundation Models summary generation and the newer glass button styles are availability-gated; older supported OS versions fall back to the built-in non-AI summarizer and standard SwiftUI button styles.
 
 ## What It Sends
 
