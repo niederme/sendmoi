@@ -21,7 +21,7 @@ struct SendMoiApp: App {
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
                 Task {
-                    await model.retryNow()
+                    await model.retryNow(isAutomaticTrigger: true)
                 }
             }
         }

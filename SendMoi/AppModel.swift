@@ -19,6 +19,8 @@ final class AppModel: ObservableObject {
     private let monitor = NetworkMonitor()
     private let queueChangeObserver = QueueChangeObserver()
     private var shouldReprocessQueue = false
+    private var suppressAutomaticQueueProcessing = false
+    private var isOnboardingFlowPresented = false
 
     init() {
         monitor.onStatusChange = { [weak self] online in
@@ -60,22 +62,37 @@ final class AppModel: ObservableObject {
     #endif
 
     @discardableResult
-    func signIn() async -> Bool {
+    func signIn(mode: GmailAPIClient.SignInMode = .standard) async -> Bool {
         guard !isBusy else { return false }
+        if mode == .switchAccount {
+            suppressAutomaticQueueProcessing = true
+        }
         isBusy = true
         var didSignIn = false
 
         do {
-            let signedInSession = try await client.signIn()
+            let signedInSession = try await client.signIn(mode: mode)
             session = signedInSession
             try KeychainStore.save(session: signedInSession)
             try SharedSessionStore.save(signedInSession)
             requiresGmailReconnect = false
+            clearReconnectFailuresFromQueue()
+            suppressAutomaticQueueProcessing = false
             statusMessage = "Signed in as \(signedInSession.emailAddress ?? "your Gmail account")."
             isAccountSectionExpanded = false
             reloadQueueFromDisk()
             didSignIn = true
+        } catch let gmailError as GmailAPIError {
+            if mode == .switchAccount, case .missingRefreshToken = gmailError {
+                try? clearActiveSession()
+                isAccountSectionExpanded = true
+                statusMessage = "SendMoi could not finish switching Gmail accounts. Please try signing in again."
+            } else {
+                suppressAutomaticQueueProcessing = false
+                statusMessage = "Sign in failed: \(gmailError.localizedDescription)"
+            }
         } catch {
+            suppressAutomaticQueueProcessing = false
             statusMessage = "Sign in failed: \(error.localizedDescription)"
         }
 
@@ -92,10 +109,7 @@ final class AppModel: ObservableObject {
     func signOut() {
         guard !isBusy else { return }
         do {
-            try KeychainStore.clearSession()
-            SharedSessionStore.clear()
-            session = nil
-            requiresGmailReconnect = false
+            try clearActiveSession()
             isAccountSectionExpanded = true
             statusMessage = "Signed out. Queued items stay on disk until you send them."
         } catch {
@@ -115,6 +129,12 @@ final class AppModel: ObservableObject {
         guard !queuedEmails.isEmpty else { return }
         guard let existingSession = session else {
             statusMessage = "You have queued items. Sign in to Gmail to send them."
+            return
+        }
+        guard !requiresGmailReconnect else {
+            isAccountSectionExpanded = true
+            isQueueSectionExpanded = true
+            statusMessage = "Reconnect Gmail to restore send permission. Queued items will send after you reconnect."
             return
         }
 
@@ -191,7 +211,11 @@ final class AppModel: ObservableObject {
         shareSheetAutoSendEnabled = RecipientStore.loadShareSheetAutoSendEnabled()
     }
 
-    func retryNow() async {
+    func retryNow(isAutomaticTrigger: Bool = false) async {
+        if isAutomaticTrigger && automaticQueueProcessingIsSuspended {
+            return
+        }
+
         reloadSharedPreferences()
         reloadSessionFromDisk()
         reloadQueueFromDisk()
@@ -202,11 +226,9 @@ final class AppModel: ObservableObject {
         guard !isBusy else { return }
 
         do {
-            try KeychainStore.clearSession()
-            SharedSessionStore.clear()
+            try clearActiveSession()
             RecipientStore.resetSetup()
 
-            session = nil
             defaultRecipient = RecipientStore.loadDefault()
             shareSheetAutoSendEnabled = RecipientStore.loadShareSheetAutoSendEnabled()
             isAccountSectionExpanded = true
@@ -220,6 +242,10 @@ final class AppModel: ObservableObject {
     func completeOnboarding() {
         RecipientStore.setHasCompletedOnboarding(true)
         shouldShowOnboarding = false
+    }
+
+    func setOnboardingFlowPresented(_ isPresented: Bool) {
+        isOnboardingFlowPresented = isPresented
     }
 
     private func reloadQueueFromDisk() {
@@ -278,6 +304,28 @@ final class AppModel: ObservableObject {
         }
     }
 
+    private func clearReconnectFailuresFromQueue() {
+        let updatedQueue = queuedEmails.map { item in
+            guard let lastError = item.lastError,
+                  GmailAPIError.indicatesInsufficientAuthenticationScopes(lastError) else {
+                return item
+            }
+
+            var clearedItem = item
+            clearedItem.lastError = nil
+            return clearedItem
+        }
+
+        guard updatedQueue != queuedEmails else {
+            updateReconnectRequirement()
+            return
+        }
+
+        queuedEmails = updatedQueue
+        updateReconnectRequirement()
+        persistQueue()
+    }
+
     private func persistQueue() {
         do {
             try QueueStore.save(queuedEmails)
@@ -311,7 +359,7 @@ final class AppModel: ObservableObject {
 
     private func handleNetworkChange(online: Bool) {
         isOnline = online
-        if online {
+        if online && !automaticQueueProcessingIsSuspended {
             Task {
                 await processQueue()
             }
@@ -323,11 +371,25 @@ final class AppModel: ObservableObject {
         reloadSessionFromDisk()
         reloadQueueFromDisk()
         Task {
-            await processQueue()
+            if !automaticQueueProcessingIsSuspended {
+                await processQueue()
+            }
             #if os(macOS)
             checkForShareExtensionDebugError()
             #endif
         }
+    }
+
+    private func clearActiveSession() throws {
+        try KeychainStore.clearSession()
+        SharedSessionStore.clear()
+        session = nil
+        requiresGmailReconnect = false
+        suppressAutomaticQueueProcessing = false
+    }
+
+    private var automaticQueueProcessingIsSuspended: Bool {
+        suppressAutomaticQueueProcessing || isOnboardingFlowPresented
     }
 
     private func removeManagedMedia(for item: QueuedEmail) {

@@ -31,6 +31,9 @@ struct ContentView: View {
         }
         .sheet(isPresented: $model.shouldShowOnboarding, onDismiss: finalizeOnboardingSheetState) {
             onboardingContent
+                .onAppear {
+                    model.setOnboardingFlowPresented(true)
+                }
             #if os(macOS) || targetEnvironment(macCatalyst)
             .frame(minWidth: 680, minHeight: 720)
             #endif
@@ -553,7 +556,7 @@ struct ContentView: View {
                         .foregroundStyle(.secondary)
                         .textCase(.uppercase)
 
-                    HStack(alignment: .center, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 0) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(model.session?.emailAddress ?? "Signed in to Gmail")
                                 .font(.body.weight(.medium))
@@ -566,22 +569,23 @@ struct ContentView: View {
                                 .lineLimit(2)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+
+                        Divider()
 
                         Button {
-                            beginOnboardingGoogleSignIn()
+                            beginOnboardingGoogleSignIn(mode: .switchAccount)
                         } label: {
                             Text("Switch Account")
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.95)
+                                .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.bordered)
-                        .controlSize(.regular)
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.large)
                         .disabled(onboardingIsBlockingActions)
-                        .fixedSize(horizontal: true, vertical: false)
-                        .layoutPriority(2)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
                     .background(
                         RoundedRectangle(cornerRadius: 14)
                             .fill(onboardingInsetCardFill)
@@ -1058,16 +1062,17 @@ struct ContentView: View {
         }
     }
 
-    private func beginOnboardingGoogleSignIn() {
+    private func beginOnboardingGoogleSignIn(mode: GmailAPIClient.SignInMode = .standard) {
         guard !onboardingIsBlockingActions, GoogleOAuthConfig.isConfigured else {
             return
         }
 
+        focusedField = nil
         onboardingSignInError = nil
         onboardingIsSigningIn = true
 
         Task {
-            let didSignIn = await model.signIn()
+            let didSignIn = await model.signIn(mode: mode)
 
             await MainActor.run {
                 onboardingIsSigningIn = false
@@ -1093,6 +1098,7 @@ struct ContentView: View {
     }
 
     private func finalizeOnboardingSheetState() {
+        model.setOnboardingFlowPresented(false)
         onboardingStep = 0
         onboardingRecipientConfirmed = false
         onboardingSignInError = nil
@@ -1144,19 +1150,27 @@ struct ContentView: View {
 
             mobileSectionLabel("Setup")
             GroupedCard {
-                Button("Open Setup Guide") { openSetupGuide() }
+                Button {
+                    openSetupGuide()
+                } label: {
+                    Text("Open Setup Guide")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                }
                     .disabled(model.isBusy)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
                 Divider().padding(.leading, 20)
-                Button("Clear Settings", role: .destructive) {
+                Button(role: .destructive) {
                     showsResetConfirmation = true
+                } label: {
+                    Text("Clear Settings")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
                 }
                 .disabled(model.isBusy)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
             }
             mobileSectionFooter("Open Setup Guide keeps your current account. Clear Settings disconnects Gmail and resets SendMoi to first launch.")
 
@@ -1220,6 +1234,8 @@ struct ContentView: View {
                         .rotationEffect(model.isAccountSectionExpanded ? .degrees(90) : .zero)
                         .animation(.easeInOut(duration: 0.2), value: model.isAccountSectionExpanded)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .padding(.horizontal, 20)
@@ -1240,19 +1256,29 @@ struct ContentView: View {
                             .padding(.horizontal, 20)
                             .padding(.vertical, 8)
                         Divider().padding(.leading, 20)
-                        Button("Reconnect Gmail") {
+                        Button {
                             Task { await model.signIn() }
+                        } label: {
+                            Text("Reconnect Gmail")
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .contentShape(Rectangle())
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 12)
                         }
                         .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 12)
                     }
 
                     Divider().padding(.leading, 20)
-                    Button("Sign Out") { model.signOut() }
+                    Button {
+                        model.signOut()
+                    } label: {
+                        Text("Sign Out")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 12)
+                    }
                         .disabled(model.isBusy)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 12)
                 } else {
                     Divider().padding(.leading, 20)
                     Text("No Gmail account connected.")
@@ -1260,12 +1286,16 @@ struct ContentView: View {
                         .padding(.horizontal, 20)
                         .padding(.vertical, 12)
                     Divider().padding(.leading, 20)
-                    Button("Sign In With Google") {
+                    Button {
                         Task { await model.signIn() }
+                    } label: {
+                        Text("Sign In With Google")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 12)
                     }
                     .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
                 }
 
                 if !GoogleOAuthConfig.isConfigured {
@@ -1334,6 +1364,8 @@ struct ContentView: View {
                         .rotationEffect(model.isQueueSectionExpanded ? .degrees(90) : .zero)
                         .animation(.easeInOut(duration: 0.2), value: model.isQueueSectionExpanded)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .padding(.horizontal, 20)
@@ -1422,6 +1454,10 @@ struct ContentView: View {
     }
 
     private var accountSummaryDetail: String {
+        if model.requiresGmailReconnect {
+            return "Reconnect Gmail to restore send permission"
+        }
+
         if model.session != nil {
             return "Signed in to Gmail"
         }

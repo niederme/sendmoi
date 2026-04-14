@@ -14,7 +14,17 @@ struct OAuthAuthorizationRequest {
     let state: String
 }
 
+private struct GoogleAuthenticationOptions {
+    let prompt: String
+    let prefersEphemeralSession: Bool
+}
+
 final class GmailAPIClient {
+    enum SignInMode {
+        case standard
+        case switchAccount
+    }
+
     private let decoder = JSONDecoder()
     private let deliveryService = GmailDeliveryService()
 
@@ -22,15 +32,30 @@ final class GmailAPIClient {
         decoder.dateDecodingStrategy = .iso8601
     }
 
-    func signIn() async throws -> GmailSession {
+    func signIn(mode: SignInMode = .standard) async throws -> GmailSession {
+        do {
+            return try await signIn(
+                using: authenticationOptions(for: mode, forcesConsent: false)
+            )
+        } catch GmailAPIError.missingRefreshToken where mode == .switchAccount {
+            // Switching to an account that previously authorized this app may not
+            // yield a refresh token unless we explicitly request consent again.
+            return try await signIn(
+                using: authenticationOptions(for: mode, forcesConsent: true)
+            )
+        }
+    }
+
+    private func signIn(using authenticationOptions: GoogleAuthenticationOptions) async throws -> GmailSession {
         guard GoogleOAuthConfig.isConfigured else {
             throw GmailAPIError.notConfigured
         }
 
-        let request = try makeAuthorizationRequest()
+        let request = try makeAuthorizationRequest(prompt: authenticationOptions.prompt)
         let callbackURL = try await authenticateWithGoogle(
             url: request.url,
-            callbackScheme: GoogleOAuthConfig.redirectScheme
+            callbackScheme: GoogleOAuthConfig.redirectScheme,
+            prefersEphemeralWebBrowserSession: authenticationOptions.prefersEphemeralSession
         )
         guard
             let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false)
@@ -106,12 +131,20 @@ final class GmailAPIClient {
     }
 
     @MainActor
-    private func authenticateWithGoogle(url: URL, callbackScheme: String) async throws -> URL {
+    private func authenticateWithGoogle(
+        url: URL,
+        callbackScheme: String,
+        prefersEphemeralWebBrowserSession: Bool
+    ) async throws -> URL {
         let coordinator = OAuthCoordinator()
-        return try await coordinator.authenticate(url: url, callbackScheme: callbackScheme)
+        return try await coordinator.authenticate(
+            url: url,
+            callbackScheme: callbackScheme,
+            prefersEphemeralWebBrowserSession: prefersEphemeralWebBrowserSession
+        )
     }
 
-    private func makeAuthorizationRequest() throws -> OAuthAuthorizationRequest {
+    private func makeAuthorizationRequest(prompt: String) throws -> OAuthAuthorizationRequest {
         let codeVerifier = Self.randomVerifier()
         let challenge = Self.codeChallenge(for: codeVerifier)
         let state = Self.randomState()
@@ -122,7 +155,7 @@ final class GmailAPIClient {
             URLQueryItem(name: "response_type", value: "code"),
             URLQueryItem(name: "scope", value: GoogleOAuthConfig.scopes.joined(separator: " ")),
             URLQueryItem(name: "access_type", value: "offline"),
-            URLQueryItem(name: "prompt", value: "consent"),
+            URLQueryItem(name: "prompt", value: prompt),
             URLQueryItem(name: "state", value: state),
             URLQueryItem(name: "code_challenge", value: challenge),
             URLQueryItem(name: "code_challenge_method", value: "S256")
@@ -132,6 +165,24 @@ final class GmailAPIClient {
             throw GmailAPIError.invalidResponse
         }
         return OAuthAuthorizationRequest(url: url, codeVerifier: codeVerifier, state: state)
+    }
+
+    private func authenticationOptions(
+        for mode: SignInMode,
+        forcesConsent: Bool
+    ) -> GoogleAuthenticationOptions {
+        switch mode {
+        case .standard:
+            return GoogleAuthenticationOptions(
+                prompt: "consent",
+                prefersEphemeralSession: false
+            )
+        case .switchAccount:
+            return GoogleAuthenticationOptions(
+                prompt: forcesConsent ? "select_account consent" : "select_account",
+                prefersEphemeralSession: true
+            )
+        }
     }
 
     private func send(_ request: URLRequest) async throws -> Data {
@@ -228,7 +279,11 @@ final class GmailAPIClient {
 private final class OAuthCoordinator: NSObject, ASWebAuthenticationPresentationContextProviding {
     private var session: ASWebAuthenticationSession?
 
-    func authenticate(url: URL, callbackScheme: String) async throws -> URL {
+    func authenticate(
+        url: URL,
+        callbackScheme: String,
+        prefersEphemeralWebBrowserSession: Bool
+    ) async throws -> URL {
         try await withCheckedThrowingContinuation { continuation in
             let session = ASWebAuthenticationSession(
                 url: url,
@@ -251,7 +306,7 @@ private final class OAuthCoordinator: NSObject, ASWebAuthenticationPresentationC
                 }
             }
 
-            session.prefersEphemeralWebBrowserSession = false
+            session.prefersEphemeralWebBrowserSession = prefersEphemeralWebBrowserSession
             session.presentationContextProvider = self
             self.session = session
 
