@@ -5,6 +5,7 @@ enum RecipientStore {
     private static let defaultKey = "defaultRecipient"
     private static let shareSheetAutoSendKey = "shareSheetAutoSendEnabled"
     private static let onboardingCompletedKey = "hasCompletedOnboarding"
+    private static let analyticsEnabledKey = "analyticsEnabled"
     private static let legacyMigrationCompletedKey = "recipientStoreLegacyMigrationCompleted"
     private static let legacyAppGroupID = "group.com.niederme.mailmoi"
     private static let maxCount = 12
@@ -67,6 +68,19 @@ enum RecipientStore {
         defaults.synchronize()
     }
 
+    static func loadAnalyticsEnabled() -> Bool {
+        let defaults = SharedContainer.sharedDefaults
+        defaults.synchronize()
+        guard defaults.object(forKey: analyticsEnabledKey) != nil else { return false }
+        return defaults.bool(forKey: analyticsEnabledKey)
+    }
+
+    static func setAnalyticsEnabled(_ isEnabled: Bool) {
+        let defaults = SharedContainer.sharedDefaults
+        defaults.set(isEnabled, forKey: analyticsEnabledKey)
+        defaults.synchronize()
+    }
+
     static func resetSetup() {
         migrateLegacyDefaultsIfNeeded()
         let defaults = SharedContainer.sharedDefaults
@@ -74,6 +88,7 @@ enum RecipientStore {
         defaults.removeObject(forKey: defaultKey)
         defaults.removeObject(forKey: shareSheetAutoSendKey)
         defaults.removeObject(forKey: onboardingCompletedKey)
+        defaults.removeObject(forKey: analyticsEnabledKey)
         defaults.synchronize()
     }
 

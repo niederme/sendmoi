@@ -19,6 +19,7 @@ struct MacSetupSidebar: View {
             gmailCard
             recipientCard
             shareBehaviorCard
+            analyticsCard
             setupCard
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -119,6 +120,28 @@ struct MacSetupSidebar: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Auto-send shared items")
                     Text(model.shareSheetAutoSendEnabled ? "Automatic send is on." : "Manual review stays on.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .toggleStyle(.switch)
+        }
+    }
+
+    private var analyticsCard: some View {
+        MacSidebarCard(
+            title: "Analytics",
+            subtitle: model.analyticsEnabled
+                ? "Sending anonymous usage signals to help improve SendMoi."
+                : "Off by default. Share a few anonymous signals to help improve SendMoi."
+        ) {
+            Toggle(isOn: Binding(
+                get: { model.analyticsEnabled },
+                set: { model.setAnalyticsEnabled($0) }
+            )) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Share anonymous usage analytics")
+                    Text("Installs, active use, and setup completion only.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }

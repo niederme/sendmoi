@@ -228,7 +228,7 @@ struct ContentView: View {
 
     private var onboardingActions: some View {
         HStack(spacing: 12) {
-            if onboardingStep == 2 && model.session != nil {
+            if onboardingStep == 3 {
                 Button("Back") {
                     onboardingStep -= 1
                 }
@@ -240,6 +240,22 @@ struct ContentView: View {
 
                 Button("Done") {
                     finishOnboarding()
+                }
+                .onboardingPrimaryButtonStyle(tint: onboardingBrandAccent)
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
+            } else if onboardingStep == 2 && model.session != nil {
+                Button("Back") {
+                    onboardingStep -= 1
+                }
+                .onboardingSecondaryButtonStyle()
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
+
+                Spacer(minLength: 0)
+
+                Button("Next") {
+                    onboardingStep += 1
                 }
                 .onboardingPrimaryButtonStyle(tint: onboardingBrandAccent)
                 .buttonBorderShape(.capsule)
@@ -302,7 +318,7 @@ struct ContentView: View {
 
     private var onboardingInlinePagination: some View {
         HStack(spacing: 5) {
-            ForEach(0..<3, id: \.self) { index in
+            ForEach(0..<4, id: \.self) { index in
                 Capsule()
                     .fill(index == onboardingStep ? onboardingInlinePaginationActive : onboardingInlinePaginationInactive)
                     .frame(width: index == onboardingStep ? 14 : 6, height: 4)
@@ -420,8 +436,10 @@ struct ContentView: View {
                 )
 
             }
-        default:
+        case 2:
             onboardingFinishStep
+        default:
+            onboardingAnalyticsStep
         }
     }
 
@@ -653,6 +671,96 @@ struct ContentView: View {
                     .toggleStyle(.switch)
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var onboardingAnalyticsStep: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Optional")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(onboardingBrandAccent)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(onboardingBrandAccent.opacity(0.12))
+                    .clipShape(Capsule())
+
+                Text("Help improve SendMoi")
+                    .font(.system(size: onboardingFirstStepHeadlineFontSize, weight: .bold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.86)
+
+                Text("Share a few anonymous usage signals. No prompts or personal info.")
+                    .font(.system(size: onboardingSecondStepSubheadingFontSize, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .lineSpacing(1.3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            VStack(alignment: .leading, spacing: 16) {
+                Toggle(isOn: Binding(
+                    get: { model.analyticsEnabled },
+                    set: { model.setAnalyticsEnabled($0) }
+                )) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Share anonymous usage analytics")
+                            .font(.headline.weight(.semibold))
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text("Installs, active use, and setup completion only.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.trailing, 8)
+                }
+                .toggleStyle(.switch)
+                .tint(onboardingBrandAccent)
+
+                Divider()
+
+                Link(destination: URL(string: "https://send.moi/privacy")!) {
+                    Label("Read the Privacy Policy", systemImage: "lock.shield")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(onboardingBrandAccent)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 22)
+            .padding(.vertical, 20)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(onboardingInsetCardFill)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(onboardingCardStroke, lineWidth: 1)
+            )
+
+            VStack(alignment: .leading, spacing: 10) {
+                onboardingTrustRow(icon: "lock.shield.fill", title: "Anonymous only")
+                onboardingTrustRow(icon: "power.circle.fill", title: "Off by default")
+                onboardingTrustRow(icon: "gearshape.fill", title: "Change anytime in Settings")
+            }
+        }
+    }
+
+    private func onboardingTrustRow(icon: String, title: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(onboardingBrandAccent)
+                .frame(width: 28, height: 28)
+                .background(onboardingBrandAccent.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary.opacity(0.92))
+
+            Spacer(minLength: 0)
         }
     }
 
@@ -1038,7 +1146,7 @@ struct ContentView: View {
         } else if model.session == nil {
             showsOnboardingAccountSheet = true
         } else {
-            finishOnboarding()
+            onboardingStep += 1
         }
     }
 
@@ -1094,6 +1202,19 @@ struct ContentView: View {
                 .padding(.vertical, 12)
             }
             mobileSectionFooter(shareSheetFooterText)
+
+            mobileSectionLabel("Analytics")
+            GroupedCard {
+                Toggle(isOn: Binding(
+                    get: { model.analyticsEnabled },
+                    set: { model.setAnalyticsEnabled($0) }
+                )) {
+                    Text("Share anonymous usage analytics")
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+            }
+            mobileSectionFooter("Installs, active use, and setup completion only. No personal info.")
 
             mobileSectionLabel("Offline Queue")
             GroupedCard { mobileQueueCardContent }

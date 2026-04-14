@@ -27,6 +27,8 @@
 		A10000010000000000000012 /* MacQueuePane.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000015 /* MacQueuePane.swift */; };
 		A10000010000000000000013 /* MacSetupSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000016 /* MacSetupSidebar.swift */; };
 		A10000010000000000000014 /* MacStatusHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000017 /* MacStatusHeader.swift */; };
+		A10000010000000000000015 /* AnalyticsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000018 /* AnalyticsClient.swift */; };
+		A10000010000000000000016 /* Analytics.plist in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000019 /* Analytics.plist */; };
 		B10000010000000000000001 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000004 /* Models.swift */; };
 		B10000010000000000000002 /* QueueStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000008 /* QueueStore.swift */; };
 		B10000010000000000000003 /* RecipientStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000009 /* RecipientStore.swift */; };
@@ -92,6 +94,8 @@
 		A20000010000000000000015 /* MacQueuePane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacQueuePane.swift; sourceTree = "<group>"; };
 		A20000010000000000000016 /* MacSetupSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacSetupSidebar.swift; sourceTree = "<group>"; };
 		A20000010000000000000017 /* MacStatusHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacStatusHeader.swift; sourceTree = "<group>"; };
+		A20000010000000000000018 /* AnalyticsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsClient.swift; sourceTree = "<group>"; };
+		A20000010000000000000019 /* Analytics.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Analytics.plist; sourceTree = "<group>"; };
 		B20000010000000000000001 /* ShareExtensionModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareExtensionModel.swift; sourceTree = "<group>"; };
 		B20000010000000000000002 /* ShareView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareView.swift; sourceTree = "<group>"; };
 		B20000010000000000000003 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
@@ -173,6 +177,8 @@
 				A2000001000000000000000F /* GmailShared.swift */,
 				A20000010000000000000010 /* SharedSessionStore.swift */,
 				A20000010000000000000011 /* GmailDeliveryService.swift */,
+				A20000010000000000000018 /* AnalyticsClient.swift */,
+				A20000010000000000000019 /* Analytics.plist */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -285,6 +291,7 @@
 				A10000010000000000000010 /* Assets.xcassets in Resources */,
 				DC6FF07B2F55D5CB00415EAC /* AppIcon.icon in Resources */,
 				DC6FF07D2F55D5CB00415EAC /* Resources/sendmoi-demo-hero.mp4 in Resources */,
+				A10000010000000000000016 /* Analytics.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -321,6 +328,7 @@
 				A10000010000000000000012 /* MacQueuePane.swift in Sources */,
 				A10000010000000000000013 /* MacSetupSidebar.swift in Sources */,
 				A10000010000000000000014 /* MacStatusHeader.swift in Sources */,
+				A10000010000000000000015 /* AnalyticsClient.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

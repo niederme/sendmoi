@@ -14,6 +14,7 @@ final class AppModel: ObservableObject {
     @Published var isQueueSectionExpanded = false
     @Published var requiresGmailReconnect = false
     @Published var shouldShowOnboarding = false
+    @Published var analyticsEnabled = false
 
     private let client = GmailAPIClient()
     private let monitor = NetworkMonitor()
@@ -40,6 +41,12 @@ final class AppModel: ObservableObject {
         reloadSessionFromDisk()
 
         isAccountSectionExpanded = session == nil || !GoogleOAuthConfig.isConfigured
+
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
+        Task {
+            await AnalyticsClient.shared.send("app_launched", params: ["app_version": version], enabled: analyticsEnabled)
+        }
+        recordDailyActiveIfNeeded()
 
         #if os(macOS)
         checkForShareExtensionDebugError()
@@ -82,6 +89,9 @@ final class AppModel: ObservableObject {
         isBusy = false
 
         if didSignIn {
+            Task {
+                await AnalyticsClient.shared.send("gmail_connected", enabled: analyticsEnabled)
+            }
             await processQueue()
             return true
         }
@@ -143,6 +153,7 @@ final class AppModel: ObservableObject {
                     removeManagedMedia(for: next)
                     removeQueuedEmail(id: next.id)
                     RecipientStore.record(next.toEmail)
+                    await AnalyticsClient.shared.send("email_sent", enabled: analyticsEnabled)
                     statusMessage = "Sent \"\(next.title)\" to \(next.toEmail)."
                 } catch {
                     if let gmailError = error as? GmailAPIError, gmailError.requiresReconnect {
@@ -220,6 +231,14 @@ final class AppModel: ObservableObject {
     func completeOnboarding() {
         RecipientStore.setHasCompletedOnboarding(true)
         shouldShowOnboarding = false
+        Task {
+            await AnalyticsClient.shared.send("onboarding_completed", enabled: analyticsEnabled)
+        }
+    }
+
+    func setAnalyticsEnabled(_ isEnabled: Bool) {
+        RecipientStore.setAnalyticsEnabled(isEnabled)
+        analyticsEnabled = RecipientStore.loadAnalyticsEnabled()
     }
 
     private func reloadQueueFromDisk() {
@@ -290,6 +309,18 @@ final class AppModel: ObservableObject {
         defaultRecipient = RecipientStore.loadDefault()
         shareSheetAutoSendEnabled = RecipientStore.loadShareSheetAutoSendEnabled()
         shouldShowOnboarding = !RecipientStore.loadHasCompletedOnboarding()
+        analyticsEnabled = RecipientStore.loadAnalyticsEnabled()
+    }
+
+    private func recordDailyActiveIfNeeded() {
+        let key = "analytics.lastActiveDate"
+        let today = Calendar.current.startOfDay(for: Date())
+        if let last = UserDefaults.standard.object(forKey: key) as? Date,
+           Calendar.current.isDate(last, inSameDayAs: today) { return }
+        UserDefaults.standard.set(today, forKey: key)
+        Task {
+            await AnalyticsClient.shared.send("app_active", enabled: analyticsEnabled)
+        }
     }
 
     private func reloadSessionFromDisk() {
