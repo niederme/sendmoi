@@ -228,7 +228,7 @@ struct ContentView: View {
 
     private var onboardingActions: some View {
         HStack(spacing: 12) {
-            if onboardingStep == 3 {
+            if onboardingStep == 2 {
                 Button("Back") {
                     onboardingStep -= 1
                 }
@@ -240,22 +240,6 @@ struct ContentView: View {
 
                 Button("Done") {
                     finishOnboarding()
-                }
-                .onboardingPrimaryButtonStyle(tint: onboardingBrandAccent)
-                .buttonBorderShape(.capsule)
-                .controlSize(.large)
-            } else if onboardingStep == 2 {
-                Button("Back") {
-                    onboardingStep -= 1
-                }
-                .onboardingSecondaryButtonStyle()
-                .buttonBorderShape(.capsule)
-                .controlSize(.large)
-
-                Spacer(minLength: 0)
-
-                Button("Next") {
-                    onboardingStep += 1
                 }
                 .onboardingPrimaryButtonStyle(tint: onboardingBrandAccent)
                 .buttonBorderShape(.capsule)
@@ -304,7 +288,7 @@ struct ContentView: View {
 
     private var onboardingInlinePagination: some View {
         HStack(spacing: 5) {
-            ForEach(0..<4, id: \.self) { index in
+            ForEach(0..<3, id: \.self) { index in
                 Capsule()
                     .fill(index == onboardingStep ? onboardingInlinePaginationActive : onboardingInlinePaginationInactive)
                     .frame(width: index == onboardingStep ? 14 : 6, height: 4)
@@ -422,10 +406,8 @@ struct ContentView: View {
                 )
 
             }
-        case 2:
-            onboardingFinishStep
         default:
-            onboardingAnalyticsStep
+            onboardingFinishStep
         }
     }
 
