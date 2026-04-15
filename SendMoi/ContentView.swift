@@ -244,7 +244,7 @@ struct ContentView: View {
                 .onboardingPrimaryButtonStyle(tint: onboardingBrandAccent)
                 .buttonBorderShape(.capsule)
                 .controlSize(.large)
-            } else if onboardingStep == 2 && model.session != nil {
+            } else if onboardingStep == 2 {
                 Button("Back") {
                     onboardingStep -= 1
                 }
@@ -288,29 +288,15 @@ struct ContentView: View {
                         .frame(width: 56, height: 56)
                     }
 
-                    if onboardingStep < 2 {
-                        Button {
-                            handleOnboardingPrimaryAction()
-                        } label: {
-                            Image(systemName: "chevron.right")
-                        }
-                        .onboardingPrimaryButtonStyle(tint: onboardingBrandAccent)
-                        .buttonBorderShape(.circle)
-                        .controlSize(.large)
-                        .frame(width: 56, height: 56)
-                    } else if onboardingStep == 2 && model.session == nil {
-                        Button {
-                        } label: {
-                            Image(systemName: "chevron.right")
-                        }
-                        .onboardingSecondaryButtonStyle()
-                        .buttonBorderShape(.circle)
-                        .controlSize(.large)
-                        .frame(width: 56, height: 56)
-                        .disabled(true)
-                        .accessibilityLabel("Next unavailable")
-                        .accessibilityHint("Connect Gmail with the button above, or tap Skip.")
+                    Button {
+                        onboardingStep += 1
+                    } label: {
+                        Image(systemName: "chevron.right")
                     }
+                    .onboardingPrimaryButtonStyle(tint: onboardingBrandAccent)
+                    .buttonBorderShape(.circle)
+                    .controlSize(.large)
+                    .frame(width: 56, height: 56)
                 }
             }
         }
@@ -677,6 +663,8 @@ struct ContentView: View {
     @ViewBuilder
     private var onboardingAnalyticsStep: some View {
         VStack(alignment: .leading, spacing: 20) {
+            onboardingAnalyticsIllustration
+
             VStack(alignment: .leading, spacing: 8) {
                 Text("Optional")
                     .font(.caption.weight(.bold))
@@ -762,6 +750,76 @@ struct ContentView: View {
 
             Spacer(minLength: 0)
         }
+    }
+
+    private var onboardingAnalyticsIllustration: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(LinearGradient(
+                    colors: [
+                        onboardingBrandAccent.opacity(0.18),
+                        onboardingBrandAccent.opacity(0.07),
+                        Color.white.opacity(0.02),
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
+                )
+
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.white.opacity(0.06))
+                .frame(width: 196, height: 88)
+                .overlay(alignment: .topLeading) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 5) {
+                            Circle().fill(Color.white.opacity(0.44)).frame(width: 5, height: 5)
+                            Circle().fill(Color.white.opacity(0.24)).frame(width: 5, height: 5)
+                            Circle().fill(Color.white.opacity(0.14)).frame(width: 5, height: 5)
+                        }
+                        OnboardingAnalyticsLineShape()
+                            .stroke(
+                                LinearGradient(
+                                    colors: [onboardingBrandAccent.opacity(0.95), Color.white.opacity(0.72)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                ),
+                                style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round)
+                            )
+                            .frame(width: 138, height: 36)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                }
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
+                )
+                .offset(x: -16, y: 8)
+
+            Circle()
+                .strokeBorder(onboardingBrandAccent.opacity(0.20), lineWidth: 8)
+                .frame(width: 84, height: 84)
+                .offset(x: 64, y: -6)
+
+            Circle()
+                .fill(LinearGradient(
+                    colors: [onboardingBrandAccent, onboardingBrandAccent.opacity(0.80)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ))
+                .frame(width: 58, height: 58)
+                .shadow(color: onboardingBrandAccent.opacity(0.28), radius: 12, y: 5)
+                .overlay {
+                    Image(systemName: "lock.shield.fill")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(.white)
+                }
+                .offset(x: 64, y: -6)
+        }
+        .frame(height: onboardingUsesSmallPhoneLayout ? 112 : 136)
     }
 
     private var onboardingFlowPreview: some View {
@@ -1141,13 +1199,7 @@ struct ContentView: View {
     }
 
     private func handleOnboardingPrimaryAction() {
-        if onboardingStep < 2 {
-            onboardingStep += 1
-        } else if model.session == nil {
-            showsOnboardingAccountSheet = true
-        } else {
-            onboardingStep += 1
-        }
+        onboardingStep += 1
     }
 
     private func openSetupGuide() {
@@ -1896,6 +1948,22 @@ private struct LoopingVideoPlayerView: View {
             .onDisappear {
                 model.pause()
             }
+    }
+}
+
+private struct OnboardingAnalyticsLineShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let points = [
+            CGPoint(x: rect.minX,           y: rect.maxY * 0.78),
+            CGPoint(x: rect.width * 0.22,   y: rect.height * 0.56),
+            CGPoint(x: rect.width * 0.42,   y: rect.height * 0.66),
+            CGPoint(x: rect.width * 0.62,   y: rect.height * 0.34),
+            CGPoint(x: rect.maxX,           y: rect.height * 0.16),
+        ]
+        var path = Path()
+        path.move(to: points[0])
+        points.dropFirst().forEach { path.addLine(to: $0) }
+        return path
     }
 }
 

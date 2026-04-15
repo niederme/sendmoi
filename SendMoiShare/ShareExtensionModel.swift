@@ -470,10 +470,13 @@ final class ShareExtensionModel: ObservableObject {
             throw error
         }
 
+        let analyticsEnabled = RecipientStore.loadAnalyticsEnabled()
+
         do {
             guard let session = try SharedSessionStore.load() else {
                 // No session — queue for main app delivery and show reconnect prompt.
                 try QueueStore.append(refreshedItem)
+                Task { await AnalyticsClient.shared.send("share_queued", params: ["source": "share_sheet"], enabled: analyticsEnabled) }
                 throw GmailAPIError.credentialsInvalid("No Gmail session found. Please connect your account.")
             }
             try Task.checkCancellation()
@@ -483,6 +486,7 @@ final class ShareExtensionModel: ObservableObject {
             // Send directly — do NOT queue first so the main app can't steal the item.
             try await deliveryService.sendEmail(using: validSession, item: refreshedItem)
             Self.clearDebugError()
+            Task { await AnalyticsClient.shared.send("email_sent", params: ["source": "share_sheet"], enabled: analyticsEnabled) }
 
             // Flush any backlog the main app left behind (best-effort).
             try? await flushQueuedEmails(using: validSession)
@@ -495,11 +499,13 @@ final class ShareExtensionModel: ObservableObject {
         } catch let error as GmailAPIError where error.requiresReconnect {
             // Auth error — queue for retry, keep the sheet open for reconnect.
             try? QueueStore.append(refreshedItem)
+            Task { await AnalyticsClient.shared.send("share_queued", params: ["source": "share_sheet"], enabled: analyticsEnabled) }
             Self.persistDebugError("auth: \(error.localizedDescription)")
             throw error
         } catch {
             // Other delivery error — queue for retry, close the sheet.
             try? QueueStore.append(refreshedItem)
+            Task { await AnalyticsClient.shared.send("share_queued", params: ["source": "share_sheet"], enabled: analyticsEnabled) }
             Self.persistDebugError("delivery: \(error.localizedDescription)")
             extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
             return refreshedItem

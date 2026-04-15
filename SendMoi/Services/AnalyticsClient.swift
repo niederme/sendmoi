@@ -20,11 +20,12 @@ actor AnalyticsClient {
         }
 
         let key = "analytics.instanceId"
-        if let existing = UserDefaults.standard.string(forKey: key) {
+        let defaults = SharedContainer.sharedDefaults
+        if let existing = defaults.string(forKey: key) {
             instanceID = existing
         } else {
             let new = UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
-            UserDefaults.standard.set(new, forKey: key)
+            defaults.set(new, forKey: key)
             instanceID = new
         }
     }

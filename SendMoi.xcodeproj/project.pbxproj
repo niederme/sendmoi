@@ -41,6 +41,8 @@
 		B1000001000000000000000A /* SharedSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000010 /* SharedSessionStore.swift */; };
 		B1000001000000000000000B /* GmailDeliveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000011 /* GmailDeliveryService.swift */; };
 		B1000001000000000000000C /* SafariPreprocessor.js in Resources */ = {isa = PBXBuildFile; fileRef = B20000010000000000000006 /* SafariPreprocessor.js */; };
+		B1000001000000000000000D /* AnalyticsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000018 /* AnalyticsClient.swift */; };
+		B1000001000000000000000E /* Analytics.plist in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000019 /* Analytics.plist */; };
 		DC6FF07B2F55D5CB00415EAC /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = DC6FF07A2F55D5CB00415EAC /* AppIcon.icon */; };
 		DC6FF07D2F55D5CB00415EAC /* Resources/sendmoi-demo-hero.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = DC6FF07C2F55D5CB00415EAC /* Resources/sendmoi-demo-hero.mp4 */; };
 /* End PBXBuildFile section */
@@ -300,6 +302,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B1000001000000000000000C /* SafariPreprocessor.js in Resources */,
+				B1000001000000000000000E /* Analytics.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -347,6 +350,7 @@
 				B10000010000000000000009 /* GmailShared.swift in Sources */,
 				B1000001000000000000000A /* SharedSessionStore.swift in Sources */,
 				B1000001000000000000000B /* GmailDeliveryService.swift in Sources */,
+				B1000001000000000000000D /* AnalyticsClient.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
