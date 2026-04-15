@@ -472,12 +472,12 @@
         <div>
           <p class="eyebrow">SendMoi</p>
           <h1 id="privacy-title" class="gradient-title">Privacy Policy</h1>
-          <p class="subhead">Last updated: March 13, 2026</p>
+          <p class="subhead">Last updated: April 14, 2026</p>
         </div>
       </section>
 
       <section class="doc-shell">
-        <p class="lede">SendMoi is a local-first app that helps you send shared links as emails through your own Gmail account. This policy explains what SendMoi handles, where that data goes, and what stays on your device.</p>
+        <p class="lede">SendMoi is a local-first app that helps you send shared links and photos as emails through your own Gmail account. This policy explains what SendMoi handles, where that data goes, and what stays on your device.</p>
 
         <h2>What SendMoi Accesses</h2>
         <p>SendMoi may access the following information when you use the app:</p>
@@ -485,8 +485,9 @@
           <li>Your Gmail account email address.</li>
           <li>OAuth tokens used to keep you signed in to Gmail.</li>
           <li>Email recipients you enter or save as defaults or recent recipients.</li>
-          <li>The title, excerpt, and URL of content you share into the app.</li>
+          <li>The title, excerpt, URL, and shared image attachments for content you share into the app.</li>
           <li>Queued email content that has not been sent yet.</li>
+          <li>An app-generated anonymous analytics identifier and limited usage events if you opt in to analytics.</li>
         </ul>
         <p>If you share a web link, SendMoi may also fetch the linked page and its preview image to improve the outgoing email with:</p>
         <ul>
@@ -504,8 +505,9 @@
           <li>Remember your default and recent recipients.</li>
           <li>Queue emails offline and retry them later.</li>
           <li>Enrich shared links before sending when metadata is available.</li>
+          <li>If you opt in, send limited anonymous usage analytics to help improve the app.</li>
         </ul>
-        <p>SendMoi does not use your data for advertising, analytics, profiling, or sale to third parties.</p>
+        <p>SendMoi does not use your data for advertising, profiling, or sale to third parties. Anonymous usage analytics are off by default and are sent only if you turn that setting on.</p>
 
         <h2>Where Data Is Stored</h2>
         <p>SendMoi stores data locally on your device, including:</p>
@@ -513,6 +515,7 @@
           <li>Gmail session information used to keep you signed in.</li>
           <li>Your saved default and recent recipients.</li>
           <li>Any queued emails waiting to be sent.</li>
+          <li>Your analytics preference and, if analytics is enabled, an app-generated anonymous analytics identifier.</li>
         </ul>
         <p>This local storage may be kept in standard app storage, the system keychain, and shared app container storage used by the SendMoi Share Extension.</p>
 
@@ -522,13 +525,16 @@
           <li>Google authentication endpoints, to sign you in and refresh your Gmail session.</li>
           <li>Gmail API endpoints, to send email through your Gmail account.</li>
           <li>The websites you share, when SendMoi fetches page metadata or preview images to improve the outgoing email.</li>
+          <li>Google Analytics collection endpoints, if you opt in to anonymous usage analytics.</li>
         </ul>
         <p>If summary generation is available on your device through Apple system frameworks, SendMoi may use those on-device capabilities to create a short article summary before sending. SendMoi does not send article text to a SendMoi-operated server for summarization.</p>
+        <p>If you enable analytics, the app may send an app-generated anonymous identifier, app version, and limited usage events such as app launches, app activity, Gmail connection, onboarding completion, and successful sends. SendMoi does not include Gmail message bodies, recipient lists, OAuth tokens, or shared content in those analytics events.</p>
 
         <h2>Third Parties</h2>
         <p>SendMoi relies on third-party services only where necessary to provide the app:</p>
         <ul>
           <li>Google, for authentication and Gmail delivery.</li>
+          <li>Google Analytics, if you enable anonymous usage analytics.</li>
           <li>The websites whose links you choose to share, for metadata and preview retrieval.</li>
           <li>Apple system frameworks and platform services used to run the app and its Share Extension.</li>
         </ul>
@@ -566,6 +572,7 @@
           <li>Sign out of Gmail from within SendMoi to remove the saved Gmail session used by the app.</li>
           <li>Delete queued emails from the app before they are sent.</li>
           <li>Change or clear the default recipient at any time.</li>
+          <li>Turn anonymous usage analytics on or off at any time from within the app.</li>
           <li>Stop sharing links into SendMoi if you do not want page metadata to be fetched.</li>
         </ul>
 
