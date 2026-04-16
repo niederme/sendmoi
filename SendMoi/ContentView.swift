@@ -1214,7 +1214,7 @@ struct ContentView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
             }
-            mobileSectionFooter("Open Setup Guide keeps your current account. Clear Settings disconnects Gmail and resets SendMoi to first launch.")
+            mobileSectionFooter("Open Setup Guide keeps your current account. How to Pin adds SendMoi to your share sheet. Clear Settings disconnects Gmail and resets SendMoi to first launch.")
 
             mobileAttributionFooter
         }
