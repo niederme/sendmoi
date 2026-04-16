@@ -1142,8 +1142,12 @@
         filter: drop-shadow(0 4px 12px rgba(152, 16, 250, 0.2));
       }
 
+      .download-strip .store-actions {
+        padding-bottom: 72px;
+      }
+
       .download-strip .store-actions--coming-soon {
-        margin-inline: auto;
+        margin: 0;
       }
 
       .download-strip .coming-soon-mark {
@@ -1226,6 +1230,54 @@
         transform: translateY(-1px) scale(1.01);
         filter: brightness(1.03);
         outline: none;
+      }
+
+      .store-badge-link--active {
+        filter:
+          drop-shadow(0 10px 30px rgba(9, 13, 24, 0.4))
+          drop-shadow(0 2px 24px rgba(43, 127, 255, 0.32));
+      }
+
+      .store-badge-link--active::before {
+        background: rgba(10, 12, 24, 0.88);
+        border-color: rgba(255, 255, 255, 0.32);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+        opacity: 1;
+      }
+
+      .store-badge-link--active .store-badge {
+        filter: saturate(1.0) contrast(1.08) brightness(1.08);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .store-badge-link--active::before {
+          background: rgba(6, 8, 18, 0.92);
+          border-color: rgba(255, 255, 255, 0.28);
+        }
+
+        .store-badge-link--active .store-badge {
+          filter: saturate(1.0) contrast(1.18) brightness(1.22);
+        }
+      }
+
+      html[data-theme="dark"] .store-badge-link--active::before {
+        background: rgba(6, 8, 18, 0.92);
+        border-color: rgba(255, 255, 255, 0.28);
+      }
+
+      html[data-theme="dark"] .store-badge-link--active .store-badge {
+        filter: saturate(1.0) contrast(1.18) brightness(1.22);
+      }
+
+      html[data-theme="light"] .store-badge-link--active {
+        filter:
+          drop-shadow(0 8px 22px rgba(27, 39, 74, 0.26))
+          drop-shadow(0 0 18px rgba(43, 127, 255, 0.2));
+      }
+
+      html[data-theme="light"] .store-badge-link--active::before {
+        background: rgba(255, 255, 255, 0.72);
+        border-color: rgba(28, 36, 62, 0.28);
       }
 
       .store-badge {
@@ -1396,11 +1448,11 @@
         .hero-download .store-actions {
           justify-content: center;
           gap: 10px;
+          padding-bottom: 80px;
         }
 
         .hero-download .store-actions--coming-soon {
-          margin-inline: auto;
-          margin-bottom: 40px;
+          margin: 0;
         }
 
         .coming-soon-mark {
@@ -1450,8 +1502,7 @@
         }
 
         .hero-download .store-actions--coming-soon {
-          margin-inline: 0;
-          margin-bottom: 34px;
+          margin: 0;
         }
 
         .hero-download .coming-soon-mark {
@@ -1551,8 +1602,12 @@
           min-height: 180px;
         }
 
+        .hero-download .store-actions {
+          padding-bottom: 50px;
+        }
+
         .hero-download .store-actions--coming-soon {
-          margin-bottom: 52px;
+          margin: 0;
         }
 
         .hero-download .coming-soon-text {
@@ -1712,7 +1767,7 @@
 
           <div class="hero-download">
             <div class="store-actions" aria-label="SendMoi store buttons">
-              <a class="store-badge-link" href="https://apps.apple.com/us/app/sendmoi-share-links-to-self/id6760132875" aria-label="Download SendMoi for iPhone and iPad on the App Store">
+              <a class="store-badge-link store-badge-link--active" href="https://apps.apple.com/us/app/sendmoi-share-links-to-self/id6760132875" aria-label="Download SendMoi for iPhone and iPad on the App Store">
                 <img
                   class="store-badge store-badge--dark"
                   src="./assets/images/sendmoi/app-store-badges/Download_on_the_App_Store_Badge_US-UK_RGB_blk_092917.svg"
@@ -1724,7 +1779,7 @@
                   alt=""
                 />
               </a>
-              <div class="store-actions store-actions--coming-soon">
+              <div class="store-actions--coming-soon">
                 <span class="coming-soon-mark" aria-hidden="true">
                   <img class="coming-soon-circle" src="./assets/images/sendmoi/coming-soon-circle.svg" alt="" loading="lazy" decoding="async" />
                   <img class="coming-soon-text" src="./assets/images/sendmoi/coming-soon-text.svg" alt="" loading="lazy" decoding="async" />
@@ -1858,7 +1913,7 @@
 
       <section class="download-strip" aria-labelledby="download-title">
         <div class="store-actions" id="download-title" aria-label="SendMoi store buttons">
-          <a class="store-badge-link" href="https://apps.apple.com/us/app/sendmoi-share-links-to-self/id6760132875" aria-label="Download SendMoi for iPhone and iPad on the App Store">
+          <a class="store-badge-link store-badge-link--active" href="https://apps.apple.com/us/app/sendmoi-share-links-to-self/id6760132875" aria-label="Download SendMoi for iPhone and iPad on the App Store">
             <img
               class="store-badge store-badge--dark"
               src="./assets/images/sendmoi/app-store-badges/Download_on_the_App_Store_Badge_US-UK_RGB_blk_092917.svg"
@@ -1870,7 +1925,7 @@
               alt=""
             />
           </a>
-          <div class="store-actions store-actions--coming-soon">
+          <div class="store-actions--coming-soon">
             <span class="coming-soon-mark" aria-hidden="true">
               <img class="coming-soon-circle" src="./assets/images/sendmoi/coming-soon-circle.svg" alt="" loading="lazy" decoding="async" />
               <img class="coming-soon-text" src="./assets/images/sendmoi/coming-soon-text.svg" alt="" loading="lazy" decoding="async" />
