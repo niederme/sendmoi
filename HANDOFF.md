@@ -1,15 +1,19 @@
 # SendMoi Handoff
 
-Last updated: April 13, 2026
+Last updated: April 16, 2026
 
 ## Current State
 
-- Repo: `codex/fold-send-moi-site` (based on `origin/main`)
-- Latest intended app version: `0.3`
+- Repo: `main`
+- Latest intended app version: `1.0`
 - Recent shipped commits:
-  - `ec40844` `Use Icon Composer .icon file as app icon source, drop legacy PNG appiconset (#33)`
-  - `0e5a871` `Fix summary promo filtering for concise homepage copy (#18)`
-  - `0488709` `Allow summaries for concise high-quality pages (#16)`
+  - `914d2b1` `Fix full-width tap targets on Toggle rows (Auto-send, Analytics)`
+  - `84cb0f4` `Merge claude/fix-app-store-rejection-o0ZB8: gradient PinTipSheet + onboarding auto-close fix`
+  - `97997ab` `Apply onboarding gradient to PinTipSheet; fix onboarding auto-close on background queue processing`
+  - `8073f4d` `Fix full-width tap targets on all settings rows`
+  - `4069a45` `Fix PinTipSheet macOS compile error preventing iOS build from updating`
+  - `45f5b07` `Add How to Pin SendMoi tip sheet; fix onboarding auto-close on app resume`
+  - `b1aa38d` `Remove pin step from onboarding, simplify to 2 steps`
 
 ## Quick Resume On Another Mac
 
@@ -21,6 +25,12 @@ Last updated: April 13, 2026
 
 ## What Changed Recently
 
+- Simplified onboarding from 3 steps to 2: removed the dedicated "Pin in Share Sheet" step and the dedicated analytics step. Onboarding now shows a welcome step (live demo video) and a finish step (Gmail connect, default recipient, auto-send, analytics toggle inline).
+- Added "How to Pin SendMoi" as a tappable row in Settings → Setup. Opens a three-slide modal carousel (`PinTipSheet`) with the same dark-blue gradient background as onboarding.
+- Analytics opt-in toggle moved inline into the onboarding finish step (after auto-send toggle) so it's visible during setup without being a dedicated full-screen prompt. Avoids App Store guideline 5.1.2(i) which flags custom tracking-permission screens.
+- Fixed onboarding auto-close: `reloadSharedPreferences()` inside `processQueue()` and `handleSharedQueueChange()` was overwriting `shouldShowOnboarding = false` whenever a Darwin queue notification or network change fired mid-onboarding. Fixed by preserving the current value before calling `reloadSharedPreferences()` in all three call sites (`processQueue`, `handleSharedQueueChange`, `retryNow`).
+- Fixed full-width tap targets on all iOS settings rows: added `.contentShape(Rectangle())` to Auto-send and Analytics Toggle rows; all Button rows already had it.
+- `PRIVACY.md` updated to accurately reflect the optional analytics feature: removed "analytics" from the blanket denial, added a dedicated Optional Usage Analytics section.
 - Folded the former standalone `send.moi` marketing repo into this repo:
   - public site now lives in `docs/`
   - preview commands now live in the repo-root `Makefile` (`make dev`, `make dev-thread`, `make dev-local`, plus live-reload variants)

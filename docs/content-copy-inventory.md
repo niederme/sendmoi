@@ -1,6 +1,6 @@
 # SendMoi Content Inventory
 
-Last updated: March 6, 2026
+Last updated: April 16, 2026
 
 This is the working copy document for product messaging, in-app copy, and App Store Connect metadata.
 
@@ -9,7 +9,7 @@ This is the working copy document for product messaging, in-app copy, and App St
 - There is no separate `Content Polish` brief in the repo today.
 - Current app copy lives primarily in `SendMoi/ContentView.swift`, `SendMoiShare/ShareView.swift`, `SendMoi/AppModel.swift`, and `SendMoiShare/ShareExtensionModel.swift`.
 - App Store Connect metadata is not currently versioned in this repo.
-- Current working branch: `codex/reel-visual-fallback`
+- Current working branch: `main`
 
 ## Positioning Snapshot
 
@@ -60,27 +60,20 @@ This is the working copy document for product messaging, in-app copy, and App St
 
 Source: `SendMoi/ContentView.swift`
 
+Onboarding is now 2 steps. The dedicated pin step and dedicated analytics step have been removed.
+
 - App title: `SendMoi`
-- Hero tagline: `Send Anything to Yourself`
-- Step 1 headline: `Share to SendMoi. It arrives as a polished email to yourself.`
-- Step 1 feature: `Save it with context`
-- Step 1 detail: `SendMoi keeps the link, title, and any notes together for later.`
-- Step 1 feature: `If it cannot send, it waits`
-- Step 1 detail: `When Gmail or the network is unavailable, it stays queued until it can go out.`
-- Step 2 headline: `Pin it once, then it is always close.`
-- Step 2 instructional card title: `Share Sheet Order`
-- Step 2 instructions:
-  - `Tap Share in any app.`
-  - `Open More.`
-  - `Drag SendMoi upward.`
-- Step 2 footnote: `Do this once. It saves a lot of friction.`
-- Step 3 signed-out headline: `Connect Gmail to finish setup.`
-- Step 3 signed-out feature: `Secure sign-in`
-- Step 3 signed-out detail: `Google handles the login in a system sheet.`
-- Step 3 signed-out feature: `Skip if you want`
-- Step 3 signed-out detail: `You can use the app now and connect Gmail later.`
-- Step 3 signed-in headline: `Ready to go.`
-- Step 3 signed-in body: `Gmail is connected. Add a default recipient now, or leave it blank and choose in the share sheet each time.`
+- Step 1 (welcome) headline: `Send anything to your Gmail inbox, with just two taps.`
+- Step 1 subheading: `SendMoi sends links to Gmail as rich email cards, so they're easy to find and act on later.`
+- Step 2 (finish) signed-out headline: `Connect Gmail to finish setup.`
+- Step 2 signed-out feature: `Secure sign-in`
+- Step 2 signed-out detail: `Google handles the login. SendMoi never sees your password or inbox.`
+- Step 2 signed-out feature: `Skip if you want`
+- Step 2 signed-out detail: `You can use the app now and connect Gmail later.`
+- Step 2 signed-out action: `Connect Gmail`
+- Step 2 signed-out footnote: `Or tap Skip below and connect later from Account.`
+- Step 2 signed-in headline: `Ready to go.`
+- Step 2 signed-in body: `Gmail is connected. Add a default recipient now, or leave it blank and choose in the share sheet each time.`
 - Connected account label: `Connected Gmail`
 - Connected account helper: `You can switch accounts before finishing setup.`
 - Recipient label: `Default recipient`
@@ -88,8 +81,10 @@ Source: `SendMoi/ContentView.swift`
 - Recipient action: `Save`
 - Toggle title: `Auto-send when ready`
 - Toggle helper: `Or leave this off and review the draft every time.`
-- Primary actions: `Next`, `Connect Gmail`
-- Secondary actions: `Skip`, `Back`, `View Settings`, `Switch Account`
+- Analytics toggle title: `Share anonymous usage analytics`
+- Analytics toggle detail: `Installs, active use, and setup completion only. No personal info.`
+- Primary actions: `Connect Gmail`, `Done`
+- Secondary actions: `Skip`, `Back`, `Switch Account`
 
 ## Main App Sections
 
@@ -114,8 +109,8 @@ Source: `SendMoi/ContentView.swift`
 - Empty queue state: `No pending emails.`
 - Queue action: `Send Queued Now`
 - Setup section title: `Setup`
-- Setup actions: `Open Setup Guide`, `Clear Settings`
-- Setup footer: `Open Setup Guide keeps your current account. Clear Settings disconnects Gmail and resets SendMoi to first launch.`
+- Setup actions: `Open Setup Guide`, `How to Pin SendMoi`, `Clear Settings`
+- Setup footer: `Open Setup Guide keeps your current account. How to Pin adds SendMoi to your share sheet. Clear Settings disconnects Gmail and resets SendMoi to first launch.`
 - Attribution: `SendMoi by John Niedermeyer, with a little help from Codex, Claude Code and friends.`
 
 ## Desktop App Copy

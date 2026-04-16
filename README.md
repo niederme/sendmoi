@@ -27,7 +27,9 @@ SendMoi currently ships the full core workflow:
 - Use the iOS `UILaunchScreen` asset configuration (`AppIconBackground` + `Splash`) directly at startup, without an extra in-app splash overlay.
 - Use a settings-style form on iPhone and iPad, and a desktop card layout on macOS.
 - Show the iPhone/iPad `Offline Queue` section as a collapsible row with queue-state summary text and a prominent `Send Queued Now` action in the expanded content.
-- Show a branded first-run setup guide with step-by-step onboarding, Gmail connect/switch, and a final “ready” step that can save recipient defaults before entering settings.
+- Show a branded two-step first-run setup guide: a welcome step with a live demo video, and a finish step that handles Gmail connect/switch, default recipient, auto-send preference, and an optional anonymous analytics opt-in.
+- Include a “How to Pin SendMoi” tip sheet (Settings → Setup) that walks through adding SendMoi to the share sheet in a three-slide modal carousel.
+- Offer opt-in anonymous usage analytics (off by default, Settings → Analytics) covering installs, active use, and setup completion only — no personal information collected.
 - Keep the onboarding hero demo video fully silent without interrupting background audio from other apps.
 - Let users reopen setup from the app and run a destructive reset flow that disconnects Gmail and clears saved setup preferences.
 

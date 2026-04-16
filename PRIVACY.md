@@ -1,6 +1,6 @@
 # SendMoi Privacy Policy
 
-Last updated: March 1, 2026
+Last updated: April 16, 2026
 
 SendMoi is a local-first app that helps you send shared links as emails through your own Gmail account. This policy explains what SendMoi handles, where that data goes, and what stays on your device.
 
@@ -31,7 +31,7 @@ SendMoi uses this information only to provide its core features:
 - Queue emails offline and retry them later.
 - Enrich shared links before sending when metadata is available.
 
-SendMoi does not use your data for advertising, analytics, profiling, or sale to third parties.
+SendMoi does not use your data for advertising, profiling, or sale to third parties.
 
 ## Where Data Is Stored
 
@@ -62,6 +62,20 @@ SendMoi relies on third-party services only where necessary to provide the app:
 - Apple system frameworks and platform services used to run the app and its Share Extension.
 
 Those services operate under their own privacy terms and policies.
+
+## Optional Usage Analytics
+
+SendMoi includes optional, opt-in usage analytics. These are off by default and can be turned on or off at any time in Settings → Analytics.
+
+When enabled, SendMoi sends a small number of anonymous usage signals:
+
+- App installs and launches.
+- Daily active use.
+- Setup completion.
+
+These analytics are not linked to your Gmail account, your email address, or any personal information. SendMoi does not use analytics data to track you across apps or websites owned by other companies, for targeted advertising, for advertising measurement, or for sharing with data brokers. A random identifier is used that is not connected to your device identity or Apple account.
+
+If analytics are off, no signals are sent.
 
 ## Your Choices
 
