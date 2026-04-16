@@ -12,7 +12,7 @@ struct ContentView: View {
     @State private var onboardingRecipientDraft = ""
     @State private var onboardingRecipientConfirmed = false
     @State private var onboardingPulse = false
-    @State private var onboardingPinSlide = 0
+
     @State private var showsResetConfirmation = false
     @State private var showsOnboardingAccountSheet = false
 
@@ -35,7 +35,7 @@ struct ContentView: View {
             #endif
             .sheet(isPresented: $showsOnboardingAccountSheet) {
                 OnboardingGmailSheet {
-                    onboardingStep = 2
+                    onboardingStep = 1
                     onboardingRecipientDraft = model.defaultRecipient
                     onboardingRecipientConfirmed = false
                 }
@@ -228,7 +228,7 @@ struct ContentView: View {
 
     private var onboardingActions: some View {
         HStack(spacing: 12) {
-            if onboardingStep == 2 {
+            if onboardingStep == 1 {
                 Button("Back") {
                     onboardingStep -= 1
                 }
@@ -288,7 +288,7 @@ struct ContentView: View {
 
     private var onboardingInlinePagination: some View {
         HStack(spacing: 5) {
-            ForEach(0..<3, id: \.self) { index in
+            ForEach(0..<2, id: \.self) { index in
                 Capsule()
                     .fill(index == onboardingStep ? onboardingInlinePaginationActive : onboardingInlinePaginationInactive)
                     .frame(width: index == onboardingStep ? 14 : 6, height: 4)
@@ -325,86 +325,6 @@ struct ContentView: View {
                 }
                 .frame(maxWidth: onboardingFirstStepCopyMaxWidth)
                 .frame(maxWidth: .infinity)
-            }
-        case 1:
-            VStack(alignment: .leading, spacing: 14) {
-                Text("Pin SendMoi in your Share Sheet")
-                    .font(.system(size: onboardingSecondStepHeadlineFontSize, weight: .bold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.86)
-
-                Text("Do this once and SendMoi stays one tap away.")
-                    .font(.system(size: onboardingSecondStepSubheadingFontSize, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .lineSpacing(1.3)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                TabView(selection: $onboardingPinSlide) {
-                    ForEach(onboardingPinSlides) { slide in
-                        RoundedRectangle(cornerRadius: 24)
-                            .fill(onboardingInsetCardFill)
-                            .overlay {
-                                Image(slide.imageName)
-                                    .resizable()
-                                    .interpolation(.high)
-                                    .scaledToFit()
-                                    .padding(onboardingPinCarouselImagePadding)
-                                    .accessibilityLabel(Text(slide.accessibilityLabel))
-                                    .accessibilityHint(Text(slide.accessibilityHint))
-                            }
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 24)
-                                    .stroke(onboardingCardStroke, lineWidth: 1)
-                            )
-                            .tag(slide.id)
-                    }
-                }
-                .frame(height: onboardingPinCarouselHeight)
-                .sendMoiPageTabViewStyle()
-                .accessibilityLabel(Text("Pin SendMoi setup steps"))
-                .accessibilityValue(Text("Step \(onboardingPinSlide + 1) of \(onboardingPinSlides.count)"))
-
-                Text("Step \(onboardingPinSlide + 1) of \(onboardingPinSlides.count)")
-                    .font(.system(size: onboardingSecondStepProgressFontSize, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-
-                HStack(spacing: 6) {
-                    Spacer(minLength: 0)
-                    ForEach(onboardingPinSlides) { slide in
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                onboardingPinSlide = slide.id
-                            }
-                        } label: {
-                            Capsule()
-                                .fill(slide.id == onboardingPinSlide ? onboardingBrandAccent : onboardingMutedTrack)
-                                .frame(width: slide.id == onboardingPinSlide ? 16 : 6, height: 5)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(Text("Show step \(slide.id + 1)"))
-                        .accessibilityHint(Text(slide.title))
-                    }
-                    Spacer(minLength: 0)
-                }
-                .animation(.easeInOut(duration: 0.2), value: onboardingPinSlide)
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(onboardingPinSlides[onboardingPinSlide].title)
-                        .font(.system(size: onboardingSecondStepInstructionTitleFontSize, weight: .semibold))
-
-                    Text(onboardingPinSlides[onboardingPinSlide].detail)
-                        .font(.system(size: onboardingSecondStepInstructionBodyFontSize, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .lineSpacing(1.2)
-                }
-                .padding(.horizontal, 2)
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(
-                    Text("\(onboardingPinSlides[onboardingPinSlide].title). \(onboardingPinSlides[onboardingPinSlide].detail)")
-                )
-
             }
         default:
             onboardingFinishStep
