@@ -1173,6 +1173,7 @@ struct ContentView: View {
                 ))
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
+                .contentShape(Rectangle())
             }
             mobileSectionFooter(shareSheetFooterText)
 
@@ -1186,6 +1187,7 @@ struct ContentView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
+                .contentShape(Rectangle())
             }
             mobileSectionFooter("Installs, active use, and setup completion only. No personal info.")
 
