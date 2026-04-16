@@ -1200,11 +1200,13 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 12)
+                    .contentShape(Rectangle())
                 Divider().padding(.leading, 20)
                 Button("How to Pin SendMoi") { showsPinTip = true }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 12)
+                    .contentShape(Rectangle())
                 Divider().padding(.leading, 20)
                 Button("Clear Settings", role: .destructive) {
                     showsResetConfirmation = true
@@ -1213,6 +1215,7 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
+                .contentShape(Rectangle())
             }
             mobileSectionFooter("Open Setup Guide keeps your current account. How to Pin adds SendMoi to your share sheet. Clear Settings disconnects Gmail and resets SendMoi to first launch.")
 
@@ -1280,6 +1283,7 @@ struct ContentView: View {
             .buttonStyle(.plain)
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
+            .contentShape(Rectangle())
 
             if model.isAccountSectionExpanded {
                 if let session = model.session {
@@ -1300,15 +1304,19 @@ struct ContentView: View {
                             Task { await model.signIn() }
                         }
                         .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 20)
                         .padding(.vertical, 12)
+                        .contentShape(Rectangle())
                     }
 
                     Divider().padding(.leading, 20)
                     Button("Sign Out") { model.signOut() }
                         .disabled(model.isBusy)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 20)
                         .padding(.vertical, 12)
+                        .contentShape(Rectangle())
                 } else {
                     Divider().padding(.leading, 20)
                     Text("No Gmail account connected.")
@@ -1320,8 +1328,10 @@ struct ContentView: View {
                         Task { await model.signIn() }
                     }
                     .disabled(model.isBusy || !GoogleOAuthConfig.isConfigured)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 12)
+                    .contentShape(Rectangle())
                 }
 
                 if !GoogleOAuthConfig.isConfigured {
@@ -1394,6 +1404,7 @@ struct ContentView: View {
             .buttonStyle(.plain)
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
+            .contentShape(Rectangle())
 
             if model.isQueueSectionExpanded {
                 if model.queuedEmails.isEmpty {
