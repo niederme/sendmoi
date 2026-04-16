@@ -44,7 +44,9 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showsPinTip) {
+            #if os(iOS)
             PinTipSheet()
+            #endif
         }
         .confirmationDialog(
             "Reset SendMoi?",
@@ -1960,6 +1962,7 @@ private struct LoopingVideoPlayerNativeView: NSViewRepresentable {
 }
 #endif
 
+#if os(iOS)
 private struct PinTipSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var currentSlide = 0
@@ -2024,3 +2027,4 @@ private struct PinTipSheet: View {
         }
     }
 }
+#endif
