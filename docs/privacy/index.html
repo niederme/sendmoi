@@ -152,10 +152,96 @@
         padding: 20px 0 72px;
       }
 
-      .page-top {
+      .site-header {
         display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      .site-brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+        color: var(--ink);
+        text-decoration: none;
+      }
+
+      .site-brand:hover,
+      .site-brand:focus-visible {
+        outline: none;
+      }
+
+      .site-brand-mark {
+        position: relative;
+        width: 46px;
+        height: 46px;
+        flex: 0 0 46px;
+      }
+
+      .site-brand-icon {
+        width: 100%;
+        height: 100%;
+        border-radius: 14px;
+        box-shadow: var(--shadow-md);
+      }
+
+      .site-brand-icon--dark {
+        display: none;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .site-brand-icon--light {
+          display: none;
+        }
+
+        .site-brand-icon--dark {
+          display: block;
+        }
+      }
+
+      html[data-theme="light"] .site-brand-icon--light {
+        display: block;
+      }
+
+      html[data-theme="light"] .site-brand-icon--dark {
+        display: none;
+      }
+
+      html[data-theme="dark"] .site-brand-icon--light {
+        display: none;
+      }
+
+      html[data-theme="dark"] .site-brand-icon--dark {
+        display: block;
+      }
+
+      .site-brand-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+      }
+
+      .site-brand-name {
+        font-size: 20px;
+        line-height: 1;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+      }
+
+      .site-brand-tagline {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.2;
+      }
+
+      .site-header-actions {
+        display: flex;
+        align-items: center;
         justify-content: flex-end;
-        margin-bottom: 14px;
       }
 
       .theme-toggle {
@@ -190,73 +276,12 @@
         background: linear-gradient(135deg, var(--blue), var(--violet));
       }
 
-      .hero,
       .doc-shell {
         border: 1px solid var(--line-strong);
         border-radius: 30px;
         background: var(--card);
         backdrop-filter: blur(18px);
         box-shadow: var(--shadow-lg);
-      }
-
-      .hero {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        gap: 18px;
-        align-items: center;
-        padding: 20px;
-        margin-bottom: 18px;
-      }
-
-      .hero-icon {
-        width: clamp(56px, 7vw, 74px);
-        height: clamp(56px, 7vw, 74px);
-      }
-
-      .hero-icon-image {
-        width: 100%;
-        height: 100%;
-        border-radius: 20px;
-        box-shadow: var(--shadow-md);
-      }
-
-      .hero-icon-image--dark {
-        display: none;
-      }
-
-      @media (prefers-color-scheme: dark) {
-        .hero-icon-image--light {
-          display: none;
-        }
-
-        .hero-icon-image--dark {
-          display: block;
-        }
-      }
-
-      html[data-theme="light"] .hero-icon-image--light {
-        display: block;
-      }
-
-      html[data-theme="light"] .hero-icon-image--dark {
-        display: none;
-      }
-
-      html[data-theme="dark"] .hero-icon-image--light {
-        display: none;
-      }
-
-      html[data-theme="dark"] .hero-icon-image--dark {
-        display: block;
-      }
-
-      .eyebrow {
-        margin: 0 0 8px;
-        color: var(--blue);
-        font-size: 12px;
-        line-height: 1;
-        font-weight: 700;
-        letter-spacing: 0.08em;
       }
 
       h1 {
@@ -288,15 +313,18 @@
       }
 
       .doc-shell {
-        padding: clamp(18px, 2.2vw, 28px);
+        padding: clamp(20px, 2.6vw, 34px);
+      }
+
+      .doc-header {
+        margin-bottom: 26px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid var(--line);
       }
 
       .lede {
-        margin: 0 0 18px;
-        padding: 16px 18px;
-        border: 1px solid var(--line);
-        border-radius: 18px;
-        background: var(--card-solid);
+        margin: 0 0 22px;
+        max-width: 64ch;
         color: var(--muted);
         text-wrap: pretty;
       }
@@ -408,21 +436,25 @@
           padding-bottom: 56px;
         }
 
-        .hero,
+        .site-header {
+          align-items: stretch;
+        }
+
+        .site-brand-tagline {
+          display: none;
+        }
+
+        .site-header-actions {
+          width: auto;
+          align-items: flex-end;
+        }
+
+        .theme-toggle {
+          margin-left: auto;
+        }
+
         .doc-shell {
           border-radius: 24px;
-        }
-
-        .hero {
-          grid-template-columns: auto 1fr;
-          gap: 12px;
-          padding: 16px;
-          align-items: center;
-        }
-
-        .hero-icon {
-          width: 56px;
-          height: 56px;
         }
 
         .doc-shell {
@@ -445,38 +477,43 @@
   </head>
   <body>
     <main class="page">
-      <div class="page-top">
-        <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle light and dark mode">
-          <span class="theme-toggle-dot" aria-hidden="true"></span>
-          <span data-theme-toggle-label>Light mode</span>
-        </button>
-      </div>
+      <header class="site-header">
+        <a class="site-brand" href="/" aria-label="SendMoi home">
+          <span class="site-brand-mark" aria-hidden="true">
+            <img
+              class="site-brand-icon site-brand-icon--light"
+              src="../assets/images/sendmoi/app-icon-light.png?v=7f526f9eb2a3"
+              alt=""
+              width="1024"
+              height="1024"
+            />
+            <img
+              class="site-brand-icon site-brand-icon--dark"
+              src="../assets/images/sendmoi/app-icon-dark.png?v=6bf5d7f5c81c"
+              alt=""
+              width="1024"
+              height="1024"
+            />
+          </span>
+          <span class="site-brand-copy">
+            <span class="site-brand-name">SendMoi</span>
+            <span class="site-brand-tagline">Your inbox, in two taps.</span>
+          </span>
+        </a>
 
-      <section class="hero" aria-labelledby="privacy-title">
-        <div class="hero-icon">
-          <img
-            class="hero-icon-image hero-icon-image--light"
-            src="../assets/images/sendmoi/app-icon-light.png?v=7f526f9eb2a3"
-            alt="SendMoi app icon"
-            width="1024"
-            height="1024"
-          />
-          <img
-            class="hero-icon-image hero-icon-image--dark"
-            src="../assets/images/sendmoi/app-icon-dark.png?v=6bf5d7f5c81c"
-            alt="SendMoi app icon"
-            width="1024"
-            height="1024"
-          />
+        <div class="site-header-actions">
+          <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle light and dark mode">
+            <span class="theme-toggle-dot" aria-hidden="true"></span>
+            <span data-theme-toggle-label>Light mode</span>
+          </button>
         </div>
-        <div>
-          <p class="eyebrow">SendMoi</p>
+      </header>
+
+      <section class="doc-shell" aria-labelledby="privacy-title">
+        <div class="doc-header">
           <h1 id="privacy-title" class="gradient-title">Privacy Policy</h1>
           <p class="subhead">Last updated: April 14, 2026</p>
         </div>
-      </section>
-
-      <section class="doc-shell">
         <p class="lede">SendMoi is a local-first app that helps you send shared links and photos as emails through your own Gmail account. This policy explains what SendMoi handles, where that data goes, and what stays on your device.</p>
 
         <h2>What SendMoi Accesses</h2>
