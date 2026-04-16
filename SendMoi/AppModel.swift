@@ -203,7 +203,9 @@ final class AppModel: ObservableObject {
     }
 
     func retryNow() async {
+        let wasShowingOnboarding = shouldShowOnboarding
         reloadSharedPreferences()
+        if wasShowingOnboarding { shouldShowOnboarding = true }
         reloadSessionFromDisk()
         reloadQueueFromDisk()
         await processQueue()

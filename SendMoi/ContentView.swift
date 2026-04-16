@@ -15,6 +15,7 @@ struct ContentView: View {
 
     @State private var showsResetConfirmation = false
     @State private var showsOnboardingAccountSheet = false
+    @State private var showsPinTip = false
 
     private enum Field: Hashable {
         case defaultRecipient
@@ -41,6 +42,9 @@ struct ContentView: View {
                 }
                     .environmentObject(model)
             }
+        }
+        .sheet(isPresented: $showsPinTip) {
+            PinTipSheet()
         }
         .confirmationDialog(
             "Reset SendMoi?",
@@ -1195,6 +1199,11 @@ struct ContentView: View {
                     .padding(.horizontal, 20)
                     .padding(.vertical, 12)
                 Divider().padding(.leading, 20)
+                Button("How to Pin SendMoi") { showsPinTip = true }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                Divider().padding(.leading, 20)
                 Button("Clear Settings", role: .destructive) {
                     showsResetConfirmation = true
                 }
@@ -1950,3 +1959,68 @@ private struct LoopingVideoPlayerNativeView: NSViewRepresentable {
     }
 }
 #endif
+
+private struct PinTipSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var currentSlide = 0
+
+    private struct Slide: Identifiable {
+        let id: Int
+        let imageName: String
+        let title: String
+        let detail: String
+    }
+
+    private let slides: [Slide] = [
+        Slide(id: 0, imageName: "OnboardingPinStep1",
+              title: "1. Open Share and tap More",
+              detail: "From the first app row in the share sheet, open More to edit your app list."),
+        Slide(id: 1, imageName: "OnboardingPinStep2",
+              title: "2. Add SendMoi to Favorites",
+              detail: "Tap the green plus next to SendMoi so it appears in Favorites."),
+        Slide(id: 2, imageName: "OnboardingPinStep3",
+              title: "3. Keep SendMoi enabled",
+              detail: "Make sure SendMoi stays toggled on, then tap Done.")
+    ]
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                TabView(selection: $currentSlide) {
+                    ForEach(slides) { slide in
+                        VStack(spacing: 20) {
+                            Image(slide.imageName)
+                                .resizable()
+                                .interpolation(.high)
+                                .scaledToFit()
+                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                .padding(.horizontal, 24)
+
+                            VStack(spacing: 6) {
+                                Text(slide.title)
+                                    .font(.headline)
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                                Text(slide.detail)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.center)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .padding(.horizontal, 32)
+                            }
+                        }
+                        .tag(slide.id)
+                    }
+                }
+                .tabViewStyle(.page(indexDisplayMode: .always))
+                .frame(maxHeight: .infinity)
+            }
+            .navigationTitle("How to Pin SendMoi")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+}
