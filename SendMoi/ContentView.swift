@@ -1976,6 +1976,7 @@ private struct LoopingVideoPlayerNativeView: NSViewRepresentable {
 #if os(iOS)
 private struct PinTipSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @State private var currentSlide = 0
 
     private struct Slide: Identifiable {
@@ -2028,6 +2029,7 @@ private struct PinTipSheet: View {
                 .tabViewStyle(.page(indexDisplayMode: .always))
                 .frame(maxHeight: .infinity)
             }
+            .background(pinTipBackground.ignoresSafeArea())
             .navigationTitle("How to Pin SendMoi")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -2035,6 +2037,54 @@ private struct PinTipSheet: View {
                     Button("Done") { dismiss() }
                 }
             }
+        }
+    }
+
+    private var pinTipBackground: some View {
+        ZStack {
+            LinearGradient(
+                colors: colorScheme == .dark
+                    ? [
+                        Color(red: 0.02, green: 0.07, blue: 0.18),
+                        Color(red: 0.04, green: 0.11, blue: 0.28),
+                        Color(red: 0.06, green: 0.16, blue: 0.38)
+                    ]
+                    : [
+                        Color(red: 0.95, green: 0.98, blue: 1.0),
+                        Color(red: 0.91, green: 0.96, blue: 1.0),
+                        Color(red: 0.92, green: 0.95, blue: 1.0)
+                    ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            RadialGradient(
+                colors: [
+                    colorScheme == .dark
+                        ? Color(red: 0.21961, green: 0.44706, blue: 1.0).opacity(0.26)
+                        : Color.white.opacity(0.78),
+                    .clear
+                ],
+                center: .topTrailing,
+                startRadius: 24,
+                endRadius: 320
+            )
+            .offset(x: -34, y: -190)
+
+            LinearGradient(
+                colors: [
+                    colorScheme == .dark
+                        ? Color(red: 0.07059, green: 0.18824, blue: 0.47843).opacity(0.30)
+                        : Color(red: 0.21961, green: 0.44706, blue: 1.0).opacity(0.18),
+                    .clear
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .frame(width: 420, height: 320)
+            .blur(radius: 52)
+            .rotationEffect(.degrees(-16))
+            .offset(x: -168, y: 286)
         }
     }
 }

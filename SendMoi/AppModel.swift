@@ -119,7 +119,9 @@ final class AppModel: ObservableObject {
             return
         }
 
+        let wasShowingOnboarding = shouldShowOnboarding
         reloadSharedPreferences()
+        if wasShowingOnboarding { shouldShowOnboarding = true }
         reloadSessionFromDisk()
         reloadQueueFromDisk()
         guard !queuedEmails.isEmpty else { return }
@@ -352,7 +354,9 @@ final class AppModel: ObservableObject {
     }
 
     private func handleSharedQueueChange() {
+        let wasShowingOnboarding = shouldShowOnboarding
         reloadSharedPreferences()
+        if wasShowingOnboarding { shouldShowOnboarding = true }
         reloadSessionFromDisk()
         reloadQueueFromDisk()
         Task {
