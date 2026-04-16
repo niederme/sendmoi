@@ -1,6 +1,7 @@
 import Foundation
 import LinkPresentation
 import NaturalLanguage
+import Network
 import SwiftUI
 import Translation
 import UniformTypeIdentifiers
@@ -480,6 +481,16 @@ final class ShareExtensionModel: ObservableObject {
                 throw GmailAPIError.credentialsInvalid("No Gmail session found. Please connect your account.")
             }
             try Task.checkCancellation()
+
+            // If the network is unavailable, queue immediately rather than hanging on a
+            // slow connection until URLSession times out (default: 60 s).
+            guard await Self.isNetworkAvailable() else {
+                try QueueStore.append(refreshedItem)
+                Task { await AnalyticsClient.shared.send("share_queued", params: ["source": "share_sheet"], enabled: analyticsEnabled) }
+                extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
+                return refreshedItem
+            }
+
             let validSession = try await deliveryService.ensureValidSession(session)
             try Task.checkCancellation()
 
@@ -524,6 +535,21 @@ final class ShareExtensionModel: ObservableObject {
 
         let enriched = makeQueuedEmail(from: draft, id: item.id, createdAt: item.createdAt, lastError: item.lastError)
         return enriched != item ? enriched : item
+    }
+
+    private static func isNetworkAvailable() async -> Bool {
+        await withCheckedContinuation { continuation in
+            let monitor = NWPathMonitor()
+            let queue = DispatchQueue(label: "SendMoi.ShareNetworkCheck")
+            var resumed = false
+            monitor.pathUpdateHandler = { path in
+                guard !resumed else { return }
+                resumed = true
+                monitor.cancel()
+                continuation.resume(returning: path.status == .satisfied)
+            }
+            monitor.start(queue: queue)
+        }
     }
 
     private static func persistDebugError(_ message: String) {
