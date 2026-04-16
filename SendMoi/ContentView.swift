@@ -638,6 +638,19 @@ struct ContentView: View {
                     }
                     .toggleStyle(.switch)
                 }
+
+                Toggle(isOn: Binding(
+                    get: { model.analyticsEnabled },
+                    set: { model.setAnalyticsEnabled($0) }
+                )) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Share anonymous usage analytics")
+                        Text("Installs, active use, and setup completion only. No personal info.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .toggleStyle(.switch)
             }
         }
     }
