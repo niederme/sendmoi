@@ -383,8 +383,21 @@
         color: var(--muted);
         font-size: 12px;
         line-height: 1.5;
+        display: grid;
+        gap: 6px;
+        justify-items: center;
+      }
+
+      .footer-row {
         display: flex;
+        flex-wrap: wrap;
+        gap: 6px 20px;
+        align-items: center;
         justify-content: center;
+      }
+
+      .footer-inline-group {
+        white-space: nowrap;
       }
 
       .footer-meta p,
@@ -416,7 +429,7 @@
         gap: 12px;
         align-items: center;
         justify-content: center;
-        margin-top: 10px;
+        margin-top: 6px;
       }
 
       .footer-links a {
@@ -589,11 +602,16 @@
 
       <footer class="footer">
         <div class="footer-meta">
-          <p>
-            <a href="https://nieder.me/">&copy; John Niedermeyer</a>
-            <span aria-hidden="true"> | </span>
-            Need Help? Email
-            <a href="mailto:help@send.moi?subject=SendMoi%20Issue%20Report&amp;body=Describe%20the%20issue%20you%20encountered%3A%0A%0A">&#104;&#101;&#108;&#112;&#64;&#115;&#101;&#110;&#100;&#46;&#109;&#111;&#105;</a>
+          <p>&copy; John Niedermeyer</p>
+          <p class="footer-row">
+            <span class="footer-inline-group">
+              Need Help? Email
+              <a href="mailto:help@send.moi?subject=SendMoi%20Issue%20Report&amp;body=Describe%20the%20issue%20you%20encountered%3A%0A%0A">&#104;&#101;&#108;&#112;&#64;&#115;&#101;&#110;&#100;&#46;&#109;&#111;&#105;</a>
+            </span>
+            <span class="footer-inline-group">
+              Follow
+              <a href="https://x.com/SendMoiApp" rel="me noopener noreferrer">@SendMoiApp on X</a>
+            </span>
           </p>
         </div>
         <div class="footer-links">
