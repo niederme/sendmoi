@@ -1,5 +1,6 @@
 .DS_Store
 Analytics.plist
+!SendMoi/Services/Analytics.plist
 DerivedData/
 xcuserdata/
 build/

@@ -12,8 +12,8 @@ actor AnalyticsClient {
     private init() {
         if let url = Bundle.main.url(forResource: "Analytics", withExtension: "plist"),
            let plist = NSDictionary(contentsOf: url) {
-            firebaseAppID = plist["FirebaseAppID"] as? String
-            apiSecret = plist["APISecret"] as? String
+            firebaseAppID = Self.nonEmptyString(plist["FirebaseAppID"])
+            apiSecret = Self.nonEmptyString(plist["APISecret"])
         } else {
             firebaseAppID = nil
             apiSecret = nil
@@ -28,6 +28,12 @@ actor AnalyticsClient {
             defaults.set(new, forKey: key)
             instanceID = new
         }
+    }
+
+    private static func nonEmptyString(_ value: Any?) -> String? {
+        guard let string = value as? String else { return nil }
+        let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     func send(_ eventName: String, params: [String: String] = [:], enabled: Bool) async {

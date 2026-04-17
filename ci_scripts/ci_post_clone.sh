@@ -5,7 +5,12 @@ set -e
 # Set ANALYTICS_FIREBASE_APP_ID and ANALYTICS_API_SECRET in the
 # Xcode Cloud workflow environment before running builds.
 
-PLIST_PATH="$CI_WORKSPACE/SendMoi/Services/Analytics.plist"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="${CI_PRIMARY_REPOSITORY_PATH:-$SCRIPT_DIR/..}"
+PLIST_DIR="$REPO_ROOT/SendMoi/Services"
+PLIST_PATH="$PLIST_DIR/Analytics.plist"
+
+mkdir -p "$PLIST_DIR"
 
 if [ -z "$ANALYTICS_FIREBASE_APP_ID" ] || [ -z "$ANALYTICS_API_SECRET" ]; then
     echo "Warning: ANALYTICS_FIREBASE_APP_ID or ANALYTICS_API_SECRET not set. Analytics will be disabled."
