@@ -1107,9 +1107,8 @@
         gap: 14px;
       }
 
-      .store-actions--coming-soon {
+      .store-badge-link--coming-soon {
         position: relative;
-        width: fit-content;
         isolation: isolate;
       }
 
@@ -1161,14 +1160,14 @@
         bottom: -58px;
       }
 
-      .store-actions--coming-soon .store-badge-link {
+      .store-badge-link--coming-soon {
         pointer-events: none;
         cursor: not-allowed;
         opacity: 0.62;
         filter: grayscale(0.32) saturate(0.48) brightness(1.02) contrast(0.86) !important;
       }
 
-      .store-actions--coming-soon .store-badge-link::before {
+      .store-badge-link--coming-soon::before {
         border-color: rgba(201, 214, 255, 0.4);
         background: linear-gradient(180deg, rgba(236, 244, 255, 0.44), rgba(220, 230, 255, 0.16) 46%, rgba(198, 173, 255, 0.14));
         box-shadow:
@@ -1177,7 +1176,7 @@
         opacity: 0.94;
       }
 
-      .store-actions--coming-soon .store-badge-link::after {
+      .store-badge-link--coming-soon::after {
         content: "";
         position: absolute;
         inset: 1px;
@@ -1189,13 +1188,13 @@
         pointer-events: none;
       }
 
-      .store-actions--coming-soon .store-badge {
+      .store-badge-link--coming-soon .store-badge {
         opacity: 0.78;
         filter: saturate(0.74) contrast(0.88) brightness(1.02) !important;
       }
 
-      .store-actions--coming-soon .store-badge-link:hover,
-      .store-actions--coming-soon .store-badge-link:focus-visible {
+      .store-badge-link--coming-soon:hover,
+      .store-badge-link--coming-soon:focus-visible {
         transform: none;
         filter: grayscale(0.32) saturate(0.48) brightness(1.02) contrast(0.86) !important;
       }
@@ -1451,10 +1450,6 @@
           padding-bottom: 80px;
         }
 
-        .hero-download .store-actions--coming-soon {
-          margin: 0;
-        }
-
         .coming-soon-mark {
           top: -6px;
           left: -22px;
@@ -1501,9 +1496,6 @@
           gap: 12px;
         }
 
-        .hero-download .store-actions--coming-soon {
-          margin: 0;
-        }
 
         .hero-download .coming-soon-mark {
           top: -4px;
@@ -1606,9 +1598,6 @@
           padding-bottom: 50px;
         }
 
-        .hero-download .store-actions--coming-soon {
-          margin: 0;
-        }
 
         .hero-download .coming-soon-text {
           right: 0;
@@ -1779,24 +1768,22 @@
                   alt=""
                 />
               </a>
-              <div class="store-actions--coming-soon">
+              <a class="store-badge-link store-badge-link--coming-soon" href="#" aria-label="Download SendMoi on the Mac App Store (coming soon)" aria-disabled="true" tabindex="-1">
                 <span class="coming-soon-mark" aria-hidden="true">
                   <img class="coming-soon-circle" src="./assets/images/sendmoi/coming-soon-circle.svg" alt="" loading="lazy" decoding="async" />
                   <img class="coming-soon-text" src="./assets/images/sendmoi/coming-soon-text.svg" alt="" loading="lazy" decoding="async" />
                 </span>
-                <a class="store-badge-link" href="#" aria-label="Download SendMoi on the Mac App Store (coming soon)" aria-disabled="true" tabindex="-1">
-                  <img
-                    class="store-badge store-badge--dark"
-                    src="./assets/images/sendmoi/app-store-badges/Download_on_the_Mac_App_Store_Badge_US-UK_RGB_blk_092917.svg"
-                    alt=""
-                  />
-                  <img
-                    class="store-badge store-badge--light"
-                    src="./assets/images/sendmoi/app-store-badges/Download_on_the_Mac_App_Store_Badge_US-UK_RGB_wht_092917.svg"
-                    alt=""
-                  />
-                </a>
-              </div>
+                <img
+                  class="store-badge store-badge--dark"
+                  src="./assets/images/sendmoi/app-store-badges/Download_on_the_Mac_App_Store_Badge_US-UK_RGB_blk_092917.svg"
+                  alt=""
+                />
+                <img
+                  class="store-badge store-badge--light"
+                  src="./assets/images/sendmoi/app-store-badges/Download_on_the_Mac_App_Store_Badge_US-UK_RGB_wht_092917.svg"
+                  alt=""
+                />
+              </a>
             </div>
           </div>
         </div>
@@ -1925,24 +1912,22 @@
               alt=""
             />
           </a>
-          <div class="store-actions--coming-soon">
+          <a class="store-badge-link store-badge-link--coming-soon" href="#" aria-label="Download SendMoi on the Mac App Store (coming soon)" aria-disabled="true" tabindex="-1">
             <span class="coming-soon-mark" aria-hidden="true">
               <img class="coming-soon-circle" src="./assets/images/sendmoi/coming-soon-circle.svg" alt="" loading="lazy" decoding="async" />
               <img class="coming-soon-text" src="./assets/images/sendmoi/coming-soon-text.svg" alt="" loading="lazy" decoding="async" />
             </span>
-            <a class="store-badge-link" href="#" aria-label="Download SendMoi on the Mac App Store (coming soon)" aria-disabled="true" tabindex="-1">
-              <img
-                class="store-badge store-badge--dark"
-                src="./assets/images/sendmoi/app-store-badges/Download_on_the_Mac_App_Store_Badge_US-UK_RGB_blk_092917.svg"
-                alt=""
-              />
-              <img
-                class="store-badge store-badge--light"
-                src="./assets/images/sendmoi/app-store-badges/Download_on_the_Mac_App_Store_Badge_US-UK_RGB_wht_092917.svg"
-                alt=""
-              />
-            </a>
-          </div>
+            <img
+              class="store-badge store-badge--dark"
+              src="./assets/images/sendmoi/app-store-badges/Download_on_the_Mac_App_Store_Badge_US-UK_RGB_blk_092917.svg"
+              alt=""
+            />
+            <img
+              class="store-badge store-badge--light"
+              src="./assets/images/sendmoi/app-store-badges/Download_on_the_Mac_App_Store_Badge_US-UK_RGB_wht_092917.svg"
+              alt=""
+            />
+          </a>
         </div>
       </section>
 
