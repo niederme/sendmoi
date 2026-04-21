@@ -39,6 +39,7 @@
           "name" : "3 – goggles shadow"
         }
       ],
+      "lighting" : "combined",
       "shadow" : {
         "kind" : "neutral",
         "opacity" : 0.5
