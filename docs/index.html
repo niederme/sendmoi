@@ -1810,6 +1810,7 @@
                     class="video-player"
                     src="./assets/videos/sendmoi/sendmoi-demo-hero.mp4"
                     muted
+                    loop
                     playsinline
                     preload="auto"
                     aria-label="SendMoi product demo video. Tap to play or pause."
@@ -2071,14 +2072,6 @@
           demoVideo.addEventListener("play", syncPausedState);
 
           demoVideo.addEventListener("pause", syncPausedState);
-
-          demoVideo.addEventListener("ended", () => {
-            setTimeout(() => {
-              if (!reducedMotion) {
-                demoVideo.play().catch(() => {});
-              }
-            }, 3000);
-          });
 
           demoVideo.addEventListener("click", toggleDemoPlayback);
           demoVideo.addEventListener("keydown", (event) => {
