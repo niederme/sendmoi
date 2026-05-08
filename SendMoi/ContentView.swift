@@ -1422,9 +1422,6 @@ struct ContentView: View {
                             Text(item.title).font(.headline)
                             Text("To: \(item.toEmail)").font(.subheadline)
                             Text(item.urlString).font(.footnote).foregroundStyle(.secondary)
-                            if let lastError = item.lastError {
-                                Text(lastError).font(.footnote).foregroundStyle(.orange)
-                            }
                         }
                         .padding(.horizontal, 20)
                         .padding(.vertical, 10)

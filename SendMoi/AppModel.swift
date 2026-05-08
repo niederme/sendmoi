@@ -129,6 +129,7 @@ final class AppModel: ObservableObject {
             statusMessage = "You have queued items. Sign in to Gmail to send them."
             return
         }
+        guard isOnline else { return }
 
         isBusy = true
         defer {
