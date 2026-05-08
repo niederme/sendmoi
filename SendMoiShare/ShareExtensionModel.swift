@@ -79,6 +79,7 @@ final class ShareExtensionModel: ObservableObject {
             schedulePreviewRefresh()
             autoSendIfPossible()
             promptForGmailConnectionIfNeeded()
+            flushQueueInBackground()
         }
     }
 
@@ -458,6 +459,18 @@ final class ShareExtensionModel: ObservableObject {
         try Task.checkCancellation()
         queuedPreviewEnrichmentItem = item
 
+        let analyticsEnabled = RecipientStore.loadAnalyticsEnabled()
+
+        // Check connectivity before waiting on preview or attempting delivery.
+        // Doing this first prevents the preview-fetch task from blocking the sheet
+        // close when there is no network.
+        guard await Self.isNetworkAvailable() else {
+            try QueueStore.append(item)
+            Task { await AnalyticsClient.shared.send("share_queued", params: ["source": "share_sheet"], enabled: analyticsEnabled) }
+            extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
+            return item
+        }
+
         // Enrich with preview data if the preview is still loading.
         // We do this before touching the queue so the main app can't race us.
         let refreshedItem: QueuedEmail
@@ -471,8 +484,6 @@ final class ShareExtensionModel: ObservableObject {
             throw error
         }
 
-        let analyticsEnabled = RecipientStore.loadAnalyticsEnabled()
-
         do {
             guard let session = try SharedSessionStore.load() else {
                 // No session — queue for main app delivery and show reconnect prompt.
@@ -481,15 +492,6 @@ final class ShareExtensionModel: ObservableObject {
                 throw GmailAPIError.credentialsInvalid("No Gmail session found. Please connect your account.")
             }
             try Task.checkCancellation()
-
-            // If the network is unavailable, queue immediately rather than hanging on a
-            // slow connection until URLSession times out (default: 60 s).
-            guard await Self.isNetworkAvailable() else {
-                try QueueStore.append(refreshedItem)
-                Task { await AnalyticsClient.shared.send("share_queued", params: ["source": "share_sheet"], enabled: analyticsEnabled) }
-                extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
-                return refreshedItem
-            }
 
             let validSession = try await deliveryService.ensureValidSession(session)
             try Task.checkCancellation()
@@ -542,13 +544,39 @@ final class ShareExtensionModel: ObservableObject {
             let monitor = NWPathMonitor()
             let queue = DispatchQueue(label: "SendMoi.ShareNetworkCheck")
             var resumed = false
-            monitor.pathUpdateHandler = { path in
+            let complete = { (available: Bool) in
                 guard !resumed else { return }
                 resumed = true
                 monitor.cancel()
-                continuation.resume(returning: path.status == .satisfied)
+                continuation.resume(returning: available)
+            }
+            monitor.pathUpdateHandler = { path in
+                complete(path.status == .satisfied)
             }
             monitor.start(queue: queue)
+            // Safety net: if the path monitor doesn't fire within 500 ms, assume available.
+            queue.asyncAfter(deadline: .now() + 0.5) { complete(true) }
+        }
+    }
+
+    private func flushQueueInBackground() {
+        guard hasSharedGmailSession else { return }
+
+        Task { [weak self] in
+            guard let self else { return }
+            guard !self.isSaving else { return }
+
+            let queue = (try? QueueStore.load()) ?? []
+            guard !queue.isEmpty else { return }
+            guard await Self.isNetworkAvailable() else { return }
+            guard !self.isSaving else { return }
+
+            guard let session = try? SharedSessionStore.load(),
+                  let validSession = try? await self.deliveryService.ensureValidSession(session) else { return }
+
+            guard !self.isSaving else { return }
+            try? await self.flushQueuedEmails(using: validSession)
+            try? SharedSessionStore.save(validSession)
         }
     }
 
