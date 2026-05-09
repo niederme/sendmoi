@@ -10,7 +10,7 @@ enum SharedContainer {
         let baseURL = try preferredBaseURL(fileManager: fileManager)
 
         let appDirectory = baseURL.appendingPathComponent(directoryName, isDirectory: true)
-        if !fileManager.fileExists(atPath: appDirectory.path()) {
+        if !fileManager.fileExists(atPath: appDirectory.path(percentEncoded: false)) {
             try fileManager.createDirectory(at: appDirectory, withIntermediateDirectories: true)
         }
         migrateLegacyApplicationSupportDirectoryIfNeeded(to: appDirectory, fileManager: fileManager)
@@ -59,7 +59,7 @@ enum SharedContainer {
     private static func sharedMediaDirectoryURL() throws -> URL {
         let fileManager = FileManager.default
         let directoryURL = try appDirectoryURL().appendingPathComponent(sharedMediaDirectoryName, isDirectory: true)
-        if !fileManager.fileExists(atPath: directoryURL.path()) {
+        if !fileManager.fileExists(atPath: directoryURL.path(percentEncoded: false)) {
             try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
         }
         return directoryURL
@@ -97,7 +97,7 @@ enum SharedContainer {
         guard let legacyDirectory = try? applicationSupportBaseURL(fileManager: fileManager)
             .appendingPathComponent(directoryName, isDirectory: true),
             legacyDirectory.standardizedFileURL != appDirectory.standardizedFileURL,
-            fileManager.fileExists(atPath: legacyDirectory.path()) else {
+            fileManager.fileExists(atPath: legacyDirectory.path(percentEncoded: false)) else {
             return
         }
 
@@ -108,7 +108,7 @@ enum SharedContainer {
 
         for legacyItem in legacyContents {
             let destination = appDirectory.appendingPathComponent(legacyItem.lastPathComponent, isDirectory: false)
-            guard !fileManager.fileExists(atPath: destination.path()) else {
+            guard !fileManager.fileExists(atPath: destination.path(percentEncoded: false)) else {
                 continue
             }
             try? fileManager.moveItem(at: legacyItem, to: destination)

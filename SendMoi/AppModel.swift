@@ -133,7 +133,7 @@ final class AppModel: ObservableObject {
     private func checkQueueFileForChanges() {
         guard let fileURL = try? SharedContainer.appDirectoryURL()
             .appendingPathComponent("queued-emails.json", isDirectory: false),
-              let attrs = try? FileManager.default.attributesOfItem(atPath: fileURL.path()),
+              let attrs = try? FileManager.default.attributesOfItem(atPath: fileURL.path(percentEncoded: false)),
               let modDate = attrs[.modificationDate] as? Date,
               modDate != lastQueueFileModificationDate else { return }
         lastQueueFileModificationDate = modDate

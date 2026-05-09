@@ -6,7 +6,7 @@ enum QueueStore {
 
     static func load() throws -> [QueuedEmail] {
         let url = try queueFileURL()
-        guard FileManager.default.fileExists(atPath: url.path()) else {
+        guard FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) else {
             return []
         }
 
