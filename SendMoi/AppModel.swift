@@ -21,7 +21,8 @@ final class AppModel: ObservableObject {
     private let queueChangeObserver = QueueChangeObserver()
     private var shouldReprocessQueue = false
     #if os(macOS)
-    private var queueDirectoryWatcher: DispatchSourceFileSystemObject?
+    private var queuePollTimer: Timer?
+    private var lastQueueFileModificationDate: Date?
     #endif
 
     init() {
@@ -68,31 +69,30 @@ final class AppModel: ObservableObject {
 
         #if os(macOS)
         checkForShareExtensionDebugError()
-        startQueueDirectoryWatcher()
+        startQueuePolling()
         #endif
 
         await processQueue()
     }
 
     #if os(macOS)
-    private func startQueueDirectoryWatcher() {
-        guard let directoryURL = try? SharedContainer.appDirectoryURL() else { return }
-        let fd = open(directoryURL.path, O_EVTONLY)
-        guard fd >= 0 else { return }
-
-        let source = DispatchSource.makeFileSystemObjectSource(
-            fileDescriptor: fd,
-            eventMask: .write,
-            queue: .main
-        )
-        source.setEventHandler { [weak self] in
+    private func startQueuePolling() {
+        queuePollTimer?.invalidate()
+        queuePollTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
-                self?.handleSharedQueueChange()
+                self?.checkQueueFileForChanges()
             }
         }
-        source.setCancelHandler { close(fd) }
-        source.resume()
-        queueDirectoryWatcher = source
+    }
+
+    private func checkQueueFileForChanges() {
+        guard let fileURL = try? SharedContainer.appDirectoryURL()
+            .appendingPathComponent("queued-emails.json", isDirectory: false),
+              let attrs = try? FileManager.default.attributesOfItem(atPath: fileURL.path()),
+              let modDate = attrs[.modificationDate] as? Date,
+              modDate != lastQueueFileModificationDate else { return }
+        lastQueueFileModificationDate = modDate
+        handleSharedQueueChange()
     }
 
     private func checkForShareExtensionDebugError() {
