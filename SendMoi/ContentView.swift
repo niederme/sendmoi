@@ -16,6 +16,7 @@ struct ContentView: View {
     @State private var showsResetConfirmation = false
     @State private var showsOnboardingAccountSheet = false
     @State private var showsPinTip = false
+    @State private var showsOfflineAlert = false
 
     private enum Field: Hashable {
         case defaultRecipient
@@ -47,6 +48,11 @@ struct ContentView: View {
             #if os(iOS)
             PinTipSheet()
             #endif
+        }
+        .alert("You're Offline", isPresented: $showsOfflineAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("No network connection. Items will send automatically when you're back online.")
         }
         .confirmationDialog(
             "Reset SendMoi?",
@@ -1451,7 +1457,11 @@ struct ContentView: View {
 
                 Divider().padding(.leading, 20)
                 Button {
-                    Task { await model.retryNow() }
+                    if model.isOnline {
+                        Task { await model.retryNow() }
+                    } else {
+                        showsOfflineAlert = true
+                    }
                 } label: {
                     Text("Send Queued Now").frame(maxWidth: .infinity)
                 }

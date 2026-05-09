@@ -14,6 +14,7 @@ import AppKit
 @MainActor
 final class ShareExtensionModel: ObservableObject {
     private static let autoSendGracePeriodNanoseconds: UInt64 = 1_000_000_000
+    private static let autoSendDeliveryTimeoutNanoseconds: UInt64 = 8_000_000_000
     private static let manualSendPreviewWaitLimitNanoseconds: UInt64 = 750_000_000
     static let missingRecipientMessage = "Enter a recipient in the To field, or set a default recipient in the SendMoi app."
     static let recipientHelperMessage = "Pro tip: add a recipient here, or save a default recipient in the SendMoi app."
@@ -54,6 +55,8 @@ final class ShareExtensionModel: ObservableObject {
     private let deliveryService = GmailDeliveryService()
     private var previewTask: Task<Void, Never>?
     private var sendTask: Task<Void, Never>?
+    private var deliveryTimeoutTask: Task<Void, Never>?
+    private var pendingAutoSendItem: QueuedEmail?
     private var recipientReloadTask: Task<Void, Never>?
     private var pendingPreviewApplication: PendingPreviewApplication?
     private var queuedPreviewEnrichmentItem: QueuedEmail?
@@ -125,12 +128,26 @@ final class ShareExtensionModel: ObservableObject {
 
         isSaving = true
 
+        if shouldAllowAutoSendEditWindow {
+            pendingAutoSendItem = item
+            deliveryTimeoutTask = Task { [weak self] in
+                guard let self else { return }
+                try? await Task.sleep(nanoseconds: Self.autoSendGracePeriodNanoseconds + Self.autoSendDeliveryTimeoutNanoseconds)
+                guard !Task.isCancelled, self.isSaving, let pending = self.pendingAutoSendItem else { return }
+                try? QueueStore.append(pending)
+                self.extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
+            }
+        }
+
         sendTask = Task { [weak self] in
             guard let self else { return }
             defer {
                 self.isSaving = false
                 self.sendTask = nil
                 self.queuedPreviewEnrichmentItem = nil
+                self.deliveryTimeoutTask?.cancel()
+                self.deliveryTimeoutTask = nil
+                self.pendingAutoSendItem = nil
             }
 
             do {
@@ -499,6 +516,7 @@ final class ShareExtensionModel: ObservableObject {
             // Send directly — do NOT queue first so the main app can't steal the item.
             try await deliveryService.sendEmail(using: validSession, item: refreshedItem)
             Self.clearDebugError()
+            pendingAutoSendItem = nil  // item sent — don't queue it if the timeout fires during flush
             Task { await AnalyticsClient.shared.send("email_sent", params: ["source": "share_sheet"], enabled: analyticsEnabled) }
 
             // Flush any backlog the main app left behind (best-effort).

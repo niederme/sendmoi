@@ -20,6 +20,9 @@ final class AppModel: ObservableObject {
     private let monitor = NetworkMonitor()
     private let queueChangeObserver = QueueChangeObserver()
     private var shouldReprocessQueue = false
+    #if os(macOS)
+    private var queueDirectoryWatcher: DispatchSourceFileSystemObject?
+    #endif
 
     init() {
         monitor.onStatusChange = { [weak self] online in
@@ -33,6 +36,21 @@ final class AppModel: ObservableObject {
             }
         }
         queueChangeObserver.start()
+
+        #if os(macOS)
+        // Darwin notifications between a Mac Catalyst extension and the main app
+        // are unreliable. Re-check the queue every time the app comes to the
+        // foreground so freshly-queued items always appear.
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.handleSharedQueueChange()
+            }
+        }
+        #endif
     }
 
     func startup() async {
@@ -50,12 +68,33 @@ final class AppModel: ObservableObject {
 
         #if os(macOS)
         checkForShareExtensionDebugError()
+        startQueueDirectoryWatcher()
         #endif
 
         await processQueue()
     }
 
     #if os(macOS)
+    private func startQueueDirectoryWatcher() {
+        guard let directoryURL = try? SharedContainer.appDirectoryURL() else { return }
+        let fd = open(directoryURL.path, O_EVTONLY)
+        guard fd >= 0 else { return }
+
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: fd,
+            eventMask: .write,
+            queue: .main
+        )
+        source.setEventHandler { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.handleSharedQueueChange()
+            }
+        }
+        source.setCancelHandler { close(fd) }
+        source.resume()
+        queueDirectoryWatcher = source
+    }
+
     private func checkForShareExtensionDebugError() {
         guard let url = try? SharedContainer.appDirectoryURL()
             .appendingPathComponent("share-extension-last-error.txt", isDirectory: false),
