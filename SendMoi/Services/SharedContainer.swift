@@ -66,40 +66,16 @@ enum SharedContainer {
     }
 
     private static func preferredBaseURL(fileManager: FileManager) throws -> URL {
-        #if os(macOS)
-        // `homeDirectoryForCurrentUser` returns the iOS-style sandbox container
-        // path in a Mac Catalyst TestFlight build, causing it to resolve to the
-        // wrong location. `ProcessInfo.environment["HOME"]` always reflects the
-        // real filesystem home directory, so it correctly reaches the shared
-        // group container that the share extension also writes to.
-        let homeURL: URL
-        if let homePath = ProcessInfo.processInfo.environment["HOME"] {
-            homeURL = URL(fileURLWithPath: homePath, isDirectory: true)
-        } else {
-            homeURL = fileManager.homeDirectoryForCurrentUser
-        }
-        let manualGroupURL = homeURL
-            .appendingPathComponent("Library/Group Containers", isDirectory: true)
-            .appendingPathComponent(appGroupID, isDirectory: true)
-
-        // Prefer the real shared group container on macOS. Sandboxed Catalyst
-        // builds can fall back to a private Application Support directory, which
-        // makes the app miss the share extension's queue file.
-        if fileManager.fileExists(atPath: manualGroupURL.path()) {
-            return manualGroupURL
-        }
-
-        if let groupURL = fileManager.containerURL(forSecurityApplicationGroupIdentifier: appGroupID)?
-            .standardizedFileURL,
-           !groupURL.path.contains("/Library/Containers/") {
-            return groupURL
-        }
-        #else
+        // `containerURL(forSecurityApplicationGroupIdentifier:)` is the only
+        // reliable API for reaching the shared group container from a sandboxed
+        // process on both iOS and macOS. Earlier macOS-specific path-construction
+        // code was falling through to Application Support because sandboxed apps
+        // cannot resolve the real home directory via `homeDirectoryForCurrentUser`
+        // or `ProcessInfo.environment["HOME"]`, and the `.standardizedFileURL`
+        // filter was incorrectly discarding the valid group-container URL.
         if let groupURL = fileManager.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
-            // On iOS the system always returns the correct shared container path.
             return groupURL
         }
-        #endif
 
         return try applicationSupportBaseURL(fileManager: fileManager)
     }

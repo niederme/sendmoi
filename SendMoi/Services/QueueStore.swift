@@ -22,9 +22,13 @@ enum QueueStore {
     }
 
     static func append(_ item: QueuedEmail) throws {
-        var queue = try load()
-        queue.insert(item, at: 0)
-        try save(queue)
+        // Use an exclusive file lock so concurrent extension processes don't
+        // overwrite each other's items during a simultaneous read-modify-write.
+        try withExclusiveLock {
+            var queue = try load()
+            queue.insert(item, at: 0)
+            try save(queue)
+        }
     }
 
     @discardableResult
@@ -41,6 +45,27 @@ enum QueueStore {
 
     private static func queueFileURL() throws -> URL {
         try SharedContainer.appDirectoryURL().appendingPathComponent(fileName, isDirectory: false)
+    }
+
+    private static func lockFileURL() throws -> URL {
+        try SharedContainer.appDirectoryURL().appendingPathComponent("queued-emails.lock", isDirectory: false)
+    }
+
+    /// Acquires an exclusive POSIX flock on a companion lock file, runs `work`,
+    /// then releases the lock. Safe across processes sharing the same group
+    /// container (the share extension and the main app).
+    private static func withExclusiveLock(_ work: () throws -> Void) throws {
+        let url = try lockFileURL()
+        let fd = open(url.path, O_CREAT | O_RDWR, 0o666)
+        guard fd != -1 else {
+            // Can't obtain lock file — run unprotected rather than losing the item.
+            try work()
+            return
+        }
+        defer { close(fd) }
+        flock(fd, LOCK_EX)          // blocks until the lock is available
+        defer { flock(fd, LOCK_UN) }
+        try work()
     }
 
     private static func notifyQueueDidChange() {
