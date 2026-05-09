@@ -55,9 +55,6 @@ final class AppModel: ObservableObject {
     }
 
     func startup() async {
-        #if os(macOS)
-        writeStartupDiagnostic()
-        #endif
         reloadSharedPreferences()
         reloadQueueFromDisk()
         reloadSessionFromDisk()
@@ -79,48 +76,6 @@ final class AppModel: ObservableObject {
     }
 
     #if os(macOS)
-    private func writeStartupDiagnostic() {
-        var lines: [String] = []
-        lines.append("timestamp: \(Date())")
-        lines.append("bundleID: \(Bundle.main.bundleIdentifier ?? "nil")")
-
-        let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedContainer.appGroupID)
-        lines.append("containerURL(group): \(groupURL?.path ?? "<nil>")")
-
-        do {
-            let appDir = try SharedContainer.appDirectoryURL()
-            lines.append("appDirectoryURL: \(appDir.path)")
-
-            let queueFile = appDir.appendingPathComponent("queued-emails.json", isDirectory: false)
-            let exists = FileManager.default.fileExists(atPath: queueFile.path)
-            lines.append("queueFile.exists: \(exists)")
-
-            if exists {
-                if let data = try? Data(contentsOf: queueFile) {
-                    lines.append("queueFile.bytes: \(data.count)")
-                    do {
-                        let items = try JSONDecoder().decode([QueuedEmail].self, from: data)
-                        lines.append("decoded.count: \(items.count)")
-                    } catch {
-                        lines.append("decode.error: \(error)")
-                    }
-                } else {
-                    lines.append("queueFile.read: failed")
-                }
-            }
-        } catch {
-            lines.append("appDirectoryURL.error: \(error)")
-        }
-
-        let text = lines.joined(separator: "\n") + "\n"
-        let cachesURL = (try? FileManager.default.url(
-            for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true
-        ))?.appendingPathComponent("sendmoi-diagnostic.txt", isDirectory: false)
-        if let cachesURL {
-            try? text.write(to: cachesURL, atomically: true, encoding: .utf8)
-        }
-    }
-
     private func startQueuePolling() {
         queuePollTimer?.invalidate()
         queuePollTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
