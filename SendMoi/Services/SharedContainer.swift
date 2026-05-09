@@ -67,7 +67,18 @@ enum SharedContainer {
 
     private static func preferredBaseURL(fileManager: FileManager) throws -> URL {
         #if os(macOS)
-        let manualGroupURL = fileManager.homeDirectoryForCurrentUser
+        // `homeDirectoryForCurrentUser` returns the iOS-style sandbox container
+        // path in a Mac Catalyst TestFlight build, causing it to resolve to the
+        // wrong location. `ProcessInfo.environment["HOME"]` always reflects the
+        // real filesystem home directory, so it correctly reaches the shared
+        // group container that the share extension also writes to.
+        let homeURL: URL
+        if let homePath = ProcessInfo.processInfo.environment["HOME"] {
+            homeURL = URL(fileURLWithPath: homePath, isDirectory: true)
+        } else {
+            homeURL = fileManager.homeDirectoryForCurrentUser
+        }
+        let manualGroupURL = homeURL
             .appendingPathComponent("Library/Group Containers", isDirectory: true)
             .appendingPathComponent(appGroupID, isDirectory: true)
 
