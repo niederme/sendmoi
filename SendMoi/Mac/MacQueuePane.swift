@@ -11,7 +11,7 @@ struct MacQueuePane: View {
             VStack(alignment: .leading, spacing: 12) {
                 actionButtons
 
-                if displayedQueue.isEmpty {
+                if displayedQueue.isEmpty && displayedSyncedGoodLinksJobs.isEmpty {
                     Text(emptyStateMessage)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -28,12 +28,26 @@ struct MacQueuePane: View {
                         }
                     )
                 }
+
+                ForEach(displayedSyncedGoodLinksJobs) { job in
+                    MacGoodLinksSyncRow(
+                        job: job,
+                        onRetry: retryQueue,
+                        onDelete: {
+                            model.deleteSyncedGoodLinksJob(id: job.id)
+                        }
+                    )
+                }
             }
         }
     }
 
     private var displayedQueue: [QueuedEmail] {
         model.queuedEmails.reversed()
+    }
+
+    private var displayedSyncedGoodLinksJobs: [GoodLinksSyncJob] {
+        model.syncedGoodLinksJobs
     }
 
     private var retryCandidateID: UUID? {
@@ -43,6 +57,9 @@ struct MacQueuePane: View {
     private var cardSubtitle: String {
         if model.requiresGmailReconnect {
             return "Reconnect Gmail to restore send permission, then retry the queue."
+        }
+        if model.queuedEmails.isEmpty && !model.syncedGoodLinksJobs.isEmpty {
+            return "GoodLinks items from iPhone are waiting for the local Mac API."
         }
         if model.queuedEmails.isEmpty {
             return "Shared items that need attention will appear here."
@@ -103,11 +120,70 @@ struct MacQueuePane: View {
     }
 
     private var showsRetryAllButton: Bool {
-        !model.queuedEmails.isEmpty && model.session != nil && !model.requiresGmailReconnect
+        !model.syncedGoodLinksJobs.isEmpty ||
+            (!model.queuedEmails.isEmpty && model.session != nil && !model.requiresGmailReconnect)
     }
 
     private func retryQueue() {
         Task { await model.retryNow() }
+    }
+}
+
+private struct MacGoodLinksSyncRow: View {
+    let job: GoodLinksSyncJob
+    let onRetry: () -> Void
+    let onDelete: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 16) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(job.title)
+                        .font(.headline)
+
+                    LabeledContent("GoodLinks", value: goodLinksStatus)
+                        .font(.subheadline)
+                        .foregroundStyle(.orange)
+
+                    Text(job.urlString)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+
+                    if let lastError = job.lastError {
+                        Text(lastError)
+                            .font(.footnote)
+                            .foregroundStyle(.orange)
+                    }
+                }
+
+                Spacer(minLength: 12)
+
+                VStack(alignment: .trailing, spacing: 10) {
+                    Button("Retry Now", action: onRetry)
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+
+                    Button(role: .destructive, action: onDelete) {
+                        Label("Delete", systemImage: "trash")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+            }
+
+            Divider()
+        }
+        .padding(12)
+        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(.quaternary)
+        )
+    }
+
+    private var goodLinksStatus: String {
+        job.lastError == nil ? "Waiting for Mac API" : "Retry needed"
     }
 }
 
@@ -125,8 +201,17 @@ private struct MacQueueRow: View {
                     Text(item.title)
                         .font(.headline)
 
-                    LabeledContent("Recipient", value: item.toEmail)
+                    LabeledContent(item.needsEmailDelivery ? "Recipient" : "Email sent", value: item.toEmail)
                         .font(.subheadline)
+
+                    if item.goodLinksEnabled {
+                        LabeledContent(
+                            "GoodLinks",
+                            value: item.needsGoodLinksDelivery ? "Pending" : "Saved"
+                        )
+                        .font(.subheadline)
+                        .foregroundStyle(item.needsGoodLinksDelivery ? .orange : .secondary)
+                    }
 
                     if let sourceLabel {
                         LabeledContent("Source", value: sourceLabel)
@@ -140,6 +225,12 @@ private struct MacQueueRow: View {
 
                     if let lastError = item.lastError {
                         Text(lastError)
+                            .font(.footnote)
+                            .foregroundStyle(.orange)
+                    }
+
+                    if let goodLinksLastError = item.goodLinksLastError {
+                        Text(goodLinksLastError)
                             .font(.footnote)
                             .foregroundStyle(.orange)
                     }

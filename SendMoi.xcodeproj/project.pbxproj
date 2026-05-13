@@ -29,6 +29,8 @@
 		A10000010000000000000014 /* MacStatusHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000017 /* MacStatusHeader.swift */; };
 		A10000010000000000000015 /* AnalyticsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000018 /* AnalyticsClient.swift */; };
 		A10000010000000000000016 /* Analytics.plist in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000019 /* Analytics.plist */; };
+		A10000010000000000000017 /* GoodLinksService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000001A /* GoodLinksService.swift */; };
+		A10000010000000000000018 /* GoodLinksSyncStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000001B /* GoodLinksSyncStore.swift */; };
 		B10000010000000000000001 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000004 /* Models.swift */; };
 		B10000010000000000000002 /* QueueStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000008 /* QueueStore.swift */; };
 		B10000010000000000000003 /* RecipientStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000009 /* RecipientStore.swift */; };
@@ -43,6 +45,8 @@
 		B1000001000000000000000C /* SafariPreprocessor.js in Resources */ = {isa = PBXBuildFile; fileRef = B20000010000000000000006 /* SafariPreprocessor.js */; };
 		B1000001000000000000000D /* AnalyticsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000018 /* AnalyticsClient.swift */; };
 		B1000001000000000000000E /* Analytics.plist in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000019 /* Analytics.plist */; };
+		B1000001000000000000000F /* GoodLinksService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000001A /* GoodLinksService.swift */; };
+		B10000010000000000000010 /* GoodLinksSyncStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000001B /* GoodLinksSyncStore.swift */; };
 		DC6FF07B2F55D5CB00415EAC /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = DC6FF07A2F55D5CB00415EAC /* AppIcon.icon */; };
 		DC6FF07D2F55D5CB00415EAC /* Resources/sendmoi-demo-hero.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = DC6FF07C2F55D5CB00415EAC /* Resources/sendmoi-demo-hero.mp4 */; };
 /* End PBXBuildFile section */
@@ -98,6 +102,8 @@
 		A20000010000000000000017 /* MacStatusHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacStatusHeader.swift; sourceTree = "<group>"; };
 		A20000010000000000000018 /* AnalyticsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsClient.swift; sourceTree = "<group>"; };
 		A20000010000000000000019 /* Analytics.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Analytics.plist; sourceTree = "<group>"; };
+		A2000001000000000000001A /* GoodLinksService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoodLinksService.swift; sourceTree = "<group>"; };
+		A2000001000000000000001B /* GoodLinksSyncStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoodLinksSyncStore.swift; sourceTree = "<group>"; };
 		B20000010000000000000001 /* ShareExtensionModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareExtensionModel.swift; sourceTree = "<group>"; };
 		B20000010000000000000002 /* ShareView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareView.swift; sourceTree = "<group>"; };
 		B20000010000000000000003 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
@@ -179,6 +185,8 @@
 				A2000001000000000000000F /* GmailShared.swift */,
 				A20000010000000000000010 /* SharedSessionStore.swift */,
 				A20000010000000000000011 /* GmailDeliveryService.swift */,
+				A2000001000000000000001A /* GoodLinksService.swift */,
+				A2000001000000000000001B /* GoodLinksSyncStore.swift */,
 				A20000010000000000000018 /* AnalyticsClient.swift */,
 				A20000010000000000000019 /* Analytics.plist */,
 			);
@@ -327,6 +335,8 @@
 				A1000001000000000000000D /* GmailShared.swift in Sources */,
 				A1000001000000000000000E /* SharedSessionStore.swift in Sources */,
 				A1000001000000000000000F /* GmailDeliveryService.swift in Sources */,
+				A10000010000000000000017 /* GoodLinksService.swift in Sources */,
+				A10000010000000000000018 /* GoodLinksSyncStore.swift in Sources */,
 				A10000010000000000000011 /* MacControlCenterView.swift in Sources */,
 				A10000010000000000000012 /* MacQueuePane.swift in Sources */,
 				A10000010000000000000013 /* MacSetupSidebar.swift in Sources */,
@@ -350,6 +360,8 @@
 				B10000010000000000000009 /* GmailShared.swift in Sources */,
 				B1000001000000000000000A /* SharedSessionStore.swift in Sources */,
 				B1000001000000000000000B /* GmailDeliveryService.swift in Sources */,
+				B1000001000000000000000F /* GoodLinksService.swift in Sources */,
+				B10000010000000000000010 /* GoodLinksSyncStore.swift in Sources */,
 				B1000001000000000000000D /* AnalyticsClient.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -467,7 +479,7 @@
 				CODE_SIGN_ENTITLEMENTS = SendMoi/SendMoi.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "SendMoi/SendMoi-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 120;
+				CURRENT_PROJECT_VERSION = 122;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 289GY9L343;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -498,7 +510,7 @@
 				CODE_SIGN_ENTITLEMENTS = SendMoi/SendMoi.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "SendMoi/SendMoi-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 120;
+				CURRENT_PROJECT_VERSION = 122;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 289GY9L343;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -530,7 +542,7 @@
 				CODE_SIGN_ENTITLEMENTS = SendMoiShare/SendMoiShare.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "SendMoiShare/SendMoiShare-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 120;
+				CURRENT_PROJECT_VERSION = 122;
 				DEVELOPMENT_TEAM = 289GY9L343;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SendMoiShare/Info.plist;
@@ -561,7 +573,7 @@
 				CODE_SIGN_ENTITLEMENTS = SendMoiShare/SendMoiShare.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "SendMoiShare/SendMoiShare-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 120;
+				CURRENT_PROJECT_VERSION = 122;
 				DEVELOPMENT_TEAM = 289GY9L343;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
