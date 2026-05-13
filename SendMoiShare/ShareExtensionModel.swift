@@ -53,6 +53,7 @@ final class ShareExtensionModel: ObservableObject {
 
     private weak var extensionContextRef: NSExtensionContext?
     private let deliveryService = GmailDeliveryService()
+    private let goodLinksService = GoodLinksService()
     private var previewTask: Task<Void, Never>?
     private var sendTask: Task<Void, Never>?
     private var deliveryTimeoutTask: Task<Void, Never>?
@@ -297,6 +298,10 @@ final class ShareExtensionModel: ObservableObject {
         from draft: ShareDraft,
         id: UUID = UUID(),
         createdAt: Date = .now,
+        emailDeliveredAt: Date? = nil,
+        goodLinksEnabled: Bool = GoodLinksSettingsStore.load().isEnabled,
+        goodLinksDeliveredAt: Date? = nil,
+        goodLinksLastError: String? = nil,
         lastError: String? = nil
     ) -> QueuedEmail {
         QueuedEmail(
@@ -309,6 +314,10 @@ final class ShareExtensionModel: ObservableObject {
             previewImageURLString: draft.previewImageURLString,
             additionalImageURLStrings: draft.additionalImageURLStrings.isEmpty ? nil : draft.additionalImageURLStrings,
             createdAt: createdAt,
+            emailDeliveredAt: emailDeliveredAt,
+            goodLinksEnabled: goodLinksEnabled,
+            goodLinksDeliveredAt: goodLinksDeliveredAt,
+            goodLinksLastError: goodLinksLastError,
             lastError: lastError
         )
     }
@@ -502,6 +511,10 @@ final class ShareExtensionModel: ObservableObject {
         }
 
         do {
+            #if os(macOS) || targetEnvironment(macCatalyst)
+            await processSyncedGoodLinksQueueIfPossible()
+            #endif
+
             guard let session = try SharedSessionStore.load() else {
                 // No session — queue for main app delivery and show reconnect prompt.
                 try QueueStore.append(refreshedItem)
@@ -519,8 +532,33 @@ final class ShareExtensionModel: ObservableObject {
             pendingAutoSendItem = nil  // item sent — don't queue it if the timeout fires during flush
             Task { await AnalyticsClient.shared.send("email_sent", params: ["source": "share_sheet"], enabled: analyticsEnabled) }
 
+            do {
+                try await saveGoodLinksCopyIfNeeded(for: refreshedItem)
+            } catch {
+                let pendingGoodLinksItem = QueuedEmail(
+                    id: refreshedItem.id,
+                    toEmail: refreshedItem.toEmail,
+                    title: refreshedItem.title,
+                    excerpt: refreshedItem.excerpt,
+                    summary: refreshedItem.summary,
+                    urlString: refreshedItem.urlString,
+                    previewImageURLString: refreshedItem.previewImageURLString,
+                    additionalImageURLStrings: refreshedItem.additionalImageURLStrings,
+                    createdAt: refreshedItem.createdAt,
+                    emailDeliveredAt: .now,
+                    goodLinksEnabled: refreshedItem.goodLinksEnabled,
+                    goodLinksDeliveredAt: nil,
+                    goodLinksLastError: error.localizedDescription,
+                    lastError: nil
+                )
+                try? QueueStore.append(pendingGoodLinksItem)
+            }
+
             // Flush any backlog the main app left behind (best-effort).
             try? await flushQueuedEmails(using: validSession)
+            #if os(macOS) || targetEnvironment(macCatalyst)
+            await processSyncedGoodLinksQueueIfPossible()
+            #endif
             try SharedSessionStore.save(validSession)
             extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
             return refreshedItem
@@ -553,7 +591,16 @@ final class ShareExtensionModel: ObservableObject {
         let draft = draftApplyingPendingPreview(to: currentDraft())
         guard draft.isValidForQueue else { return item }
 
-        let enriched = makeQueuedEmail(from: draft, id: item.id, createdAt: item.createdAt, lastError: item.lastError)
+        let enriched = makeQueuedEmail(
+            from: draft,
+            id: item.id,
+            createdAt: item.createdAt,
+            emailDeliveredAt: item.emailDeliveredAt,
+            goodLinksEnabled: item.goodLinksEnabled,
+            goodLinksDeliveredAt: item.goodLinksDeliveredAt,
+            goodLinksLastError: item.goodLinksLastError,
+            lastError: item.lastError
+        )
         return enriched != item ? enriched : item
     }
 
@@ -730,6 +777,10 @@ final class ShareExtensionModel: ObservableObject {
             from: updatedDraft,
             id: queuedPreviewEnrichmentItem.id,
             createdAt: queuedPreviewEnrichmentItem.createdAt,
+            emailDeliveredAt: queuedPreviewEnrichmentItem.emailDeliveredAt,
+            goodLinksEnabled: queuedPreviewEnrichmentItem.goodLinksEnabled,
+            goodLinksDeliveredAt: queuedPreviewEnrichmentItem.goodLinksDeliveredAt,
+            goodLinksLastError: queuedPreviewEnrichmentItem.goodLinksLastError,
             lastError: queuedPreviewEnrichmentItem.lastError
         )
 
@@ -758,15 +809,30 @@ final class ShareExtensionModel: ObservableObject {
         let queuedItem = queue[index]
 
         do {
-            try await deliveryService.sendEmail(using: session, item: queuedItem)
-            removeManagedMedia(for: queuedItem)
-            queue.remove(at: index)
+            if queuedItem.needsEmailDelivery {
+                try await deliveryService.sendEmail(using: session, item: queuedItem)
+                queue[index].emailDeliveredAt = .now
+                queue[index].lastError = nil
+            }
+            if queue[index].needsGoodLinksDelivery {
+                try await saveGoodLinksCopyIfNeeded(for: queue[index])
+                queue[index].goodLinksDeliveredAt = .now
+                queue[index].goodLinksLastError = nil
+            }
+            if queue[index].isFullyDelivered {
+                removeManagedMedia(for: queuedItem)
+                queue.remove(at: index)
+            }
             try QueueStore.save(queue)
             return true
         } catch is CancellationError {
             throw CancellationError()
         } catch {
-            queue[index].lastError = error.localizedDescription
+            if queue[index].needsEmailDelivery {
+                queue[index].lastError = error.localizedDescription
+            } else {
+                queue[index].goodLinksLastError = error.localizedDescription
+            }
             try QueueStore.save(queue)
             throw error
         }
@@ -779,15 +845,31 @@ final class ShareExtensionModel: ObservableObject {
             try Task.checkCancellation()
 
             do {
-                try await deliveryService.sendEmail(using: session, item: next)
-                removeManagedMedia(for: next)
-                queue.removeLast()
+                let index = queue.count - 1
+                if queue[index].needsEmailDelivery {
+                    try await deliveryService.sendEmail(using: session, item: queue[index])
+                    queue[index].emailDeliveredAt = .now
+                    queue[index].lastError = nil
+                }
+                if queue[index].needsGoodLinksDelivery {
+                    try await saveGoodLinksCopyIfNeeded(for: queue[index])
+                    queue[index].goodLinksDeliveredAt = .now
+                    queue[index].goodLinksLastError = nil
+                }
+                if queue[index].isFullyDelivered {
+                    removeManagedMedia(for: next)
+                    queue.removeLast()
+                }
                 try QueueStore.save(queue)
             } catch is CancellationError {
                 throw CancellationError()
             } catch {
                 if let index = queue.indices.last {
-                    queue[index].lastError = error.localizedDescription
+                    if queue[index].needsEmailDelivery {
+                        queue[index].lastError = error.localizedDescription
+                    } else {
+                        queue[index].goodLinksLastError = error.localizedDescription
+                    }
                     try QueueStore.save(queue)
                 }
                 throw error
@@ -814,6 +896,25 @@ final class ShareExtensionModel: ObservableObject {
             return false
         }
     }
+
+    private func saveGoodLinksCopyIfNeeded(for item: QueuedEmail) async throws {
+        guard item.goodLinksEnabled else {
+            return
+        }
+
+        let settings = GoodLinksSettingsStore.load()
+        #if os(macOS) || targetEnvironment(macCatalyst)
+        try await goodLinksService.saveUsingLocalAPI(item: item, settings: settings)
+        #else
+        try GoodLinksSyncStore.append(item: item, settings: settings)
+        #endif
+    }
+
+    #if os(macOS) || targetEnvironment(macCatalyst)
+    private func processSyncedGoodLinksQueueIfPossible() async {
+        _ = await GoodLinksSyncProcessor.drain(using: goodLinksService)
+    }
+    #endif
 
     private func promptForGmailConnectionIfNeeded() {
         guard !hasPromptedForGmailConnection, !hasSharedGmailSession else {
