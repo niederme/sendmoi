@@ -1,4 +1,4 @@
-.PHONY: dev dev-lan dev-local dev-live dev-thread dev-live-thread
+.PHONY: dev dev-lan dev-local dev-live dev-thread dev-live-thread upload-app-store-connect upload-ios-app-store-connect upload-macos-app-store-connect upload-testflight
 
 PORT ?= 8000
 THREAD_BASE_PORT ?= 8001
@@ -138,3 +138,14 @@ dev-live: dev
 dev-live-thread: PORT := $(THREAD_BASE_PORT)
 dev-live-thread: LIVE := 1
 dev-live-thread: dev
+
+upload-app-store-connect:
+	./scripts/upload_app_store_connect.sh
+
+upload-ios-app-store-connect:
+	./scripts/upload_app_store_connect.sh --platform ios
+
+upload-macos-app-store-connect:
+	AUTH_MODE=api-key ./scripts/upload_app_store_connect.sh --platform macos
+
+upload-testflight: upload-app-store-connect

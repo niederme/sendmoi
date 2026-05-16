@@ -5,6 +5,7 @@ import SwiftUI
 final class AppModel: ObservableObject {
     @Published var queuedEmails: [QueuedEmail] = []
     @Published var defaultRecipient = ""
+    @Published var savedRecipients: [String] = []
     @Published var shareSheetAutoSendEnabled = true
     @Published var goodLinksSettings = GoodLinksSettingsStore.load()
     @Published var syncedGoodLinksJobs: [GoodLinksSyncJob] = GoodLinksSyncStore.load()
@@ -272,6 +273,23 @@ final class AppModel: ObservableObject {
     func setDefaultRecipient(_ recipient: String) {
         RecipientStore.setDefault(recipient)
         defaultRecipient = RecipientStore.loadDefault()
+        savedRecipients = RecipientStore.load()
+    }
+
+    func addSavedRecipient(_ recipient: String) {
+        RecipientStore.record(recipient)
+        savedRecipients = RecipientStore.load()
+    }
+
+    func removeSavedRecipient(_ recipient: String) {
+        let normalizedRecipient = recipient.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let normalizedDefault = defaultRecipient.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard normalizedRecipient != normalizedDefault else {
+            return
+        }
+
+        RecipientStore.remove(recipient)
+        savedRecipients = RecipientStore.load()
     }
 
     func setShareSheetAutoSendEnabled(_ isEnabled: Bool) {
@@ -341,6 +359,7 @@ final class AppModel: ObservableObject {
 
             session = nil
             defaultRecipient = RecipientStore.loadDefault()
+            savedRecipients = RecipientStore.load()
             shareSheetAutoSendEnabled = RecipientStore.loadShareSheetAutoSendEnabled()
             goodLinksSettings = GoodLinksSettingsStore.load()
             goodLinksConnectionMessage = nil
@@ -459,6 +478,7 @@ final class AppModel: ObservableObject {
 
     private func reloadSharedPreferences() {
         defaultRecipient = RecipientStore.loadDefault()
+        savedRecipients = RecipientStore.load()
         shareSheetAutoSendEnabled = RecipientStore.loadShareSheetAutoSendEnabled()
         goodLinksSettings = GoodLinksSettingsStore.load()
         shouldShowOnboarding = !RecipientStore.loadHasCompletedOnboarding()

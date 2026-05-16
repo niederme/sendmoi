@@ -136,6 +136,9 @@ struct ShareView: View {
                         .font(.caption2)
                         .foregroundStyle(model.recipientInlineMessageIsError ? .red : .secondary)
                 }
+                if !recipientPickerOptions.isEmpty {
+                    recipientPickerView
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -298,8 +301,8 @@ struct ShareView: View {
                         .font(.caption2)
                         .foregroundStyle(model.recipientInlineMessageIsError ? .red : .secondary)
                 }
-                if !recentRecipientSuggestions.isEmpty {
-                    recentRecipientsView
+                if !recipientPickerOptions.isEmpty {
+                    recipientPickerView
                 }
             }
 
@@ -423,25 +426,55 @@ struct ShareView: View {
         }
     }
 
-    private var recentRecipientsView: some View {
+    private var recipientPickerView: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Recent")
+            Text("Recipients")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    ForEach(recentRecipientSuggestions, id: \.self) { recipient in
-                        Button(recipient) {
-                            model.useSavedRecipient(recipient)
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
+                    ForEach(recipientPickerOptions, id: \.self) { recipient in
+                        recipientChip(recipient)
                     }
                 }
             }
             .scrollClipDisabled()
         }
+    }
+
+    private func recipientChip(_ recipient: String) -> some View {
+        let selected = normalizedRecipient(recipient) == normalizedRecipient(model.toEmail)
+
+        return Button {
+            model.useSavedRecipient(recipient)
+        } label: {
+            HStack(spacing: 5) {
+                if selected {
+                    Image(systemName: "checkmark")
+                        .font(.caption.weight(.bold))
+                }
+
+                Text(displayRecipient(recipient, maxLength: 30))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            .font(.caption.weight(selected ? .semibold : .regular))
+            .foregroundStyle(selected ? Color.accentColor : Color.primary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                Capsule()
+                    .fill(selected ? Color.accentColor.opacity(0.14) : Color.secondary.opacity(0.1))
+            )
+            .overlay {
+                Capsule()
+                    .strokeBorder(selected ? Color.accentColor.opacity(0.62) : Color.secondary.opacity(0.18), lineWidth: 1)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(recipient)
+        .accessibilityValue(selected ? "Selected" : "")
     }
 
     private var previewImageURL: URL? {
@@ -472,15 +505,21 @@ struct ShareView: View {
             .padding(4)
     }
 
-    private var recentRecipientSuggestions: [String] {
-        let currentRecipient = model.toEmail
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
+    private var recipientPickerOptions: [String] {
+        let candidates = [model.defaultRecipient] + model.savedRecipients
+        var seen = Set<String>()
+        return candidates.compactMap { candidate in
+            let trimmed = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+            let normalized = normalizedRecipient(trimmed)
+            guard !trimmed.isEmpty, seen.insert(normalized).inserted else {
+                return nil
+            }
+            return trimmed
+        }
+    }
 
-        return model.savedRecipients
-            .filter { $0.lowercased() != currentRecipient }
-            .prefix(4)
-            .map { $0 }
+    private func normalizedRecipient(_ recipient: String) -> String {
+        recipient.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 
     private var titleIsLoading: Bool {
@@ -528,10 +567,17 @@ struct ShareView: View {
             ProgressView()
                 .controlSize(.large)
 
-            Text(model.statusMessage)
+            Text(autoSendRecipientHeadline)
                 .font(.headline)
                 .fontWeight(.semibold)
                 .foregroundStyle(.primary)
+                .multilineTextAlignment(.center)
+                .lineLimit(3)
+                .textSelection(.enabled)
+
+            if recipientPickerOptions.count > 1 {
+                autoSendRecipientPickerView
+            }
 
             if model.isSaving {
                 Button {
@@ -556,7 +602,7 @@ struct ShareView: View {
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 22)
-        .frame(maxWidth: 248)
+        .frame(maxWidth: 340)
         .background {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(overlayCardFill)
@@ -567,6 +613,40 @@ struct ShareView: View {
         }
         .shadow(color: .black.opacity(0.16), radius: 10, y: 4)
         .padding(24)
+    }
+
+    private var autoSendRecipientHeadline: String {
+        let recipient = model.toEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !recipient.isEmpty else {
+            return "Auto-sending..."
+        }
+
+        return "Auto-sending to \(displayRecipient(recipient, maxLength: 44))"
+    }
+
+    private func displayRecipient(_ recipient: String, maxLength: Int) -> String {
+        let trimmed = recipient.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count > maxLength, maxLength > 3 else {
+            return trimmed
+        }
+
+        let available = maxLength - 1
+        let prefixCount = max(1, available / 2)
+        let suffixCount = max(1, available - prefixCount)
+        return "\(trimmed.prefix(prefixCount))…\(trimmed.suffix(suffixCount))"
+    }
+
+    private var autoSendRecipientPickerView: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(recipientPickerOptions, id: \.self) { recipient in
+                    recipientChip(recipient)
+                }
+            }
+            .padding(.horizontal, 2)
+        }
+        .scrollClipDisabled()
+        .accessibilityLabel("Choose recipient")
     }
 
     private var processingView: some View {

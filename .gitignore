@@ -9,3 +9,7 @@ build/
 .deriveddata-local/
 .playwright/
 .playwright-cli/
+AuthKey_*.p8
+private_keys/
+.private_keys/
+.appstoreconnect/

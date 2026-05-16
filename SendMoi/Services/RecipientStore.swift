@@ -107,6 +107,19 @@ enum RecipientStore {
         defaults.synchronize()
     }
 
+    static func remove(_ recipient: String) {
+        migrateLegacyDefaultsIfNeeded()
+        let normalized = normalize(recipient)
+        guard !normalized.isEmpty else {
+            return
+        }
+
+        let current = load().filter { $0 != normalized }
+        let defaults = SharedContainer.sharedDefaults
+        defaults.set(current, forKey: historyKey)
+        defaults.synchronize()
+    }
+
     private static func normalize(_ recipient: String) -> String {
         recipient.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }

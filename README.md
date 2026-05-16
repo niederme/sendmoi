@@ -85,16 +85,16 @@ The `SendMoiShare` extension is included for iPhone, iPad, and macOS share sheet
 
 ## Distribution
 
-The current build is set up to ship through TestFlight.
+The current build is set up to ship through App Store Connect.
 
 - Xcode Cloud is configured to start on pushes to `main`.
 - The active workflow archives both iOS and macOS builds.
-- Successful archives are prepared for `TestFlight (Internal Testing Only)`.
+- Successful archives can be uploaded to App Store Connect for TestFlight or App Store distribution.
 - `SendMoi/AppIcon.icon` is the single source of truth for the app icon. It is processed directly by actool (`folder.iconcomposer.icon`) alongside `Assets.xcassets`, so `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon` resolves from the Icon Composer file without any exported PNG set. Do not revert to a PNG-based `AppIcon.appiconset` — the `.icon` file is the build source, not just an editable reference.
 
 To update the artwork, open `SendMoi/AppIcon.icon` in Icon Composer, make changes, and commit. No PNG export or extra build steps are needed.
 
-That means a merge into `main` should automatically enqueue a new TestFlight build for the current internal testers.
+That means a merge into `main` should automatically enqueue a new build in App Store Connect.
 
 Before each archive, you can run:
 
@@ -103,6 +103,61 @@ Before each archive, you can run:
 ```
 
 That command updates `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` across both targets, then prints the current signing team and bundle IDs so the release settings are easy to verify before uploading. If you only need the next build number, run `./scripts/prepare_release.sh` with no arguments.
+
+For local command-line App Store Connect uploads, sign in to the Apple account in Xcode first:
+
+```sh
+open -a Xcode
+```
+
+Then run:
+
+```sh
+make upload-app-store-connect
+```
+
+The upload script archives the iOS app by default and uploads it to App Store Connect using Xcode account auth for cloud signing. It also accepts `--platform macos`, `--skip-archive --archive-path <path>` when you want to upload an existing archive, and `--export-only` when you only want to verify export/signing without uploading.
+
+The macOS upload target uses API-key auth plus manual Mac App Store signing. It expects these local signing assets to exist:
+
+- `3rd Party Mac Developer Application: John Niedermeyer (289GY9L343)`
+- `3rd Party Mac Developer Installer: John Niedermeyer (289GY9L343)`
+- `SendMoi Mac App Store 2026`
+- `SendMoi Share Mac App Store 2026`
+
+Platform-specific targets:
+
+```sh
+make upload-ios-app-store-connect
+make upload-macos-app-store-connect
+```
+
+API-key auth is still available for environments where the key has sufficient signing permissions. Keep the downloaded private key outside the repo:
+
+```sh
+mkdir -p ~/.appstoreconnect/private_keys
+mv ~/Downloads/AuthKey_<KEY_ID>.p8 ~/.appstoreconnect/private_keys/
+chmod 600 ~/.appstoreconnect/private_keys/AuthKey_<KEY_ID>.p8
+```
+
+You can pass the key details per command:
+
+```sh
+AUTH_MODE=api-key ASC_KEY_ID=<KEY_ID> ASC_ISSUER_ID=<ISSUER_ID> make upload-app-store-connect
+```
+
+Or save them once in `~/.appstoreconnect/sendmoi.env`:
+
+```sh
+export ASC_KEY_ID=<KEY_ID>
+export ASC_ISSUER_ID=<ISSUER_ID>
+```
+
+Then run:
+
+```sh
+AUTH_MODE=api-key make upload-app-store-connect
+```
 
 ## Website Preview
 

@@ -6,12 +6,14 @@ import AppKit
 struct MacSetupSidebar: View {
     @EnvironmentObject private var model: AppModel
     @FocusState private var focusedField: Field?
+    @State private var recipientPresetDraft = ""
 
     let openSetupGuide: () -> Void
     let showResetConfirmation: () -> Void
 
     private enum Field: Hashable {
         case defaultRecipient
+        case recipientPreset
     }
 
     var body: some View {
@@ -90,7 +92,7 @@ struct MacSetupSidebar: View {
     private var recipientCard: some View {
         MacSidebarCard(
             title: "Default Recipient",
-            subtitle: "Used as the default when starting from the share sheet."
+            subtitle: "Auto-send uses the default. Additional recipients appear as quick picks when editing."
         ) {
             VStack(alignment: .leading, spacing: 12) {
                 TextField("Email address", text: $model.defaultRecipient)
@@ -103,6 +105,50 @@ struct MacSetupSidebar: View {
                 }
                 .buttonStyle(.bordered)
                 .disabled(model.isBusy)
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Additional Recipients")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+
+                    if !additionalRecipientPresets.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(additionalRecipientPresets, id: \.self) { recipient in
+                                    Button {
+                                        removeRecipientPreset(recipient)
+                                    } label: {
+                                        HStack(spacing: 5) {
+                                            Text(recipient)
+                                                .lineLimit(1)
+                                            Image(systemName: "xmark")
+                                                .font(.caption.weight(.bold))
+                                        }
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .buttonBorderShape(.capsule)
+                                    .controlSize(.small)
+                                }
+                            }
+                        }
+                    }
+
+                    HStack(spacing: 8) {
+                        TextField("Email address", text: $recipientPresetDraft)
+                            .textFieldStyle(.roundedBorder)
+                            .focused($focusedField, equals: .recipientPreset)
+                            .onSubmit(addRecipientPreset)
+
+                        Button("Add") {
+                            addRecipientPreset()
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(recipientPresetDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                }
             }
         }
     }
@@ -223,6 +269,28 @@ struct MacSetupSidebar: View {
     private func saveDefaultRecipient() {
         focusedField = nil
         model.setDefaultRecipient(model.defaultRecipient)
+    }
+
+    private var additionalRecipientPresets: [String] {
+        let normalizedDefault = model.defaultRecipient.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return model.savedRecipients.filter { recipient in
+            recipient.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() != normalizedDefault
+        }
+    }
+
+    private func addRecipientPreset() {
+        let recipient = recipientPresetDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !recipient.isEmpty else {
+            return
+        }
+
+        model.addSavedRecipient(recipient)
+        recipientPresetDraft = ""
+        focusedField = nil
+    }
+
+    private func removeRecipientPreset(_ recipient: String) {
+        model.removeSavedRecipient(recipient)
     }
 
     private func goodLinksBinding<Value>(_ keyPath: WritableKeyPath<GoodLinksSettings, Value>) -> Binding<Value> {

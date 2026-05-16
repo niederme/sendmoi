@@ -12,6 +12,7 @@ struct ContentView: View {
     @State private var onboardingRecipientDraft = ""
     @State private var onboardingRecipientConfirmed = false
     @State private var onboardingPulse = false
+    @State private var recipientPresetDraft = ""
 
     @State private var showsResetConfirmation = false
     @State private var showsOnboardingAccountSheet = false
@@ -20,6 +21,7 @@ struct ContentView: View {
 
     private enum Field: Hashable {
         case defaultRecipient
+        case recipientPreset
     }
 
     var body: some View {
@@ -1462,6 +1464,60 @@ struct ContentView: View {
             .controlSize(.large)
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
+
+            Divider().padding(.leading, 20)
+
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Additional Recipients")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text("Use these as quick-pick chips when reviewing a share.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+
+                if !additionalRecipientPresets.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(additionalRecipientPresets, id: \.self) { recipient in
+                                Button {
+                                    removeRecipientPreset(recipient)
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Text(recipient)
+                                            .lineLimit(1)
+                                        Image(systemName: "xmark")
+                                            .font(.caption.weight(.bold))
+                                    }
+                                }
+                                .buttonStyle(.bordered)
+                                .buttonBorderShape(.capsule)
+                                .controlSize(.small)
+                            }
+                        }
+                    }
+                    .scrollClipDisabled()
+                }
+
+                HStack(spacing: 10) {
+                    TextField("Email address", text: $recipientPresetDraft)
+                        .textInputAutocapitalization(.never)
+                        .keyboardType(.emailAddress)
+                        .autocorrectionDisabled()
+                        .submitLabel(.done)
+                        .focused($focusedField, equals: .recipientPreset)
+                        .onSubmit(addRecipientPreset)
+
+                    Button("Add") {
+                        addRecipientPreset()
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(recipientPresetDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
         }
     }
 
@@ -1807,9 +1863,31 @@ struct ContentView: View {
         return "Tap to review and send now"
     }
 
+    private var additionalRecipientPresets: [String] {
+        let normalizedDefault = model.defaultRecipient.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return model.savedRecipients.filter { recipient in
+            recipient.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() != normalizedDefault
+        }
+    }
+
     private func saveDefaultRecipient() {
         focusedField = nil
         model.setDefaultRecipient(model.defaultRecipient)
+    }
+
+    private func addRecipientPreset() {
+        let recipient = recipientPresetDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !recipient.isEmpty else {
+            return
+        }
+
+        model.addSavedRecipient(recipient)
+        recipientPresetDraft = ""
+        focusedField = nil
+    }
+
+    private func removeRecipientPreset(_ recipient: String) {
+        model.removeSavedRecipient(recipient)
     }
 
     private func goodLinksBinding<Value>(_ keyPath: WritableKeyPath<GoodLinksSettings, Value>) -> Binding<Value> {

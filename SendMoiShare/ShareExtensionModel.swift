@@ -40,6 +40,7 @@ final class ShareExtensionModel: ObservableObject {
     @Published var additionalImageURLStrings: [String] = []
     @Published var statusMessage = "Preparing your email..."
     @Published private(set) var autoSendEnabled = true
+    @Published private(set) var defaultRecipient = ""
     @Published var translationConfiguration: TranslationSession.Configuration?
     @Published var isSaving = false
     @Published var isConnectingGmail = false
@@ -90,6 +91,9 @@ final class ShareExtensionModel: ObservableObject {
     func useSavedRecipient(_ recipient: String) {
         recipientReloadTask?.cancel()
         toEmail = recipient
+        if presentationMode == .processing, isSaving {
+            pendingAutoSendItem = makeQueuedEmail(from: currentDraft())
+        }
     }
 
     func cancel() {
@@ -121,11 +125,11 @@ final class ShareExtensionModel: ObservableObject {
         }
 
         showsMissingRecipientValidation = false
-        let item = makeQueuedEmail(from: draft)
         let shouldQueueWhilePreviewLoads = isRefreshingPreview && previewTask != nil
         if shouldQueueWhilePreviewLoads && presentationMode == .editing {
             statusMessage = "Finishing preview before send..."
         }
+        let item = makeQueuedEmail(from: draft)
 
         isSaving = true
 
@@ -156,8 +160,21 @@ final class ShareExtensionModel: ObservableObject {
                     try await Task.sleep(nanoseconds: Self.autoSendGracePeriodNanoseconds)
                     try Task.checkCancellation()
                 }
+                let itemToSend: QueuedEmail
+                if shouldAllowAutoSendEditWindow {
+                    let updatedDraft = self.currentDraft()
+                    if let validationMessage = self.validationMessage(for: updatedDraft) {
+                        self.statusMessage = validationMessage
+                        self.presentationMode = .editing
+                        return
+                    }
+                    itemToSend = self.makeQueuedEmail(from: updatedDraft)
+                    self.pendingAutoSendItem = itemToSend
+                } else {
+                    itemToSend = item
+                }
                 let completedItem = try await self.queueAndAttemptBackgroundDelivery(
-                    item,
+                    itemToSend,
                     waitForPreview: shouldQueueWhilePreviewLoads
                 )
                 RecipientStore.record(completedItem.toEmail)
@@ -259,7 +276,7 @@ final class ShareExtensionModel: ObservableObject {
         savedRecipients = RecipientStore.load()
         autoSendEnabled = RecipientStore.loadShareSheetAutoSendEnabled()
 
-        let defaultRecipient = RecipientStore.loadDefault()
+        defaultRecipient = RecipientStore.loadDefault()
         guard !preserveTypedRecipient || toEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return
         }
