@@ -596,7 +596,7 @@ struct ShareView: View {
         .padding(.vertical, 22)
         .frame(maxWidth: 340)
         .modifier(LiquidGlassPlatter(cornerRadius: 24))
-        .shadow(color: .black.opacity(0.22), radius: 24, y: 12)
+        .shadow(color: .black.opacity(0.18), radius: 22, y: 10)
         .padding(24)
     }
 
@@ -720,15 +720,11 @@ private struct LiquidGlassPlatter: ViewModifier {
 
         if #available(iOS 26.0, macOS 26.0, *) {
             content
-                .glassEffect(.regular.tint(.white.opacity(0.06)), in: shape)
+                .glassEffect(.regular.tint(.white.opacity(0.035)), in: shape)
                 .overlay {
                     shape
-                        .strokeBorder(platterHighlight, lineWidth: 1)
+                        .strokeBorder(platterHighlight, lineWidth: 0.6)
                         .blendMode(.plusLighter)
-                }
-                .overlay {
-                    shape
-                        .strokeBorder(.black.opacity(0.12), lineWidth: 0.5)
                 }
         } else {
             content
@@ -737,16 +733,12 @@ private struct LiquidGlassPlatter: ViewModifier {
                         .fill(.ultraThinMaterial)
                         .overlay {
                             shape
-                                .fill(.white.opacity(0.05))
+                                .fill(.white.opacity(0.025))
                         }
                         .overlay {
                             shape
-                                .strokeBorder(platterHighlight, lineWidth: 1)
+                                .strokeBorder(platterHighlight, lineWidth: 0.6)
                                 .blendMode(.plusLighter)
-                        }
-                        .overlay {
-                            shape
-                                .strokeBorder(.black.opacity(0.12), lineWidth: 0.5)
                         }
                 }
         }
@@ -755,9 +747,9 @@ private struct LiquidGlassPlatter: ViewModifier {
     private var platterHighlight: LinearGradient {
         LinearGradient(
             colors: [
-                .white.opacity(0.34),
-                .white.opacity(0.11),
-                .white.opacity(0.03)
+                .white.opacity(0.16),
+                .white.opacity(0.05),
+                .white.opacity(0.01)
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
@@ -769,10 +761,10 @@ private struct LiquidGlassCapsule: ViewModifier {
     func body(content: Content) -> some View {
         if #available(iOS 26.0, macOS 26.0, *) {
             content
-                .glassEffect(.regular.tint(.white.opacity(0.05)), in: Capsule())
+                .glassEffect(.regular.tint(.white.opacity(0.035)), in: Capsule())
                 .overlay {
                     Capsule()
-                        .strokeBorder(.white.opacity(0.18), lineWidth: 0.8)
+                        .strokeBorder(.white.opacity(0.1), lineWidth: 0.6)
                         .blendMode(.plusLighter)
                 }
         } else {
@@ -782,11 +774,11 @@ private struct LiquidGlassCapsule: ViewModifier {
                         .fill(.thinMaterial)
                         .overlay {
                             Capsule()
-                                .fill(.white.opacity(0.05))
+                                .fill(.white.opacity(0.025))
                         }
                         .overlay {
                             Capsule()
-                                .strokeBorder(.white.opacity(0.16), lineWidth: 0.8)
+                                .strokeBorder(.white.opacity(0.1), lineWidth: 0.6)
                         }
                 }
         }
