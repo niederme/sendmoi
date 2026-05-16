@@ -636,11 +636,7 @@ struct ShareView: View {
     }
 
     private var autoSendRecipientPickerView: some View {
-        let columns = [
-            GridItem(.adaptive(minimum: 118, maximum: 148), spacing: 8)
-        ]
-
-        return LazyVGrid(columns: columns, alignment: .center, spacing: 8) {
+        VStack(spacing: 8) {
             ForEach(recipientPickerOptions, id: \.self) { recipient in
                 autoSendRecipientChip(recipient)
             }
@@ -650,8 +646,7 @@ struct ShareView: View {
     }
 
     private func autoSendRecipientChip(_ recipient: String) -> some View {
-        recipientChip(recipient, maxLength: 18)
-            .frame(maxWidth: .infinity)
+        recipientChip(recipient, maxLength: 30)
     }
 
     private var processingView: some View {
