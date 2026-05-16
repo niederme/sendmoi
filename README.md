@@ -116,9 +116,15 @@ Then run:
 make upload-app-store-connect
 ```
 
-The upload script archives the iOS app by default and uploads it to App Store Connect using Xcode account auth for cloud signing. It also accepts `--platform macos`, `--skip-archive --archive-path <path>` when you want to upload an existing archive, and `--export-only` when you only want to verify export/signing without uploading.
+The default upload target archives the iOS app and uploads it to App Store Connect using API-key auth plus manual App Store signing. The script also accepts `--platform macos`, `--skip-archive --archive-path <path>` when you want to upload an existing archive, and `--export-only` when you only want to verify export/signing without uploading.
 
-The macOS upload target uses API-key auth plus manual Mac App Store signing. It expects these local signing assets to exist:
+The platform upload targets use API-key auth plus manual App Store signing. The iOS upload expects these local signing assets to exist:
+
+- `Apple Distribution: John Niedermeyer (289GY9L343)`
+- `SendMoi iOS App Store 2026`
+- `SendMoi Share iOS App Store 2026`
+
+The macOS upload expects these local signing assets to exist:
 
 - `3rd Party Mac Developer Application: John Niedermeyer (289GY9L343)`
 - `3rd Party Mac Developer Installer: John Niedermeyer (289GY9L343)`

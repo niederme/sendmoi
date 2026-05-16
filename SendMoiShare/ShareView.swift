@@ -136,7 +136,7 @@ struct ShareView: View {
                         .font(.caption2)
                         .foregroundStyle(model.recipientInlineMessageIsError ? .red : .secondary)
                 }
-                if !recipientPickerOptions.isEmpty {
+                if !recipientPickerOptions.isEmpty && !showsAutoSendOverlayLayout {
                     recipientPickerView
                 }
             }
@@ -301,7 +301,7 @@ struct ShareView: View {
                         .font(.caption2)
                         .foregroundStyle(model.recipientInlineMessageIsError ? .red : .secondary)
                 }
-                if !recipientPickerOptions.isEmpty {
+                if !recipientPickerOptions.isEmpty && !showsAutoSendOverlayLayout {
                     recipientPickerView
                 }
             }
@@ -435,15 +435,14 @@ struct ShareView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(recipientPickerOptions, id: \.self) { recipient in
-                        recipientChip(recipient)
+                        recipientChip(recipient, maxLength: 28)
                     }
                 }
             }
-            .scrollClipDisabled()
         }
     }
 
-    private func recipientChip(_ recipient: String) -> some View {
+    private func recipientChip(_ recipient: String, maxLength: Int) -> some View {
         let selected = normalizedRecipient(recipient) == normalizedRecipient(model.toEmail)
 
         return Button {
@@ -455,7 +454,7 @@ struct ShareView: View {
                         .font(.caption.weight(.bold))
                 }
 
-                Text(displayRecipient(recipient, maxLength: 30))
+                Text(displayRecipient(recipient, maxLength: maxLength))
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
@@ -637,16 +636,22 @@ struct ShareView: View {
     }
 
     private var autoSendRecipientPickerView: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(recipientPickerOptions, id: \.self) { recipient in
-                    recipientChip(recipient)
-                }
+        let columns = [
+            GridItem(.adaptive(minimum: 118, maximum: 148), spacing: 8)
+        ]
+
+        return LazyVGrid(columns: columns, alignment: .center, spacing: 8) {
+            ForEach(recipientPickerOptions, id: \.self) { recipient in
+                autoSendRecipientChip(recipient)
             }
-            .padding(.horizontal, 2)
         }
-        .scrollClipDisabled()
+        .frame(maxWidth: .infinity)
         .accessibilityLabel("Choose recipient")
+    }
+
+    private func autoSendRecipientChip(_ recipient: String) -> some View {
+        recipientChip(recipient, maxLength: 18)
+            .frame(maxWidth: .infinity)
     }
 
     private var processingView: some View {

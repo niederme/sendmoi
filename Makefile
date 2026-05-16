@@ -140,10 +140,10 @@ dev-live-thread: LIVE := 1
 dev-live-thread: dev
 
 upload-app-store-connect:
-	./scripts/upload_app_store_connect.sh
+	AUTH_MODE=api-key IOS_SIGNING_STYLE=manual ./scripts/upload_app_store_connect.sh --platform ios
 
 upload-ios-app-store-connect:
-	./scripts/upload_app_store_connect.sh --platform ios
+	AUTH_MODE=api-key IOS_SIGNING_STYLE=manual ./scripts/upload_app_store_connect.sh --platform ios
 
 upload-macos-app-store-connect:
 	AUTH_MODE=api-key ./scripts/upload_app_store_connect.sh --platform macos

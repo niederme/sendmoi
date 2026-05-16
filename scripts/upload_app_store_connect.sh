@@ -13,9 +13,13 @@ EXPORT_DIR="${EXPORT_DIR:-$ROOT_DIR/build/app-store-connect-export}"
 ASC_CONFIG_FILE="${ASC_CONFIG_FILE:-$HOME/.appstoreconnect/sendmoi.env}"
 AUTH_MODE="${AUTH_MODE:-}"
 DESTINATION="${DESTINATION:-upload}"
+IOS_SIGNING_STYLE="${IOS_SIGNING_STYLE:-automatic}"
+IOS_SIGNING_CERTIFICATE="${IOS_SIGNING_CERTIFICATE:-Apple Distribution: John Niedermeyer (289GY9L343)}"
+IOS_APP_PROFILE_NAME="${IOS_APP_PROFILE_NAME:-SendMoi iOS App Store 2026}"
+IOS_SHARE_PROFILE_NAME="${IOS_SHARE_PROFILE_NAME:-SendMoi Share iOS App Store 2026}"
 MACOS_SIGNING_STYLE="${MACOS_SIGNING_STYLE:-manual}"
-MACOS_SIGNING_CERTIFICATE="${MACOS_SIGNING_CERTIFICATE:-3rd Party Mac Developer Application}"
-MACOS_INSTALLER_SIGNING_CERTIFICATE="${MACOS_INSTALLER_SIGNING_CERTIFICATE:-3rd Party Mac Developer Installer}"
+MACOS_SIGNING_CERTIFICATE="${MACOS_SIGNING_CERTIFICATE:-3rd Party Mac Developer Application: John Niedermeyer (289GY9L343)}"
+MACOS_INSTALLER_SIGNING_CERTIFICATE="${MACOS_INSTALLER_SIGNING_CERTIFICATE:-3rd Party Mac Developer Installer: John Niedermeyer (289GY9L343)}"
 MACOS_APP_PROFILE_NAME="${MACOS_APP_PROFILE_NAME:-SendMoi Mac App Store 2026}"
 MACOS_SHARE_PROFILE_NAME="${MACOS_SHARE_PROFILE_NAME:-SendMoi Share Mac App Store 2026}"
 SKIP_ARCHIVE=false
@@ -38,6 +42,10 @@ Options:
 Environment:
   PLATFORM              ios or macos. Defaults to ios.
   AUTH_MODE             account or api-key. Defaults to account for iOS and api-key for macOS.
+  IOS_SIGNING_STYLE     automatic or manual. Defaults to automatic.
+  IOS_APP_PROFILE_NAME  iOS app provisioning profile name for manual signing.
+  IOS_SHARE_PROFILE_NAME
+                        iOS share extension provisioning profile name for manual signing.
   MACOS_SIGNING_STYLE   automatic or manual. Defaults to manual.
   MACOS_APP_PROFILE_NAME
                         macOS app provisioning profile name for manual signing.
@@ -134,6 +142,11 @@ if [[ "$DESTINATION" != "upload" && "$DESTINATION" != "export" ]]; then
   exit 1
 fi
 
+if [[ "$IOS_SIGNING_STYLE" != "automatic" && "$IOS_SIGNING_STYLE" != "manual" ]]; then
+  echo "IOS_SIGNING_STYLE must be automatic or manual." >&2
+  exit 1
+fi
+
 if [[ "$MACOS_SIGNING_STYLE" != "automatic" && "$MACOS_SIGNING_STYLE" != "manual" ]]; then
   echo "MACOS_SIGNING_STYLE must be automatic or manual." >&2
   exit 1
@@ -182,7 +195,18 @@ trap 'rm -f "$EXPORT_OPTIONS"' EXIT
   print '  <key>teamID</key>'
   print "  <string>$team_id</string>"
   print '  <key>signingStyle</key>'
-  if [[ "$PLATFORM" == "macos" && "$MACOS_SIGNING_STYLE" == "manual" ]]; then
+  if [[ "$PLATFORM" == "ios" && "$IOS_SIGNING_STYLE" == "manual" ]]; then
+    print '  <string>manual</string>'
+    print '  <key>signingCertificate</key>'
+    print "  <string>$IOS_SIGNING_CERTIFICATE</string>"
+    print '  <key>provisioningProfiles</key>'
+    print '  <dict>'
+    print '    <key>com.niederme.SendMoi</key>'
+    print "    <string>$IOS_APP_PROFILE_NAME</string>"
+    print '    <key>com.niederme.SendMoi.ShareExtension</key>'
+    print "    <string>$IOS_SHARE_PROFILE_NAME</string>"
+    print '  </dict>'
+  elif [[ "$PLATFORM" == "macos" && "$MACOS_SIGNING_STYLE" == "manual" ]]; then
     print '  <string>manual</string>'
     print '  <key>signingCertificate</key>'
     print "  <string>$MACOS_SIGNING_CERTIFICATE</string>"
