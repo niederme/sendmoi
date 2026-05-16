@@ -442,10 +442,15 @@ struct ShareView: View {
         }
     }
 
-    private func recipientChip(_ recipient: String, maxLength: Int) -> some View {
+    private func recipientChip(
+        _ recipient: String,
+        maxLength: Int,
+        isEnabled: Bool = true
+    ) -> some View {
         let selected = normalizedRecipient(recipient) == normalizedRecipient(model.toEmail)
 
         return Button {
+            guard isEnabled else { return }
             model.useSavedRecipient(recipient)
         } label: {
             HStack(spacing: 5) {
@@ -472,6 +477,8 @@ struct ShareView: View {
             }
         }
         .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .opacity(isEnabled ? 1 : 0.45)
         .accessibilityLabel(recipient)
         .accessibilityValue(selected ? "Selected" : "")
     }
@@ -632,7 +639,11 @@ struct ShareView: View {
     }
 
     private func autoSendRecipientChip(_ recipient: String) -> some View {
-        recipientChip(recipient, maxLength: 30)
+        recipientChip(
+            recipient,
+            maxLength: 30,
+            isEnabled: model.canChangeAutoSendRecipient
+        )
     }
 
     private var processingView: some View {

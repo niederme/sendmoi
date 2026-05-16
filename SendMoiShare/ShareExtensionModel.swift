@@ -13,7 +13,7 @@ import AppKit
 
 @MainActor
 final class ShareExtensionModel: ObservableObject {
-    private static let autoSendGracePeriodNanoseconds: UInt64 = 1_000_000_000
+    private static let autoSendGracePeriodNanoseconds: UInt64 = 2_000_000_000
     private static let autoSendDeliveryTimeoutNanoseconds: UInt64 = 8_000_000_000
     private static let manualSendPreviewWaitLimitNanoseconds: UInt64 = 750_000_000
     static let missingRecipientMessage = "Enter a recipient in the To field, or set a default recipient in the SendMoi app."
@@ -45,6 +45,7 @@ final class ShareExtensionModel: ObservableObject {
     @Published var isSaving = false
     @Published var isConnectingGmail = false
     @Published var isRefreshingPreview = false
+    @Published private(set) var canChangeAutoSendRecipient = false
     @Published var savedRecipients: [String] = []
     @Published var presentationMode: PresentationMode = .processing
     @Published var showsGmailConnectAlert = false
@@ -90,6 +91,10 @@ final class ShareExtensionModel: ObservableObject {
 
     func useSavedRecipient(_ recipient: String) {
         recipientReloadTask?.cancel()
+        guard canChangeAutoSendRecipient || presentationMode == .editing else {
+            return
+        }
+
         toEmail = recipient
         if presentationMode == .processing, isSaving {
             pendingAutoSendItem = makeQueuedEmail(from: currentDraft())
@@ -134,6 +139,7 @@ final class ShareExtensionModel: ObservableObject {
         isSaving = true
 
         if shouldAllowAutoSendEditWindow {
+            canChangeAutoSendRecipient = true
             pendingAutoSendItem = item
             deliveryTimeoutTask = Task { [weak self] in
                 guard let self else { return }
@@ -153,12 +159,14 @@ final class ShareExtensionModel: ObservableObject {
                 self.deliveryTimeoutTask?.cancel()
                 self.deliveryTimeoutTask = nil
                 self.pendingAutoSendItem = nil
+                self.canChangeAutoSendRecipient = false
             }
 
             do {
                 if shouldAllowAutoSendEditWindow {
                     try await Task.sleep(nanoseconds: Self.autoSendGracePeriodNanoseconds)
                     try Task.checkCancellation()
+                    self.canChangeAutoSendRecipient = false
                 }
                 let itemToSend: QueuedEmail
                 if shouldAllowAutoSendEditWindow {
@@ -198,6 +206,7 @@ final class ShareExtensionModel: ObservableObject {
         sendTask?.cancel()
         sendTask = nil
         isSaving = false
+        canChangeAutoSendRecipient = false
         statusMessage = "Review and tap Send when ready."
         presentationMode = .editing
         schedulePreviewRefresh()
