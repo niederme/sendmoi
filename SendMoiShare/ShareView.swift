@@ -23,7 +23,7 @@ struct ShareView: View {
                         .allowsHitTesting(false)
                         .overlay {
                             Rectangle()
-                                .fill(.black.opacity(0.58))
+                                .fill(.black.opacity(0.42))
                                 .ignoresSafeArea()
                         }
 
@@ -589,28 +589,14 @@ struct ShareView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.primary)
-                .background(
-                    Capsule()
-                        .fill(overlayButtonFill)
-                        .overlay {
-                            Capsule()
-                                .strokeBorder(overlayBorderColor, lineWidth: 1)
-                        }
-                )
+                .modifier(LiquidGlassCapsule())
             }
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 22)
         .frame(maxWidth: 340)
-        .background {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(overlayCardFill)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .strokeBorder(overlayBorderColor, lineWidth: 1)
-                }
-        }
-        .shadow(color: .black.opacity(0.16), radius: 10, y: 4)
+        .modifier(LiquidGlassPlatter(cornerRadius: 24))
+        .shadow(color: .black.opacity(0.22), radius: 24, y: 12)
         .padding(24)
     }
 
@@ -724,24 +710,86 @@ struct ShareView: View {
             || model.isConnectingGmail
     }
 
-    private var overlayBorderColor: Color {
-        .white.opacity(0.08)
+}
+
+private struct LiquidGlassPlatter: ViewModifier {
+    let cornerRadius: CGFloat
+
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+
+        if #available(iOS 26.0, macOS 26.0, *) {
+            content
+                .glassEffect(.regular.tint(.white.opacity(0.06)), in: shape)
+                .overlay {
+                    shape
+                        .strokeBorder(platterHighlight, lineWidth: 1)
+                        .blendMode(.plusLighter)
+                }
+                .overlay {
+                    shape
+                        .strokeBorder(.black.opacity(0.12), lineWidth: 0.5)
+                }
+        } else {
+            content
+                .background {
+                    shape
+                        .fill(.ultraThinMaterial)
+                        .overlay {
+                            shape
+                                .fill(.white.opacity(0.05))
+                        }
+                        .overlay {
+                            shape
+                                .strokeBorder(platterHighlight, lineWidth: 1)
+                                .blendMode(.plusLighter)
+                        }
+                        .overlay {
+                            shape
+                                .strokeBorder(.black.opacity(0.12), lineWidth: 0.5)
+                        }
+                }
+        }
     }
 
-    private var overlayCardFill: Color {
-        #if os(iOS)
-        return Color(uiColor: .secondarySystemBackground).opacity(0.94)
-        #else
-        return Color(nsColor: .controlBackgroundColor).opacity(0.96)
-        #endif
+    private var platterHighlight: LinearGradient {
+        LinearGradient(
+            colors: [
+                .white.opacity(0.34),
+                .white.opacity(0.11),
+                .white.opacity(0.03)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
     }
+}
 
-    private var overlayButtonFill: Color {
-        #if os(iOS)
-        return Color(uiColor: .tertiarySystemBackground).opacity(0.98)
-        #else
-        return Color(nsColor: .underPageBackgroundColor).opacity(0.98)
-        #endif
+private struct LiquidGlassCapsule: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            content
+                .glassEffect(.regular.tint(.white.opacity(0.05)), in: Capsule())
+                .overlay {
+                    Capsule()
+                        .strokeBorder(.white.opacity(0.18), lineWidth: 0.8)
+                        .blendMode(.plusLighter)
+                }
+        } else {
+            content
+                .background {
+                    Capsule()
+                        .fill(.thinMaterial)
+                        .overlay {
+                            Capsule()
+                                .fill(.white.opacity(0.05))
+                        }
+                        .overlay {
+                            Capsule()
+                                .strokeBorder(.white.opacity(0.16), lineWidth: 0.8)
+                        }
+                }
+        }
     }
 }
 
