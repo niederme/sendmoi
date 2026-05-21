@@ -21,7 +21,6 @@ struct MacSetupSidebar: View {
             gmailCard
             recipientCard
             shareBehaviorCard
-            goodLinksCard
             analyticsCard
             setupCard
         }
@@ -175,54 +174,6 @@ struct MacSetupSidebar: View {
         }
     }
 
-    private var goodLinksCard: some View {
-        MacSidebarCard(
-            title: "GoodLinks",
-            subtitle: goodLinksSubtitle
-        ) {
-            VStack(alignment: .leading, spacing: 12) {
-                Toggle(isOn: goodLinksBinding(\.isEnabled)) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Also save to GoodLinks")
-                        Text("Uses the local GoodLinks API for shares started on this Mac.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .toggleStyle(.switch)
-
-                goodLinksSetupState
-
-                TextField("API address", text: goodLinksBinding(\.apiAddress))
-                    .textFieldStyle(.roundedBorder)
-
-                SecureField("API token", text: goodLinksBinding(\.apiToken))
-                    .textFieldStyle(.roundedBorder)
-
-                goodLinksSetupGuide
-
-                GoodLinksTagsEditor(
-                    tagsText: goodLinksBinding(\.tagsText),
-                    isEnabled: true
-                )
-
-                Toggle("Star saved links", isOn: goodLinksBinding(\.starred))
-
-                Toggle("Mark saved links as read", isOn: goodLinksBinding(\.read))
-
-                Button(goodLinksTestButtonTitle) {
-                    Task { await model.testGoodLinksConnection() }
-                }
-                .buttonStyle(.bordered)
-                .disabled(
-                    model.isBusy ||
-                    model.isTestingGoodLinks ||
-                    model.goodLinksSettings.apiToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                )
-            }
-        }
-    }
-
     private var analyticsCard: some View {
         MacSidebarCard(
             title: "Analytics",
@@ -293,17 +244,6 @@ struct MacSetupSidebar: View {
         model.removeSavedRecipient(recipient)
     }
 
-    private func goodLinksBinding<Value>(_ keyPath: WritableKeyPath<GoodLinksSettings, Value>) -> Binding<Value> {
-        Binding(
-            get: { model.goodLinksSettings[keyPath: keyPath] },
-            set: { value in
-                var settings = model.goodLinksSettings
-                settings[keyPath: keyPath] = value
-                model.setGoodLinksSettings(settings)
-            }
-        )
-    }
-
     private func clearInitialRecipientFocus() {
         focusedField = nil
         #if os(macOS)
@@ -322,167 +262,6 @@ struct MacSetupSidebar: View {
             return "SendMoi needs Gmail to send queued items."
         }
         return "Ready for queued delivery on this Mac."
-    }
-
-    private var goodLinksSubtitle: String {
-        if !model.syncedGoodLinksJobs.isEmpty {
-            return "Paste the local API token so this Mac can save iPhone GoodLinks items."
-        }
-
-        if model.goodLinksSettings.isEnabled {
-            return "Save a bonus copy to GoodLinks after Gmail sends."
-        }
-
-        return "Optional. Gmail remains the required delivery path."
-    }
-
-    private var goodLinksSetupState: some View {
-        Label {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(goodLinksSetupStateTitle)
-                    .font(.footnote.weight(.semibold))
-                Text(goodLinksSetupStateDetail)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        } icon: {
-            Image(systemName: goodLinksSetupStateIcon)
-                .foregroundStyle(goodLinksSetupStateTint)
-        }
-        .padding(10)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(goodLinksSetupStateTint.opacity(0.10))
-        )
-    }
-
-    private var goodLinksSetupGuide: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("GoodLinks setup")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-
-            goodLinksSetupStep("1", "In GoodLinks for Mac, open Settings > API and turn on API Server.")
-            goodLinksSetupStep("2", "Paste the Address and API Token from GoodLinks into SendMoi.")
-            goodLinksSetupStep("3", "Test the connection. Pending iPhone items retry after a successful test.")
-        }
-        .font(.footnote)
-        .foregroundStyle(.secondary)
-    }
-
-    private func goodLinksSetupStep(_ number: String, _ text: String) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Text(number)
-                .font(.caption.weight(.bold))
-                .foregroundStyle(.white)
-                .frame(width: 18, height: 18)
-                .background(Circle().fill(Color.accentColor))
-            Text(text)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-    private var goodLinksTestButtonTitle: String {
-        if model.isTestingGoodLinks {
-            return "Testing..."
-        }
-
-        if !model.syncedGoodLinksJobs.isEmpty {
-            return "Test & Retry Queue"
-        }
-
-        return "Test Connection"
-    }
-
-    private var goodLinksSetupStateTitle: String {
-        if model.goodLinksConnectionSucceeded {
-            return "GoodLinks is ready"
-        }
-
-        if model.goodLinksConnectionMessage != nil {
-            return "GoodLinks needs attention"
-        }
-
-        if goodLinksAddressIsMissing {
-            return "Add the API address"
-        }
-
-        if goodLinksTokenIsMissing {
-            return "Paste the API token"
-        }
-
-        if !model.syncedGoodLinksJobs.isEmpty {
-            return "Pending iPhone saves are waiting"
-        }
-
-        if model.goodLinksSettings.isEnabled {
-            return "Ready to test"
-        }
-
-        return "Configured for later"
-    }
-
-    private var goodLinksSetupStateDetail: String {
-        if let message = model.goodLinksConnectionMessage {
-            return message
-        }
-
-        if goodLinksAddressIsMissing {
-            return "Use the local address shown in GoodLinks Settings > API, usually http://localhost:9428."
-        }
-
-        if goodLinksTokenIsMissing {
-            return "SendMoi cannot save to GoodLinks until this Mac has the token from GoodLinks Settings > API."
-        }
-
-        if !model.syncedGoodLinksJobs.isEmpty {
-            return "The Mac will use this API token even if Mac-origin GoodLinks copies are off."
-        }
-
-        if model.goodLinksSettings.isEnabled {
-            return "Test the local API before relying on GoodLinks copies."
-        }
-
-        return "The token stays saved for iPhone queue processing and future Mac saves."
-    }
-
-    private var goodLinksSetupStateIcon: String {
-        if model.goodLinksConnectionSucceeded {
-            return "checkmark.circle.fill"
-        }
-
-        if model.goodLinksConnectionMessage != nil || goodLinksAddressIsMissing || goodLinksTokenIsMissing {
-            return "exclamationmark.triangle.fill"
-        }
-
-        if !model.syncedGoodLinksJobs.isEmpty {
-            return "arrow.triangle.2.circlepath.circle.fill"
-        }
-
-        return "info.circle.fill"
-    }
-
-    private var goodLinksSetupStateTint: Color {
-        if model.goodLinksConnectionSucceeded {
-            return .green
-        }
-
-        if model.goodLinksConnectionMessage != nil || goodLinksAddressIsMissing || goodLinksTokenIsMissing {
-            return .orange
-        }
-
-        return .accentColor
-    }
-
-    private var goodLinksAddressIsMissing: Bool {
-        model.goodLinksSettings.apiAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    private var goodLinksTokenIsMissing: Bool {
-        model.goodLinksSettings.apiToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private var gmailIcon: String {

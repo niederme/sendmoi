@@ -7,11 +7,6 @@ final class AppModel: ObservableObject {
     @Published var defaultRecipient = ""
     @Published var savedRecipients: [String] = []
     @Published var shareSheetAutoSendEnabled = true
-    @Published var goodLinksSettings = GoodLinksSettingsStore.load()
-    @Published var syncedGoodLinksJobs: [GoodLinksSyncJob] = GoodLinksSyncStore.load()
-    @Published var isTestingGoodLinks = false
-    @Published var goodLinksConnectionMessage: String?
-    @Published var goodLinksConnectionSucceeded = false
     @Published var session: GmailSession?
     @Published var statusMessage = "Configure Google OAuth, sign in, then queue or send shared items."
     @Published var isBusy = false
@@ -23,10 +18,8 @@ final class AppModel: ObservableObject {
     @Published var analyticsEnabled = false
 
     private let client = GmailAPIClient()
-    private let goodLinksService = GoodLinksService()
     private let monitor = NetworkMonitor()
     private let queueChangeObserver = QueueChangeObserver()
-    private let goodLinksQueueChangeObserver = QueueChangeObserver(notificationName: GoodLinksSyncStore.didChangeNotification)
     private var shouldReprocessQueue = false
     #if os(macOS)
     private var queuePollTimer: Timer?
@@ -45,13 +38,6 @@ final class AppModel: ObservableObject {
             }
         }
         queueChangeObserver.start()
-
-        goodLinksQueueChangeObserver.onChange = { [weak self] in
-            Task { @MainActor [weak self] in
-                self?.handleGoodLinksSyncQueueChange()
-            }
-        }
-        goodLinksQueueChangeObserver.start()
 
         #if os(macOS)
         // Darwin notifications between a Mac Catalyst extension and the main app
@@ -72,7 +58,6 @@ final class AppModel: ObservableObject {
     func startup() async {
         reloadSharedPreferences()
         reloadQueueFromDisk()
-        reloadGoodLinksSyncQueue()
         reloadSessionFromDisk()
 
         isAccountSectionExpanded = session == nil || !GoogleOAuthConfig.isConfigured
@@ -179,12 +164,6 @@ final class AppModel: ObservableObject {
         if wasShowingOnboarding { shouldShowOnboarding = true }
         reloadSessionFromDisk()
         reloadQueueFromDisk()
-        reloadGoodLinksSyncQueue()
-
-        #if os(macOS)
-        await processSyncedGoodLinksQueue()
-        #endif
-
         guard !queuedEmails.isEmpty else { return }
         guard let existingSession = session else {
             statusMessage = "You have queued items. Sign in to Gmail to send them."
@@ -213,23 +192,12 @@ final class AppModel: ObservableObject {
 
             while let next = queuedEmails.last {
                 do {
-                    if next.needsEmailDelivery {
-                        try await client.sendEmail(using: validSession, item: next)
-                        markEmailDelivered(for: next.id)
-                        RecipientStore.record(next.toEmail)
-                        await AnalyticsClient.shared.send("email_sent", enabled: analyticsEnabled)
-                        statusMessage = "Sent \"\(next.title)\" to \(next.toEmail)."
-                    }
-
-                    if queuedEmails.last?.id == next.id,
-                       queuedEmails.last?.needsGoodLinksDelivery == true {
-                        try await deliverGoodLinksCopy(for: queuedEmails.last!)
-                    }
-
-                    if let updated = queuedEmails.last, updated.id == next.id, updated.isFullyDelivered {
-                        removeManagedMedia(for: updated)
-                        removeQueuedEmail(id: updated.id)
-                    }
+                    try await client.sendEmail(using: validSession, item: next)
+                    removeManagedMedia(for: next)
+                    removeQueuedEmail(id: next.id)
+                    RecipientStore.record(next.toEmail)
+                    await AnalyticsClient.shared.send("email_sent", enabled: analyticsEnabled)
+                    statusMessage = "Sent \"\(next.title)\" to \(next.toEmail)."
                 } catch {
                     if let gmailError = error as? GmailAPIError, gmailError.requiresReconnect {
                         requiresGmailReconnect = true
@@ -237,9 +205,6 @@ final class AppModel: ObservableObject {
                         isQueueSectionExpanded = true
                         markFailure(for: next.id, message: gmailError.localizedDescription)
                         statusMessage = "Reconnect Gmail to grant send permission. Queued items will send after you reconnect."
-                    } else if error is GoodLinksError {
-                        markGoodLinksFailure(for: next.id, message: error.localizedDescription)
-                        statusMessage = "Email is done. GoodLinks copy is queued for retry: \(error.localizedDescription)"
                     } else {
                         markFailure(for: next.id, message: error.localizedDescription)
                         statusMessage = "Queued item kept for retry: \(error.localizedDescription)"
@@ -297,55 +262,13 @@ final class AppModel: ObservableObject {
         shareSheetAutoSendEnabled = RecipientStore.loadShareSheetAutoSendEnabled()
     }
 
-    func setGoodLinksSettings(_ settings: GoodLinksSettings) {
-        let previousSettings = goodLinksSettings
-        GoodLinksSettingsStore.save(settings)
-        goodLinksSettings = GoodLinksSettingsStore.load()
-        if previousSettings.apiAddress != goodLinksSettings.apiAddress ||
-            previousSettings.apiToken != goodLinksSettings.apiToken {
-            goodLinksConnectionMessage = nil
-            goodLinksConnectionSucceeded = false
-        }
-    }
-
-    func testGoodLinksConnection() async {
-        guard !isTestingGoodLinks else { return }
-        isTestingGoodLinks = true
-        defer { isTestingGoodLinks = false }
-
-        do {
-            let settings = GoodLinksSettingsStore.load()
-            try await goodLinksService.testLocalAPI(settings: settings)
-            goodLinksConnectionSucceeded = true
-            goodLinksConnectionMessage = "Connection verified."
-            statusMessage = "GoodLinks connection verified."
-            #if os(macOS)
-            await processSyncedGoodLinksQueue()
-            #endif
-        } catch {
-            goodLinksConnectionSucceeded = false
-            goodLinksConnectionMessage = error.localizedDescription
-            statusMessage = "GoodLinks test failed: \(error.localizedDescription)"
-        }
-    }
-
     func retryNow() async {
         let wasShowingOnboarding = shouldShowOnboarding
         reloadSharedPreferences()
         if wasShowingOnboarding { shouldShowOnboarding = true }
         reloadSessionFromDisk()
         reloadQueueFromDisk()
-        reloadGoodLinksSyncQueue()
         await processQueue()
-    }
-
-    func deleteSyncedGoodLinksJob(id: UUID) {
-        do {
-            try GoodLinksSyncStore.remove(id: id)
-            reloadGoodLinksSyncQueue()
-        } catch {
-            statusMessage = "Could not remove GoodLinks sync item: \(error.localizedDescription)"
-        }
     }
 
     func resetSetup() {
@@ -355,15 +278,11 @@ final class AppModel: ObservableObject {
             try KeychainStore.clearSession()
             SharedSessionStore.clear()
             RecipientStore.resetSetup()
-            GoodLinksSettingsStore.reset()
 
             session = nil
             defaultRecipient = RecipientStore.loadDefault()
             savedRecipients = RecipientStore.load()
             shareSheetAutoSendEnabled = RecipientStore.loadShareSheetAutoSendEnabled()
-            goodLinksSettings = GoodLinksSettingsStore.load()
-            goodLinksConnectionMessage = nil
-            goodLinksConnectionSucceeded = false
             isAccountSectionExpanded = true
             shouldShowOnboarding = true
             statusMessage = "Setup reset. Walk through the guide to reconnect Gmail and reconfigure defaults."
@@ -405,10 +324,6 @@ final class AppModel: ObservableObject {
         }
     }
 
-    private func reloadGoodLinksSyncQueue() {
-        syncedGoodLinksJobs = GoodLinksSyncStore.load()
-    }
-
     private func removeQueuedEmail(id: UUID) {
         removeQueuedEmails(ids: [id])
     }
@@ -435,29 +350,6 @@ final class AppModel: ObservableObject {
         }
     }
 
-    private func markEmailDelivered(for id: UUID) {
-        if let index = queuedEmails.firstIndex(where: { $0.id == id }) {
-            queuedEmails[index].emailDeliveredAt = .now
-            queuedEmails[index].lastError = nil
-            persistQueue()
-        }
-    }
-
-    private func markGoodLinksDelivered(for id: UUID) {
-        if let index = queuedEmails.firstIndex(where: { $0.id == id }) {
-            queuedEmails[index].goodLinksDeliveredAt = .now
-            queuedEmails[index].goodLinksLastError = nil
-            persistQueue()
-        }
-    }
-
-    private func markGoodLinksFailure(for id: UUID, message: String) {
-        if let index = queuedEmails.firstIndex(where: { $0.id == id }) {
-            queuedEmails[index].goodLinksLastError = message
-            persistQueue()
-        }
-    }
-
     private func updateReconnectRequirement() {
         requiresGmailReconnect = queuedEmails.contains { item in
             guard let lastError = item.lastError else {
@@ -480,7 +372,6 @@ final class AppModel: ObservableObject {
         defaultRecipient = RecipientStore.loadDefault()
         savedRecipients = RecipientStore.load()
         shareSheetAutoSendEnabled = RecipientStore.loadShareSheetAutoSendEnabled()
-        goodLinksSettings = GoodLinksSettingsStore.load()
         shouldShowOnboarding = !RecipientStore.loadHasCompletedOnboarding()
         analyticsEnabled = RecipientStore.loadAnalyticsEnabled()
     }
@@ -536,72 +427,15 @@ final class AppModel: ObservableObject {
         }
     }
 
-    private func handleGoodLinksSyncQueueChange() {
-        reloadGoodLinksSyncQueue()
-
-        #if os(macOS)
-        guard syncedGoodLinksJobs.contains(where: { $0.lastError == nil }) else {
-            return
-        }
-
-        Task {
-            await processSyncedGoodLinksQueue()
-        }
-        #endif
-    }
-
     private func removeManagedMedia(for item: QueuedEmail) {
         item.allImageURLStrings.forEach { SharedContainer.removeManagedMediaIfPresent(urlString: $0) }
     }
-
-    private func deliverGoodLinksCopy(for item: QueuedEmail) async throws {
-        let settings = GoodLinksSettingsStore.load()
-        #if os(macOS) || targetEnvironment(macCatalyst)
-        do {
-            try await goodLinksService.saveUsingLocalAPI(item: item, settings: settings)
-            markGoodLinksDelivered(for: item.id)
-            statusMessage = "Saved \"\(item.title)\" to GoodLinks."
-        } catch {
-            markGoodLinksFailure(for: item.id, message: error.localizedDescription)
-            throw error
-        }
-        #elseif os(iOS)
-        do {
-            try GoodLinksSyncStore.append(item: item, settings: settings)
-            reloadGoodLinksSyncQueue()
-            markGoodLinksDelivered(for: item.id)
-            statusMessage = "Queued \"\(item.title)\" for GoodLinks on your Mac."
-        } catch {
-            markGoodLinksFailure(for: item.id, message: error.localizedDescription)
-            throw error
-        }
-        #endif
-    }
-
-    #if os(macOS)
-    private func processSyncedGoodLinksQueue() async {
-        let result = await GoodLinksSyncProcessor.drain(using: goodLinksService)
-        reloadGoodLinksSyncQueue()
-        if result.didSaveJobs {
-            statusMessage = result.savedCount == 1
-                ? "Saved 1 synced GoodLinks item."
-                : "Saved \(result.savedCount) synced GoodLinks items."
-        } else if let lastError = result.lastError, result.remainingCount > 0 {
-            statusMessage = "Synced GoodLinks items will retry later: \(lastError)"
-        }
-    }
-    #endif
 
 }
 
 private final class QueueChangeObserver {
     var onChange: (() -> Void)?
-    private let notificationName: String
     private var isStarted = false
-
-    init(notificationName: String = QueueStore.didChangeNotification) {
-        self.notificationName = notificationName
-    }
 
     func start() {
         guard !isStarted else { return }
@@ -619,7 +453,7 @@ private final class QueueChangeObserver {
                     .takeUnretainedValue()
                 queueObserver.onChange?()
             },
-            notificationName as CFString,
+            QueueStore.didChangeNotification as CFString,
             nil,
             .deliverImmediately
         )
@@ -634,7 +468,7 @@ private final class QueueChangeObserver {
         CFNotificationCenterRemoveObserver(
             center,
             observer,
-            CFNotificationName(rawValue: notificationName as CFString),
+            CFNotificationName(rawValue: QueueStore.didChangeNotification as CFString),
             nil
         )
     }

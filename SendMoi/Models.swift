@@ -426,43 +426,10 @@ struct QueuedEmail: Codable, Identifiable, Equatable {
     let previewImageURLString: String?
     let additionalImageURLStrings: [String]?
     let createdAt: Date
-    var emailDeliveredAt: Date?
-    var goodLinksEnabled: Bool
-    var goodLinksDeliveredAt: Date?
-    var goodLinksLastError: String?
     var lastError: String?
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case toEmail
-        case title
-        case excerpt
-        case summary
-        case urlString
-        case previewImageURLString
-        case additionalImageURLStrings
-        case createdAt
-        case emailDeliveredAt
-        case goodLinksEnabled
-        case goodLinksDeliveredAt
-        case goodLinksLastError
-        case lastError
-    }
 
     var allImageURLStrings: [String] {
         combinedImageURLStrings(primary: previewImageURLString, additional: additionalImageURLStrings ?? [])
-    }
-
-    var needsEmailDelivery: Bool {
-        emailDeliveredAt == nil
-    }
-
-    var needsGoodLinksDelivery: Bool {
-        goodLinksEnabled && goodLinksDeliveredAt == nil
-    }
-
-    var isFullyDelivered: Bool {
-        !needsEmailDelivery && !needsGoodLinksDelivery
     }
 
     init(
@@ -475,10 +442,6 @@ struct QueuedEmail: Codable, Identifiable, Equatable {
         previewImageURLString: String? = nil,
         additionalImageURLStrings: [String]? = nil,
         createdAt: Date = .now,
-        emailDeliveredAt: Date? = nil,
-        goodLinksEnabled: Bool = false,
-        goodLinksDeliveredAt: Date? = nil,
-        goodLinksLastError: String? = nil,
         lastError: String? = nil
     ) {
         self.id = id
@@ -490,29 +453,7 @@ struct QueuedEmail: Codable, Identifiable, Equatable {
         self.previewImageURLString = previewImageURLString
         self.additionalImageURLStrings = additionalImageURLStrings
         self.createdAt = createdAt
-        self.emailDeliveredAt = emailDeliveredAt
-        self.goodLinksEnabled = goodLinksEnabled
-        self.goodLinksDeliveredAt = goodLinksDeliveredAt
-        self.goodLinksLastError = goodLinksLastError
         self.lastError = lastError
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(UUID.self, forKey: .id)
-        toEmail = try container.decode(String.self, forKey: .toEmail)
-        title = try container.decode(String.self, forKey: .title)
-        excerpt = try container.decode(String.self, forKey: .excerpt)
-        summary = try container.decodeIfPresent(String.self, forKey: .summary)
-        urlString = try container.decode(String.self, forKey: .urlString)
-        previewImageURLString = try container.decodeIfPresent(String.self, forKey: .previewImageURLString)
-        additionalImageURLStrings = try container.decodeIfPresent([String].self, forKey: .additionalImageURLStrings)
-        createdAt = try container.decode(Date.self, forKey: .createdAt)
-        emailDeliveredAt = try container.decodeIfPresent(Date.self, forKey: .emailDeliveredAt)
-        goodLinksEnabled = try container.decodeIfPresent(Bool.self, forKey: .goodLinksEnabled) ?? false
-        goodLinksDeliveredAt = try container.decodeIfPresent(Date.self, forKey: .goodLinksDeliveredAt)
-        goodLinksLastError = try container.decodeIfPresent(String.self, forKey: .goodLinksLastError)
-        lastError = try container.decodeIfPresent(String.self, forKey: .lastError)
     }
 }
 

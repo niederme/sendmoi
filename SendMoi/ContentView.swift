@@ -573,20 +573,6 @@ struct ContentView: View {
                     .toggleStyle(.switch)
                 }
 
-                Toggle(isOn: goodLinksBinding(\.isEnabled)) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Also save to GoodLinks")
-                        Text(goodLinksOnboardingDetail)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .toggleStyle(.switch)
-
-                if model.goodLinksSettings.isEnabled {
-                    onboardingGoodLinksSetupGuide
-                }
-
                 Toggle(isOn: Binding(
                     get: { model.analyticsEnabled },
                     set: { model.setAnalyticsEnabled($0) }
@@ -601,67 +587,6 @@ struct ContentView: View {
                 .toggleStyle(.switch)
             }
         }
-    }
-
-    private var onboardingGoodLinksSetupGuide: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("GoodLinks setup")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-
-            #if os(macOS) || targetEnvironment(macCatalyst)
-            onboardingFeatureRow(
-                iconName: "network",
-                title: "Turn on the local API",
-                detail: "In GoodLinks for Mac, open Settings > API and enable API Server."
-            )
-
-            TextField("API address", text: goodLinksBinding(\.apiAddress))
-                .textFieldStyle(.roundedBorder)
-
-            SecureField("API token", text: goodLinksBinding(\.apiToken))
-                .textFieldStyle(.roundedBorder)
-
-            Button(model.isTestingGoodLinks ? "Testing..." : "Test GoodLinks") {
-                Task { await model.testGoodLinksConnection() }
-            }
-            .buttonStyle(.bordered)
-            .disabled(
-                model.isTestingGoodLinks ||
-                model.goodLinksSettings.apiToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            )
-
-            if let message = model.goodLinksConnectionMessage {
-                Label(
-                    message,
-                    systemImage: model.goodLinksConnectionSucceeded ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
-                )
-                .font(.footnote)
-                .foregroundStyle(model.goodLinksConnectionSucceeded ? .green : .orange)
-            }
-            #else
-            onboardingFeatureRow(
-                iconName: "icloud.and.arrow.up.fill",
-                title: "Saved through your Mac",
-                detail: "iPhone and iPad GoodLinks copies sync to SendMoi on your Mac for silent saving."
-            )
-            onboardingFeatureRow(
-                iconName: "macbook",
-                title: "Mac setup required",
-                detail: "On your Mac, paste the token from GoodLinks Settings > API into SendMoi."
-            )
-            #endif
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(onboardingInsetCardFill)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(onboardingCardStroke, lineWidth: 1)
-        )
     }
 
     @ViewBuilder
@@ -1260,10 +1185,6 @@ struct ContentView: View {
             }
             mobileSectionFooter(shareSheetFooterText)
 
-            mobileSectionLabel("GoodLinks")
-            GroupedCard { mobileGoodLinksCardContent }
-            mobileSectionFooter(goodLinksFooterText)
-
             mobileSectionLabel("Analytics")
             GroupedCard {
                 Toggle(isOn: Binding(
@@ -1521,149 +1442,6 @@ struct ContentView: View {
         }
     }
 
-    private var mobileGoodLinksCardContent: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Toggle("Also save to GoodLinks", isOn: goodLinksBinding(\.isEnabled))
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .contentShape(Rectangle())
-
-            if model.goodLinksSettings.isEnabled || !model.syncedGoodLinksJobs.isEmpty {
-                Divider().padding(.leading, 20)
-
-                mobileGoodLinksSetupState
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-            }
-
-            Divider().padding(.leading, 20)
-
-            VStack(alignment: .leading, spacing: 6) {
-                GoodLinksTagsEditor(
-                    tagsText: goodLinksBinding(\.tagsText),
-                    isEnabled: model.goodLinksSettings.isEnabled
-                )
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-
-            Divider().padding(.leading, 20)
-
-            Toggle("Star saved links", isOn: goodLinksBinding(\.starred))
-                .disabled(!model.goodLinksSettings.isEnabled)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .contentShape(Rectangle())
-
-            Divider().padding(.leading, 20)
-
-            Toggle("Mark saved links as read", isOn: goodLinksBinding(\.read))
-                .disabled(!model.goodLinksSettings.isEnabled)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .contentShape(Rectangle())
-
-            if !model.syncedGoodLinksJobs.isEmpty {
-                Divider().padding(.leading, 20)
-
-                VStack(alignment: .leading, spacing: 10) {
-                    LabeledContent("Mac save queue", value: "\(model.syncedGoodLinksJobs.count) pending")
-                        .font(.subheadline)
-
-                    ForEach(model.syncedGoodLinksJobs) { job in
-                        HStack(alignment: .top, spacing: 10) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(job.title)
-                                    .font(.footnote.weight(.semibold))
-                                    .lineLimit(2)
-                                Text(job.urlString)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                                if let lastError = job.lastError {
-                                    Text(lastError)
-                                        .font(.caption)
-                                        .foregroundStyle(.orange)
-                                        .lineLimit(2)
-                                }
-                            }
-
-                            Spacer(minLength: 8)
-
-                            Button(role: .destructive) {
-                                model.deleteSyncedGoodLinksJob(id: job.id)
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .symbolRenderingMode(.hierarchical)
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("Remove GoodLinks queue item")
-                        }
-                        .padding(.vertical, 4)
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-            }
-        }
-    }
-
-    private var mobileGoodLinksSetupState: some View {
-        Label {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(mobileGoodLinksSetupTitle)
-                    .font(.footnote.weight(.semibold))
-                Text(mobileGoodLinksSetupDetail)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        } icon: {
-            Image(systemName: mobileGoodLinksSetupIcon)
-                .foregroundStyle(mobileGoodLinksSetupTint)
-        }
-    }
-
-    private var mobileGoodLinksSetupTitle: String {
-        if model.syncedGoodLinksJobs.contains(where: { $0.lastError != nil }) {
-            return "Mac retry needed"
-        }
-
-        if !model.syncedGoodLinksJobs.isEmpty {
-            return "\(model.syncedGoodLinksJobs.count) waiting for Mac"
-        }
-
-        return "iPhone saves through your Mac"
-    }
-
-    private var mobileGoodLinksSetupDetail: String {
-        if let lastError = model.syncedGoodLinksJobs.compactMap(\.lastError).first {
-            return lastError
-        }
-
-        if !model.syncedGoodLinksJobs.isEmpty {
-            return "Open SendMoi on your Mac after adding the GoodLinks API token there."
-        }
-
-        return "GoodLinks does not expose a silent iOS API, so SendMoi syncs copies to your Mac queue."
-    }
-
-    private var mobileGoodLinksSetupIcon: String {
-        if model.syncedGoodLinksJobs.contains(where: { $0.lastError != nil }) {
-            return "exclamationmark.triangle.fill"
-        }
-
-        if !model.syncedGoodLinksJobs.isEmpty {
-            return "icloud.and.arrow.up.fill"
-        }
-
-        return "info.circle.fill"
-    }
-
-    private var mobileGoodLinksSetupTint: Color {
-        model.syncedGoodLinksJobs.contains(where: { $0.lastError != nil }) ? .orange : .accentColor
-    }
-
     private var mobileQueueCardContent: some View {
         VStack(alignment: .leading, spacing: 0) {
             Button {
@@ -1704,13 +1482,7 @@ struct ContentView: View {
                         Divider().padding(.leading, 20)
                         VStack(alignment: .leading, spacing: 6) {
                             Text(item.title).font(.headline)
-                            Text(item.needsEmailDelivery ? "To: \(item.toEmail)" : "Email sent to \(item.toEmail)")
-                                .font(.subheadline)
-                            if item.goodLinksEnabled {
-                                Text(item.needsGoodLinksDelivery ? "GoodLinks pending" : "Saved to GoodLinks")
-                                    .font(.subheadline)
-                                    .foregroundStyle(item.needsGoodLinksDelivery ? .orange : .secondary)
-                            }
+                            Text("To: \(item.toEmail)").font(.subheadline)
                             Text(item.urlString).font(.footnote).foregroundStyle(.secondary)
                         }
                         .padding(.horizontal, 20)
@@ -1801,22 +1573,6 @@ struct ContentView: View {
         return "Items shared from other apps stay open so you can review the draft before sending."
     }
 
-    private var goodLinksFooterText: String {
-        #if os(iOS)
-        return "On iPhone and iPad, GoodLinks copies appear in the Mac save queue until your Mac can reach the local GoodLinks API."
-        #else
-        return "On Mac, paste the API address and token from GoodLinks Settings -> API."
-        #endif
-    }
-
-    private var goodLinksOnboardingDetail: String {
-        #if os(iOS)
-        return "Optional bonus copy. On iPhone and iPad this syncs to your Mac for silent GoodLinks saving."
-        #else
-        return "Optional bonus copy using the local GoodLinks API after Gmail sends."
-        #endif
-    }
-
     private var accountSectionFooterText: String {
         if model.requiresGmailReconnect {
             return "Reconnect Gmail to restore send permission for queued items."
@@ -1841,10 +1597,10 @@ struct ContentView: View {
         let count = model.queuedEmails.count
 
         if count == 0 {
-            return "No pending items"
+            return "No pending emails"
         }
 
-        return "\(count) pending item\(count == 1 ? "" : "s")"
+        return "\(count) pending email\(count == 1 ? "" : "s")"
     }
 
     private var queueSummaryDetail: String {
@@ -1890,17 +1646,6 @@ struct ContentView: View {
         model.removeSavedRecipient(recipient)
     }
 
-    private func goodLinksBinding<Value>(_ keyPath: WritableKeyPath<GoodLinksSettings, Value>) -> Binding<Value> {
-        Binding(
-            get: { model.goodLinksSettings[keyPath: keyPath] },
-            set: { value in
-                var settings = model.goodLinksSettings
-                settings[keyPath: keyPath] = value
-                model.setGoodLinksSettings(settings)
-            }
-        )
-    }
-
     private func saveOnboardingRecipient() {
         guard onboardingShowsRecipientSave else {
             return
@@ -1928,176 +1673,6 @@ private struct GroupedCard<Content: View>: View {
     }
 }
 #endif
-
-struct GoodLinksTagsEditor: View {
-    @Binding var tagsText: String
-    let isEnabled: Bool
-
-    @State private var draft = ""
-
-    private var tags: [String] {
-        GoodLinksSettings.normalizedTags(from: tagsText)
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Tags")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            if tags.isEmpty {
-                Text("No tags")
-                    .font(.footnote)
-                    .foregroundStyle(.tertiary)
-            } else {
-                SendMoiTagFlowLayout(spacing: 8) {
-                    ForEach(tags, id: \.self) { tag in
-                        GoodLinksTagChip(
-                            tag: tag,
-                            isEnabled: isEnabled,
-                            remove: { removeTag(tag) }
-                        )
-                    }
-                }
-            }
-
-            HStack(spacing: 8) {
-                TextField("Add tag", text: $draft)
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    #endif
-                    .autocorrectionDisabled()
-                    .disabled(!isEnabled)
-                    .onSubmit(addDraftTags)
-                    .onChange(of: draft) { _, newValue in
-                        if newValue.contains(",") || newValue.last?.isWhitespace == true {
-                            addDraftTags()
-                        }
-                    }
-
-                Button {
-                    addDraftTags()
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .imageScale(.medium)
-                }
-                .buttonStyle(.plain)
-                .disabled(!isEnabled || GoodLinksSettings.normalizedTags(from: draft).isEmpty)
-                .accessibilityLabel("Add GoodLinks tag")
-            }
-        }
-    }
-
-    private func addDraftTags() {
-        let newTags = GoodLinksSettings.normalizedTags(from: draft)
-        guard !newTags.isEmpty else {
-            draft = ""
-            return
-        }
-
-        var combined = tags
-        for tag in newTags where !combined.contains(where: { $0.caseInsensitiveCompare(tag) == .orderedSame }) {
-            combined.append(tag)
-        }
-        setTags(combined)
-        draft = ""
-    }
-
-    private func removeTag(_ tag: String) {
-        setTags(tags.filter { $0 != tag })
-    }
-
-    private func setTags(_ tags: [String]) {
-        tagsText = tags.joined(separator: " ")
-    }
-}
-
-private struct GoodLinksTagChip: View {
-    let tag: String
-    let isEnabled: Bool
-    let remove: () -> Void
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Text(tag)
-                .font(.footnote.weight(.medium))
-                .lineLimit(1)
-
-            Button(action: remove) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 9, weight: .bold))
-                    .frame(width: 14, height: 14)
-            }
-            .buttonStyle(.plain)
-            .disabled(!isEnabled)
-            .accessibilityLabel("Remove \(tag)")
-        }
-        .padding(.leading, 10)
-        .padding(.trailing, 7)
-        .padding(.vertical, 6)
-        .foregroundStyle(isEnabled ? Color.accentColor : Color.secondary)
-        .background(
-            Capsule()
-                .fill(Color.accentColor.opacity(isEnabled ? 0.13 : 0.07))
-        )
-        .overlay(
-            Capsule()
-                .stroke(Color.accentColor.opacity(isEnabled ? 0.22 : 0.10), lineWidth: 1)
-        )
-    }
-}
-
-private struct SendMoiTagFlowLayout: Layout {
-    var spacing: CGFloat = 8
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let maxWidth = proposal.width ?? .infinity
-        var rowWidth: CGFloat = 0
-        var rowHeight: CGFloat = 0
-        var totalWidth: CGFloat = 0
-        var totalHeight: CGFloat = 0
-
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            let shouldWrap = rowWidth > 0 && rowWidth + spacing + size.width > maxWidth
-            if shouldWrap {
-                totalHeight += rowHeight + spacing
-                totalWidth = max(totalWidth, rowWidth)
-                rowWidth = size.width
-                rowHeight = size.height
-            } else {
-                rowWidth += rowWidth > 0 ? spacing + size.width : size.width
-                rowHeight = max(rowHeight, size.height)
-            }
-        }
-
-        totalHeight += rowHeight
-        totalWidth = max(totalWidth, rowWidth)
-        return CGSize(width: proposal.width ?? totalWidth, height: totalHeight)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var x = bounds.minX
-        var y = bounds.minY
-        var rowHeight: CGFloat = 0
-
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if x > bounds.minX && x + size.width > bounds.maxX {
-                x = bounds.minX
-                y += rowHeight + spacing
-                rowHeight = 0
-            }
-
-            subview.place(
-                at: CGPoint(x: x, y: y),
-                proposal: ProposedViewSize(width: size.width, height: size.height)
-            )
-            x += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
-        }
-    }
-}
 
 private extension View {
     @ViewBuilder

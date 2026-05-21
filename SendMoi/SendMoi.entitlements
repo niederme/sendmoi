@@ -6,7 +6,5 @@
 	<array>
 		<string>group.com.niederme.sendmoi</string>
 	</array>
-	<key>com.apple.developer.ubiquity-kvstore-identifier</key>
-	<string>$(TeamIdentifierPrefix)com.niederme.SendMoi</string>
 </dict>
 </plist>
