@@ -52,6 +52,7 @@ final class ShareExtensionModel: ObservableObject {
     @Published private(set) var shouldCloseAfterReconnect = false
     @Published private(set) var showsMissingRecipientValidation = false
     @Published private(set) var recipientFocusRequest = 0
+    @Published private(set) var allowsAutoSendEdit = false
 
     private weak var extensionContextRef: NSExtensionContext?
     private let deliveryService = GmailDeliveryService()
@@ -140,6 +141,7 @@ final class ShareExtensionModel: ObservableObject {
 
         if shouldAllowAutoSendEditWindow {
             canChangeAutoSendRecipient = true
+            allowsAutoSendEdit = true
             pendingAutoSendItem = item
             deliveryTimeoutTask = Task { [weak self] in
                 guard let self else { return }
@@ -167,6 +169,7 @@ final class ShareExtensionModel: ObservableObject {
                     try await Task.sleep(nanoseconds: Self.autoSendGracePeriodNanoseconds)
                     try Task.checkCancellation()
                     self.canChangeAutoSendRecipient = false
+                    self.allowsAutoSendEdit = false
                 }
                 let itemToSend: QueuedEmail
                 if shouldAllowAutoSendEditWindow {
@@ -187,13 +190,16 @@ final class ShareExtensionModel: ObservableObject {
                 )
                 RecipientStore.record(completedItem.toEmail)
             } catch is CancellationError {
+                self.allowsAutoSendEdit = false
                 return
             } catch let error as GmailAPIError where error.requiresReconnect {
+                self.allowsAutoSendEdit = false
                 self.shouldCloseAfterReconnect = true
                 self.statusMessage = "Your share is queued. Reconnect Gmail to send it."
                 self.showsGmailConnectAlert = true
                 self.presentationMode = .editing
             } catch {
+                self.allowsAutoSendEdit = false
                 self.statusMessage = "Could not send or save this share item: \(error.localizedDescription)"
                 self.presentationMode = .editing
             }
@@ -201,12 +207,13 @@ final class ShareExtensionModel: ObservableObject {
     }
 
     func stopAutoSendAndEdit() {
-        guard presentationMode == .processing, isSaving else { return }
+        guard presentationMode == .processing, isSaving, allowsAutoSendEdit else { return }
 
         sendTask?.cancel()
         sendTask = nil
         isSaving = false
         canChangeAutoSendRecipient = false
+        allowsAutoSendEdit = false
         statusMessage = "Review and tap Send when ready."
         presentationMode = .editing
         schedulePreviewRefresh()

@@ -585,7 +585,7 @@ struct ShareView: View {
                 autoSendRecipientPickerView
             }
 
-            if model.isSaving {
+            if model.allowsAutoSendEdit {
                 Button {
                     model.stopAutoSendAndEdit()
                 } label: {
@@ -657,7 +657,7 @@ struct ShareView: View {
                     .multilineTextAlignment(.center)
             }
 
-            if model.autoSendEnabled && model.isSaving {
+            if model.autoSendEnabled && model.allowsAutoSendEdit {
                 Button {
                     model.stopAutoSendAndEdit()
                 } label: {
