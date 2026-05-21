@@ -701,7 +701,7 @@ struct ShareView: View {
     private var showsAutoSendOverlayLayout: Bool {
         model.presentationMode == .processing &&
         model.autoSendEnabled &&
-        model.statusMessage == "Auto-Sending..."
+        (model.statusMessage == "Auto-Sending..." || model.isSaving)
     }
 
     private var showsSendToolbarItem: Bool {
