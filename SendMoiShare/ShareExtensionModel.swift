@@ -13,8 +13,10 @@ import AppKit
 
 @MainActor
 final class ShareExtensionModel: ObservableObject {
-    private static let autoSendGracePeriodNanoseconds: UInt64 = 1_000_000_000
-    private static let autoSendDeliveryTimeoutNanoseconds: UInt64 = 8_000_000_000
+    private static let autoSendGracePeriodNanoseconds: UInt64 = 1_500_000_000
+    private static let autoSendCommitFlashNanoseconds: UInt64 = 200_000_000
+    private static let autoSendPreviewWaitLimitNanoseconds: UInt64 = 6_000_000_000
+    private static let autoSendDeliveryTimeoutNanoseconds: UInt64 = 15_000_000_000
     private static let manualSendPreviewWaitLimitNanoseconds: UInt64 = 750_000_000
     static let missingRecipientMessage = "Enter a recipient in the To field, or set a default recipient in the SendMoi app."
     static let recipientHelperMessage = "Pro tip: add a recipient here, or save a default recipient in the SendMoi app."
@@ -144,7 +146,11 @@ final class ShareExtensionModel: ObservableObject {
             pendingAutoSendItem = item
             deliveryTimeoutTask = Task { [weak self] in
                 guard let self else { return }
-                try? await Task.sleep(nanoseconds: Self.autoSendGracePeriodNanoseconds + Self.autoSendDeliveryTimeoutNanoseconds)
+                try? await Task.sleep(
+                    nanoseconds: Self.autoSendGracePeriodNanoseconds
+                        + Self.autoSendCommitFlashNanoseconds
+                        + Self.autoSendDeliveryTimeoutNanoseconds
+                )
                 guard !Task.isCancelled, self.isSaving, let pending = self.pendingAutoSendItem else { return }
                 try? QueueStore.append(pending)
                 self.extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
@@ -168,6 +174,9 @@ final class ShareExtensionModel: ObservableObject {
                     try await Task.sleep(nanoseconds: Self.autoSendGracePeriodNanoseconds)
                     try Task.checkCancellation()
                     self.canChangeAutoSendRecipient = false
+                    self.statusMessage = "Sending..."
+                    try await Task.sleep(nanoseconds: Self.autoSendCommitFlashNanoseconds)
+                    try Task.checkCancellation()
                     self.allowsAutoSendEdit = false
                 }
                 let itemToSend: QueuedEmail
@@ -185,7 +194,10 @@ final class ShareExtensionModel: ObservableObject {
                 }
                 let completedItem = try await self.queueAndAttemptBackgroundDelivery(
                     itemToSend,
-                    waitForPreview: shouldQueueWhilePreviewLoads
+                    waitForPreview: shouldQueueWhilePreviewLoads,
+                    previewWaitLimitNanoseconds: shouldAllowAutoSendEditWindow
+                        ? Self.autoSendPreviewWaitLimitNanoseconds
+                        : Self.manualSendPreviewWaitLimitNanoseconds
                 )
                 RecipientStore.record(completedItem.toEmail)
             } catch is CancellationError {
@@ -206,7 +218,7 @@ final class ShareExtensionModel: ObservableObject {
     }
 
     func stopAutoSendAndEdit() {
-        guard presentationMode == .processing, isSaving, allowsAutoSendEdit else { return }
+        guard presentationMode == .processing, isSaving, allowsAutoSendEdit, canChangeAutoSendRecipient else { return }
 
         sendTask?.cancel()
         sendTask = nil
@@ -504,7 +516,8 @@ final class ShareExtensionModel: ObservableObject {
 
     private func queueAndAttemptBackgroundDelivery(
         _ item: QueuedEmail,
-        waitForPreview: Bool
+        waitForPreview: Bool,
+        previewWaitLimitNanoseconds: UInt64
     ) async throws -> QueuedEmail {
         try Task.checkCancellation()
         queuedPreviewEnrichmentItem = item
@@ -526,8 +539,11 @@ final class ShareExtensionModel: ObservableObject {
         let refreshedItem: QueuedEmail
         do {
             refreshedItem = waitForPreview
-                ? try await waitForPreviewAndEnrichItem(item)
+                ? try await waitForPreviewAndEnrichItem(item, timeoutNanoseconds: previewWaitLimitNanoseconds)
                 : item
+            if pendingAutoSendItem?.id == refreshedItem.id {
+                pendingAutoSendItem = refreshedItem
+            }
         } catch {
             // Cancellation during preview wait — close the sheet without queuing.
             extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
@@ -577,9 +593,9 @@ final class ShareExtensionModel: ObservableObject {
     }
 
     // Preview-enriches an item without requiring it to be in the queue first.
-    private func waitForPreviewAndEnrichItem(_ item: QueuedEmail) async throws -> QueuedEmail {
+    private func waitForPreviewAndEnrichItem(_ item: QueuedEmail, timeoutNanoseconds: UInt64) async throws -> QueuedEmail {
         let didFinishPreviewInTime = try await waitForPreviewToFinish(
-            upTo: Self.manualSendPreviewWaitLimitNanoseconds
+            upTo: timeoutNanoseconds
         )
         guard didFinishPreviewInTime else { return item }
 

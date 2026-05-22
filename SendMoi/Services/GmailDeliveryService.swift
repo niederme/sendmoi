@@ -2039,8 +2039,16 @@ final class GmailDeliveryService {
             return passesSummaryOutputQualityGate(normalized) ? normalized : nil
         }
 
-        // Do not fall back to extractive snippets here; those read as the article opening, not a summary.
-        return nil
+        guard let fallbackSummary = summarize(
+            cleanedText,
+            minWords: summaryWordRange.minWords,
+            maxWords: summaryWordRange.maxWords
+        ) else {
+            return nil
+        }
+
+        let normalized = stripSummaryPreamble(from: fallbackSummary, title: title)
+        return passesSummaryOutputQualityGate(normalized) ? normalized : nil
     }
 
     private static func generateSummaryFromExcerpt(_ excerpt: String?, title: String) async -> String? {
@@ -2074,8 +2082,21 @@ final class GmailDeliveryService {
             return passesSummaryOutputQualityGate(normalized) ? normalized : nil
         }
 
-        // Without a model-generated summary, leave the summary block out instead of echoing the excerpt.
-        return nil
+        if wordCount(in: cleanedExcerpt) <= maxWords {
+            let normalized = stripSummaryPreamble(from: cleanedExcerpt, title: title)
+            return passesSummaryOutputQualityGate(normalized) ? normalized : nil
+        }
+
+        guard let fallbackSummary = summarize(
+            cleanedExcerpt,
+            minWords: 20,
+            maxWords: maxWords
+        ) else {
+            return nil
+        }
+
+        let normalized = stripSummaryPreamble(from: fallbackSummary, title: title)
+        return passesSummaryOutputQualityGate(normalized) ? normalized : nil
     }
 
     private static func extractPreferredSection(from html: String) -> String? {

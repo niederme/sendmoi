@@ -597,6 +597,8 @@ struct ShareView: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(.primary)
                 .modifier(LiquidGlassCapsule())
+                .disabled(!model.canChangeAutoSendRecipient)
+                .opacity(model.canChangeAutoSendRecipient ? 1 : 0.45)
             }
         }
         .padding(.horizontal, 24)
@@ -613,7 +615,8 @@ struct ShareView: View {
             return "Auto-sending..."
         }
 
-        return "Auto-sending to \(displayRecipient(recipient, maxLength: 44))"
+        let verb = model.canChangeAutoSendRecipient ? "Auto-sending" : "Sending"
+        return "\(verb) to \(displayRecipient(recipient, maxLength: 44))"
     }
 
     private func displayRecipient(_ recipient: String, maxLength: Int) -> String {
@@ -668,6 +671,8 @@ struct ShareView: View {
                 .buttonBorderShape(.capsule)
                 .controlSize(.small)
                 .tint(.primary)
+                .disabled(!model.canChangeAutoSendRecipient)
+                .opacity(model.canChangeAutoSendRecipient ? 1 : 0.45)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
