@@ -252,7 +252,7 @@ Optional overrides:
 
 GitHub Actions expects the repository secret `SSH_PRIVATE_KEY` to contain the deploy key for `suckahs@ssh.suckahs.org`.
 
-For local manual deploys, the script prefers `~/.ssh/sendmoi_deploy` automatically when present, then falls back to the older shared deploy keys unless `DEPLOY_IDENTITY_FILE` is set explicitly.
+For local manual deploys, the script prefers `~/.ssh/send_moi_deploy` automatically when present, then falls back to the legacy `~/.ssh/sendmoi_deploy` name and older shared deploy keys unless `DEPLOY_IDENTITY_FILE` is set explicitly.
 
 ## App Development
 

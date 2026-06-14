@@ -35,7 +35,7 @@ Last updated: April 16, 2026
   - public site now lives in `docs/`
   - preview commands now live in the repo-root `Makefile` (`make dev`, `make dev-thread`, `make dev-local`, plus live-reload variants)
   - deploy now runs from `./scripts/deploy-site.sh`
-  - deploy defaults now target `ssh.suckahs.org` and prefer `~/.ssh/sendmoi_deploy` locally, with the older AIQuota deploy keys kept only as fallback
+  - deploy defaults now target `ssh.suckahs.org` and prefer `~/.ssh/send_moi_deploy` locally, with the legacy `~/.ssh/sendmoi_deploy` name and older AIQuota deploy keys kept only as fallback
   - GitHub Actions deploy is now defined in `.github/workflows/deploy-site.yml` and expects the repo secret `SSH_PRIVATE_KEY`
   - the imported site pages are `docs/index.html`, `docs/privacy/index.html`, `docs/terms/index.html`, and `docs/accessibility/index.html`
   - app/site shared assets now live together in this repo instead of syncing across two separate repos
