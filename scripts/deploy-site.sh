@@ -54,6 +54,8 @@ cp -R "${SITE_ROOT}/assets" "$STAGING_DIR/"
 light_cache_bust="$(shasum -a 256 "$STAGING_DIR/assets/images/sendmoi/app-icon-light.png" | awk '{print substr($1, 1, 12)}')"
 dark_cache_bust="$(shasum -a 256 "$STAGING_DIR/assets/images/sendmoi/app-icon-dark.png" | awk '{print substr($1, 1, 12)}')"
 fallback_cache_bust="$(shasum -a 256 "$STAGING_DIR/assets/images/sendmoi/app-icon.png" | awk '{print substr($1, 1, 12)}')"
+poster_cache_bust="$(shasum -a 256 "$STAGING_DIR/assets/images/sendmoi/sendmoi-demo-poster.jpg" | awk '{print substr($1, 1, 12)}')"
+video_cache_bust="$(shasum -a 256 "$STAGING_DIR/assets/videos/sendmoi/sendmoi-demo-hero.mp4" | awk '{print substr($1, 1, 12)}')"
 
 PAGE_FILES=(
   "$STAGING_DIR/index.html"
@@ -65,13 +67,15 @@ PAGE_FILES=(
 perl -0pi -e "s#(app-icon-light\\.png)(?:\\?v=[^\"]+)?#\${1}?v=${light_cache_bust}#g" "${PAGE_FILES[@]}"
 perl -0pi -e "s#(app-icon-dark\\.png)(?:\\?v=[^\"]+)?#\${1}?v=${dark_cache_bust}#g" "${PAGE_FILES[@]}"
 perl -0pi -e "s#(app-icon\\.png)(?:\\?v=[^\"]+)?#\${1}?v=${fallback_cache_bust}#g" "${PAGE_FILES[@]}"
+perl -0pi -e "s#(sendmoi-demo-poster\\.jpg)(?:\\?v=[^\"]+)?#\${1}?v=${poster_cache_bust}#g" "$STAGING_DIR/index.html"
+perl -0pi -e "s#(sendmoi-demo-hero\\.mp4)(?:\\?v=[^\"]+)?#\${1}?v=${video_cache_bust}#g" "$STAGING_DIR/index.html"
 
 image_url="${SITE_URL%/}/assets/images/sendmoi/app-icon-light.png?v=${light_cache_bust}"
 perl -0pi -e "s#<meta property=\"og:image\" content=\"[^\"]*\" />#<meta property=\"og:image\" content=\"${image_url}\" />#g" "$STAGING_DIR/index.html"
 perl -0pi -e "s#<meta property=\"og:image:secure_url\" content=\"[^\"]*\" />#<meta property=\"og:image:secure_url\" content=\"${image_url}\" />#g" "$STAGING_DIR/index.html"
 perl -0pi -e "s#<meta name=\"twitter:image\" content=\"[^\"]*\" />#<meta name=\"twitter:image\" content=\"${image_url}\" />#g" "$STAGING_DIR/index.html"
 
-echo "Using staged asset cache-bust versions: app-icon-light.png?v=${light_cache_bust}, app-icon-dark.png?v=${dark_cache_bust}, app-icon.png?v=${fallback_cache_bust}"
+echo "Using staged asset cache-bust versions: app-icon-light.png?v=${light_cache_bust}, app-icon-dark.png?v=${dark_cache_bust}, app-icon.png?v=${fallback_cache_bust}, sendmoi-demo-poster.jpg?v=${poster_cache_bust}, sendmoi-demo-hero.mp4?v=${video_cache_bust}"
 
 REMOTE="${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH%/}/"
 SSH_CMD=(

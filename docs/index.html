@@ -1830,7 +1830,9 @@
         const label = document.querySelector("[data-theme-label]");
         const themeColorMeta = document.querySelector('meta[name="theme-color"]');
         const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+        const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
         const demoVideo = document.querySelector("[data-demo-video]");
+        let reducedMotion = motionQuery.matches;
 
         function systemTheme() {
           return darkQuery.matches ? "dark" : "light";
@@ -1937,7 +1939,26 @@
             toggleDemoPlayback();
           });
 
+          if (!reducedMotion) {
+            playDemo();
+          }
+
           syncPausedState();
+
+          motionQuery.addEventListener("change", (event) => {
+            reducedMotion = event.matches;
+
+            if (reducedMotion) {
+              if (!demoVideo.paused) {
+                demoVideo.pause();
+              }
+              return;
+            }
+
+            if (demoVideo.paused && demoVideo.currentTime === 0) {
+              playDemo();
+            }
+          });
         }
 
       })();
