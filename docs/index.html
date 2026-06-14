@@ -41,6 +41,94 @@
     <meta name="twitter:image" content="https://send.moi/assets/images/sendmoi/app-icon-light.png?v=7f526f9eb2a3" />
     <meta name="twitter:image:alt" content="SendMoi app icon." />
 
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://send.moi/#website",
+            "url": "https://send.moi/",
+            "name": "SendMoi",
+            "description": "Send links to Gmail as rich email cards in two taps."
+          },
+          {
+            "@type": "SoftwareApplication",
+            "@id": "https://send.moi/#app",
+            "name": "SendMoi",
+            "url": "https://send.moi/",
+            "downloadUrl": "https://apps.apple.com/us/app/sendmoi-share-links-to-self/id6760132875",
+            "image": "https://send.moi/assets/images/sendmoi/app-icon-light.png",
+            "description": "SendMoi sends links to Gmail as rich email cards, so they are easy to find and act on later.",
+            "applicationCategory": "ProductivityApplication",
+            "operatingSystem": "iOS, iPadOS, macOS"
+          },
+          {
+            "@type": "FAQPage",
+            "@id": "https://send.moi/#faq",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "What does SendMoi actually do?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "SendMoi lets you send links, posts, notes, and photos to yourself in two taps. Instead of leaving tabs open, losing things in bookmarks, or texting yourself a link you’ll forget about, it saves what you shared as a polished email in Gmail with the title, preview, link, and context still attached, so it is easy to find and useful when you come back to it later."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Does it send from my Gmail account?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes. SendMoi sends through your own Gmail account, so the message comes from an address you already use instead of a separate SendMoi inbox or forwarding service."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "What do I need to get started?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "You need a Gmail account and an iPhone, iPad, or Mac where you can add SendMoi to the Share Sheet. Setup takes about a minute, and after that the flow is just tap Share, tap SendMoi."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Can I check it before it sends?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes. If Auto-send is off, SendMoi keeps the draft open in the Share Sheet so you can review it, edit the title or notes, and change the recipient before it goes out. If Auto-send is on, you still get a short 1.5-second window to edit or switch to a saved recipient before it sends."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Can I save more than one recipient?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes. Set a default recipient for the normal one-tap flow, then optionally save a few alternates. During Auto-send, the card gives you a short 1.5-second window to switch to one of those saved recipients before the share goes out."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "What if I save something while I’m offline?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "If Gmail or the network is unavailable, SendMoi queues the send locally and retries later. The thing you wanted to save does not disappear just because you were in a tunnel, on a plane, or in a bad-signal moment."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Does any of this live on SendMoi servers?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "No. SendMoi is local-first and does not use a backend to store your Gmail session, saved recipients, or queued sends. The flow stays tied to your device and your own Gmail account."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
+
     <script>
       (() => {
         try {

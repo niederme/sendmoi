@@ -1,0 +1,18 @@
+# SendMoi — Send links to Gmail in two taps
+# https://send.moi
+
+> SendMoi is a local-first iPhone, iPad, and Mac app that sends links, posts,
+> notes, and photos through the user's own Gmail account as rich email cards.
+> It supports editable drafts, saved recipients, Auto-send, and an offline queue.
+
+## Product
+
+- [SendMoi](https://send.moi/): Product overview, download links, demo, and frequently asked questions
+- [Download on the App Store](https://apps.apple.com/us/app/sendmoi-share-links-to-self/id6760132875): SendMoi for iPhone, iPad, and Mac
+
+## Policies and Support
+
+- [Privacy Policy](https://send.moi/privacy/): Data access, storage, third parties, and Google user data practices
+- [Terms of Service](https://send.moi/terms/): Terms governing use of SendMoi
+- [Accessibility Statement](https://send.moi/accessibility/): Accessibility approach, known limitations, and feedback
+- Support: help@send.moi

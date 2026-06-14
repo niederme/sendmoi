@@ -42,6 +42,7 @@ cleanup() {
 trap cleanup EXIT
 
 cp "${SITE_ROOT}/index.html" "$STAGING_DIR/"
+cp "${SITE_ROOT}/llms.txt" "$STAGING_DIR/"
 cp "${SITE_ROOT}/robots.txt" "$STAGING_DIR/"
 cp "${SITE_ROOT}/sitemap.xml" "$STAGING_DIR/"
 cp -R "${SITE_ROOT}/privacy" "$STAGING_DIR/"
@@ -105,6 +106,7 @@ RSYNC_SSH_CMD="${RSYNC_SSH_CMD% }"
 
 rsync "${RSYNC_ARGS[@]}" -e "$RSYNC_SSH_CMD" \
   "$STAGING_DIR/index.html" \
+  "$STAGING_DIR/llms.txt" \
   "$STAGING_DIR/robots.txt" \
   "$STAGING_DIR/sitemap.xml" \
   "$STAGING_DIR/privacy" \
