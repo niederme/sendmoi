@@ -8,7 +8,8 @@
 ## Product
 
 - [SendMoi](https://send.moi/): Product overview, download links, demo, and frequently asked questions
-- [Download on the App Store](https://apps.apple.com/us/app/sendmoi-share-links-to-self/id6760132875): SendMoi for iPhone, iPad, and Mac
+- [Download for iPhone and iPad on the App Store](https://apps.apple.com/us/app/sendmoi-share-links-to-self/id6760132875): SendMoi for iOS and iPadOS
+- [Download for Mac on the Mac App Store](https://apps.apple.com/us/app/sendmoi-share-links-to-self/id6760132875): SendMoi for macOS
 
 ## Policies and Support
 
