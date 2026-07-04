@@ -2983,33 +2983,63 @@ final class GmailDeliveryService {
         return refusalMarkers.contains { lowered.contains($0) }
     }
 
+    // The share extension sends under a delivery watchdog, so the on-device
+    // model gets a tight budget there before we fall back to the extractive
+    // summarizer; the main app's queue flush has no UI waiting on it and can
+    // afford more.
+    private static let summaryResponseDeadlineNanoseconds: UInt64 =
+        Bundle.main.bundleURL.pathExtension == "appex" ? 5_000_000_000 : 12_000_000_000
+
+    // Races an operation against a deadline. Unlike a task group, this does not
+    // wait for the losing operation to acknowledge cancellation — a model call
+    // that stalls without honoring cancellation is abandoned so the deadline
+    // holds. The abandoned task is left to finish (or die with the process).
+    private static func resultWithinDeadline<T: Sendable>(
+        nanoseconds: UInt64,
+        of operation: @escaping @Sendable () async -> T?
+    ) async -> T? {
+        let state = DeadlineRaceState()
+        return await withCheckedContinuation { continuation in
+            let work = Task {
+                let value = await operation()
+                if state.claimCompletion() {
+                    continuation.resume(returning: value)
+                }
+            }
+            Task {
+                try? await Task.sleep(nanoseconds: nanoseconds)
+                if state.claimCompletion() {
+                    work.cancel()
+                    continuation.resume(returning: nil)
+                }
+            }
+        }
+    }
+
     private static func summarizeWithFoundationModels(_ text: String, title: String, minWords: Int, maxWords: Int) async -> String? {
 #if canImport(FoundationModels)
         guard #available(iOS 26.0, macOS 26.0, visionOS 26.0, *) else {
             return nil
         }
 
-        let model = SystemLanguageModel.default
-        guard model.isAvailable else {
+        guard SystemLanguageModel.default.isAvailable else {
             return nil
         }
 
         let excerptSource = truncate(text, to: 700)
-        let session = LanguageModelSession(model: model) {
-            """
-            You summarize already-published web content for a read-later email.
-            Return plain text only.
-            Write between \(minWords) and \(maxWords) words when the source supports it.
-            Treat the content as a summary request, not advice, classification, or a safety review.
-            Summarize only what is already published in the provided source text.
-            Ignore image captions, credits, product listings, bylines, and promotional or subscription copy.
-            Be neutral, concise, and specific.
-            Do not repeat the title verbatim.
-            Focus on the main point of the page.
-            Do not introduce the summary with phrases like "Here is a summary" or "This post is about".
-            Start directly with the substance.
-            """
-        }
+        let instructions = """
+        You summarize already-published web content for a read-later email.
+        Return plain text only.
+        Write between \(minWords) and \(maxWords) words when the source supports it.
+        Treat the content as a summary request, not advice, classification, or a safety review.
+        Summarize only what is already published in the provided source text.
+        Ignore image captions, credits, product listings, bylines, and promotional or subscription copy.
+        Be neutral, concise, and specific.
+        Do not repeat the title verbatim.
+        Focus on the main point of the page.
+        Do not introduce the summary with phrases like "Here is a summary" or "This post is about".
+        Start directly with the substance.
+        """
 
         let prompt = """
         Summarize this content for an email digest.
@@ -3020,29 +3050,36 @@ final class GmailDeliveryService {
         \(excerptSource)
         """
 
-        do {
-            let response = try await session.respond(
+        let responseContent = await resultWithinDeadline(
+            nanoseconds: summaryResponseDeadlineNanoseconds
+        ) { () -> String? in
+            let session = LanguageModelSession(model: .default) { instructions }
+            let response = try? await session.respond(
                 to: prompt,
                 options: GenerationOptions(maximumResponseTokens: 180)
             )
-            let normalized = stripSummaryPreamble(
-                from: collapseWhitespace(in: response.content),
-                title: title
-            )
-            guard !normalized.isEmpty else {
-                return nil
-            }
-            guard !looksLikeModelRefusal(normalized) else {
-                return nil
-            }
-            let clamped = truncate(normalized, to: maxWords)
-            guard wordCount(in: clamped) >= minWords else {
-                return nil
-            }
-            return clamped
-        } catch {
+            return response?.content
+        }
+
+        guard let responseContent else {
             return nil
         }
+
+        let normalized = stripSummaryPreamble(
+            from: collapseWhitespace(in: responseContent),
+            title: title
+        )
+        guard !normalized.isEmpty else {
+            return nil
+        }
+        guard !looksLikeModelRefusal(normalized) else {
+            return nil
+        }
+        let clamped = truncate(normalized, to: maxWords)
+        guard wordCount(in: clamped) >= minWords else {
+            return nil
+        }
+        return clamped
 #else
         return nil
 #endif
@@ -3247,6 +3284,22 @@ private actor PreviewMetadataCache {
     private func touch(_ urlString: String) {
         keysInAccessOrder.removeAll { $0 == urlString }
         keysInAccessOrder.append(urlString)
+    }
+}
+
+// First-completion-wins flag for racing an operation against a deadline.
+private final class DeadlineRaceState: @unchecked Sendable {
+    private let lock = NSLock()
+    private var finished = false
+
+    func claimCompletion() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        if finished {
+            return false
+        }
+        finished = true
+        return true
     }
 }
 
