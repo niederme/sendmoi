@@ -15,8 +15,8 @@ import AppKit
 final class ShareExtensionModel: ObservableObject {
     private static let autoSendGracePeriodNanoseconds: UInt64 = 1_500_000_000
     private static let autoSendCommitFlashNanoseconds: UInt64 = 200_000_000
-    private static let autoSendPreviewWaitLimitNanoseconds: UInt64 = 6_000_000_000
-    private static let autoSendDeliveryTimeoutNanoseconds: UInt64 = 15_000_000_000
+    private static let autoSendPreviewWaitLimitNanoseconds: UInt64 = 4_000_000_000
+    private static let deliveryTimeoutNanoseconds: UInt64 = 8_000_000_000
     private static let manualSendPreviewWaitLimitNanoseconds: UInt64 = 750_000_000
     static let missingRecipientMessage = "Enter a recipient in the To field, or set a default recipient in the SendMoi app."
     static let recipientHelperMessage = "Pro tip: add a recipient here, or save a default recipient in the SendMoi app."
@@ -139,22 +139,31 @@ final class ShareExtensionModel: ObservableObject {
         let item = makeQueuedEmail(from: draft)
 
         isSaving = true
+        pendingAutoSendItem = item
 
         if shouldAllowAutoSendEditWindow {
             canChangeAutoSendRecipient = true
             allowsAutoSendEdit = true
-            pendingAutoSendItem = item
-            deliveryTimeoutTask = Task { [weak self] in
-                guard let self else { return }
-                try? await Task.sleep(
-                    nanoseconds: Self.autoSendGracePeriodNanoseconds
-                        + Self.autoSendCommitFlashNanoseconds
-                        + Self.autoSendDeliveryTimeoutNanoseconds
-                )
-                guard !Task.isCancelled, self.isSaving, let pending = self.pendingAutoSendItem else { return }
+        }
+
+        // Watchdog: if delivery hasn't finished by the deadline, queue the item
+        // for the next launch (share extension or main app) and close the sheet.
+        // Cancelling the send task first keeps a late-succeeding send from also
+        // leaving the item queued.
+        let watchdogDelayNanoseconds = shouldAllowAutoSendEditWindow
+            ? Self.autoSendGracePeriodNanoseconds
+                + Self.autoSendCommitFlashNanoseconds
+                + Self.deliveryTimeoutNanoseconds
+            : Self.deliveryTimeoutNanoseconds
+        deliveryTimeoutTask = Task { [weak self] in
+            guard let self else { return }
+            try? await Task.sleep(nanoseconds: watchdogDelayNanoseconds)
+            guard !Task.isCancelled, self.isSaving else { return }
+            self.sendTask?.cancel()
+            if let pending = self.pendingAutoSendItem {
                 try? QueueStore.append(pending)
-                self.extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
             }
+            self.extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
         }
 
         sendTask = Task { [weak self] in
