@@ -23,7 +23,7 @@ Use a signed Mac build for runtime Shortcuts checks. Current limitation: invocat
 
 ## Shortcuts and Siri checks
 
-1. Launch the probe once to register its action.
+1. Launch the probe once to register its actions. First run **Check SendMoi Connection**, a fixed-text control with no network or enrichment. Confirm its returned text before testing a full preview.
 2. In Shortcuts, create a shortcut with **Preview with SendMoi** and give Article URL a public article URL. Run it. It returns preview text, never a sent status. The app itself displays the full HTML preview.
 3. Repeat with the app closed and then already running. Record whether a window appears and whether a result returns.
 4. On a compatible physical iPhone with Siri AI, view an article in Safari and try “Preview this with SendMoi Probe.” Record the exact phrase, supplied URL, clarifications, timing, and result. A request for a URL means onscreen resolution was not established.
@@ -38,13 +38,15 @@ scripts/siri-probe/run-fidelity.sh
 scripts/siri-probe/check.sh
 ```
 
-The harness compiles the current production content builder with the probe seam. It renders URL-only and browser-context versions without sending. It uses an 8-second total preview budget and 5-second model budget; the production metadata cache is bypassed in probe builds to avoid hiding latency. Model availability is recorded but does not prove the model produced a given summary: existing fallback behavior remains active.
+The harness compiles the current production content builder with the probe seam. Shared extraction changes were split into `codex/enrichment-quality`; the current probe no longer includes them. See `docs/superpowers/reports/2026-09-09-siri-probe-ios-handoff.md` before comparing source versions.
+
+The probe uses an eight-second enrichment budget, one cumulative three-second model allowance, and bounded optional image requests. Production budgets are unchanged. Success and failure records include `summarySource`, `summaryPath`, `budgetSeconds`, `modelBudgetSeconds`, `phaseSeconds`, recovered body words and observed word clamping in their metrics objects. Failed cases preserve partial traces. Final rendering and scheduling overhead are not a hard real-time guarantee. Model availability is separate from summary provenance.
 
 `corpus.json` freezes the sample and thresholds. Do not replace failing URLs. Results and HTML previews are under ignored `build/siri-probe-fidelity/`; they include source text for local comparison and should not be committed or published. The included sample is science/nature/technology-heavy and does not establish general consumer sharing reliability.
 
 The browser baseline runs the actual Safari preprocessor in a nonpersistent WKWebView. Its image comes from page metadata, not an actual Safari share attachment. Safari/iPhone parity, authenticated pages, selected text, X, and other diagnostic sources require follow-up device testing. No browser session or account credentials are reused.
 
-`check.sh` verifies invalid-input rejection, disabled sending, and cancellation. It does not claim to test production queue safety, which has not been changed.
+`check.sh` verifies invalid-input rejection, disabled sending, cancellation, and frozen partial timing evidence. An optional URL argument performs a single instrumentation smoke check: `scripts/siri-probe/check.sh https://webkit.org/blog/11588/introducing-css-grid-inspector/`. It does not claim to test production queue safety, which has not been changed.
 
 ## Normal-build checks
 

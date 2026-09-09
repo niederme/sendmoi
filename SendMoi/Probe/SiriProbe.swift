@@ -23,12 +23,26 @@ struct PreviewWithSendMoi: AppIntent {
     }
 }
 
+struct SendMoiConnectionCheck: AppIntent {
+    static var title: LocalizedStringResource = "Check SendMoi Connection"
+    static var description = IntentDescription("Development check. Returns fixed text without networking or enrichment.")
+    static var openAppWhenRun: Bool { false }
+    @available(iOS 26.0, macOS 26.0, *)
+    static var supportedModes: IntentModes { .background }
+    func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        .result(value: "SendMoi probe connected. Nothing sent or queued.")
+    }
+}
+
 struct SendMoiProbeShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(intent: PreviewWithSendMoi(), phrases: [
             "Preview with \(.applicationName)",
             "Preview this with \(.applicationName)"
         ], shortTitle: "Preview Article", systemImageName: "doc.text.magnifyingglass")
+        AppShortcut(intent: SendMoiConnectionCheck(), phrases: [
+            "Check \(.applicationName) connection"
+        ], shortTitle: "Check Connection", systemImageName: "checkmark.circle")
     }
 }
 

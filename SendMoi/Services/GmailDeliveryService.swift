@@ -337,7 +337,11 @@ final class GmailDeliveryService {
         request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
 
         do {
+            #if SENDMOI_SIRI_PROBE
+            let (_, response) = try await Self.probeData(for: request)
+#else
             let (_, response) = try await URLSession.sendMoiMetadata.data(for: request)
+#endif
             if let expandedURL = preferredExpandedURL(from: response, fallbackURL: canonicalRawURL) {
                 return canonicalizedTweetURL(expandedURL)
             }
@@ -347,7 +351,11 @@ final class GmailDeliveryService {
         fallbackRequest.httpMethod = "GET"
 
         do {
+            #if SENDMOI_SIRI_PROBE
+            let (_, response) = try await Self.probeData(for: fallbackRequest)
+#else
             let (_, response) = try await URLSession.sendMoiMetadata.data(for: fallbackRequest)
+#endif
             if let expandedURL = preferredExpandedURL(from: response, fallbackURL: canonicalRawURL) {
                 return canonicalizedTweetURL(expandedURL)
             }
@@ -442,7 +450,11 @@ final class GmailDeliveryService {
         request.timeoutInterval = 6
 
         do {
+            #if SENDMOI_SIRI_PROBE
+            let (data, response) = try await Self.probeData(for: request)
+#else
             let (data, response) = try await URLSession.sendMoiMetadata.data(for: request)
+#endif
             let responseURL = Self.canonicalizedTweetURL((response as? HTTPURLResponse)?.url ?? canonicalURL)
             let shouldTryXOEmbedFallback = Self.isTweetHost(canonicalURL) || Self.isTweetHost(responseURL)
             guard let httpResponse = response as? HTTPURLResponse,
@@ -454,7 +466,9 @@ final class GmailDeliveryService {
                 return nil
             }
 
-            guard !Self.isChallengePage(html) else { return nil }
+#if SENDMOI_SIRI_PROBE
+            let metadataPhase = Self.probeTrace?.begin("extract")
+#endif
             let metaTags = Self.extractMetaTags(from: html)
             var instagramMetadata = Self.extractInstagramPostMetadata(fromHTML: html, baseURL: responseURL)
             if instagramMetadata == nil,
@@ -467,6 +481,9 @@ final class GmailDeliveryService {
             }
             let rawExcerpt = instagramMetadata?.excerpt ?? Self.extractExcerpt(fromMetaTags: metaTags)
             let excerpt = Self.isMeaninglessTweetExcerpt(rawExcerpt, for: responseURL) ? nil : rawExcerpt
+#if SENDMOI_SIRI_PROBE
+            Self.probeTrace?.end(metadataPhase)
+#endif
             let summary: String?
             if Self.shouldSkipSummary(for: responseURL) {
                 summary = nil
@@ -530,7 +547,11 @@ final class GmailDeliveryService {
         request.timeoutInterval = 5
 
         do {
+            #if SENDMOI_SIRI_PROBE
+            let (data, response) = try await Self.probeData(for: request)
+#else
             let (data, response) = try await URLSession.sendMoiMetadata.data(for: request)
+#endif
             guard let httpResponse = response as? HTTPURLResponse,
                   (200..<300).contains(httpResponse.statusCode) else {
                 return nil
@@ -571,7 +592,11 @@ final class GmailDeliveryService {
         request.timeoutInterval = 6
 
         do {
+            #if SENDMOI_SIRI_PROBE
+            let (data, response) = try await Self.probeData(for: request)
+#else
             let (data, response) = try await URLSession.sendMoiMetadata.data(for: request)
+#endif
             guard let httpResponse = response as? HTTPURLResponse,
                   (200..<300).contains(httpResponse.statusCode),
                   let html = decodeHTML(data: data) else {
@@ -646,7 +671,11 @@ final class GmailDeliveryService {
         request.timeoutInterval = 8
 
         do {
+            #if SENDMOI_SIRI_PROBE
+            let (data, response) = try await Self.probeData(for: request)
+#else
             let (data, response) = try await URLSession.sendMoiMetadata.data(for: request)
+#endif
             guard let httpResponse = response as? HTTPURLResponse,
                   (200..<300).contains(httpResponse.statusCode),
                   !data.isEmpty,
@@ -2019,6 +2048,10 @@ final class GmailDeliveryService {
     }
 
     private static func generateSummary(fromHTML html: String, title: String, excerpt: String?) async -> String? {
+#if SENDMOI_SIRI_PROBE
+        let extraction = probeTrace?.begin("extract")
+        defer { probeTrace?.end(extraction) }
+#endif
         let preferredSection = extractPreferredSection(from: html) ?? html
         let strippedSection = stripNonContentTags(from: preferredSection)
         guard let plainText = plainText(fromHTMLForSummary: strippedSection) else {
@@ -2026,6 +2059,9 @@ final class GmailDeliveryService {
         }
 
         let cleanedText = normalizeArticleText(plainText, title: title, excerpt: excerpt)
+#if SENDMOI_SIRI_PROBE
+        probeTrace?.recordBodyWords(wordCount(in: cleanedText))
+#endif
         // Allow concise homepage/profile content to be summarized when it still has
         // meaningful body text, while relying on existing quality gates to reject noise.
         guard wordCount(in: cleanedText) >= 70,
@@ -2035,6 +2071,9 @@ final class GmailDeliveryService {
         }
 
         let summaryWordRange = summaryWordRange(for: cleanedText)
+#if SENDMOI_SIRI_PROBE
+        probeTrace?.end(extraction)
+#endif
 
         if let aiSummary = await summarizeWithFoundationModels(
             cleanedText,
@@ -2043,7 +2082,10 @@ final class GmailDeliveryService {
             maxWords: summaryWordRange.maxWords
         ) {
             let normalized = stripSummaryPreamble(from: aiSummary, title: title)
-            if passesSummaryOutputQualityGate(normalized) { return normalized }
+#if SENDMOI_SIRI_PROBE
+            if passesSummaryOutputQualityGate(normalized) { probeTrace?.recordSource("model", path: "body") }
+#endif
+            return passesSummaryOutputQualityGate(normalized) ? normalized : nil
         }
 
         guard let fallbackSummary = summarize(
@@ -2055,6 +2097,9 @@ final class GmailDeliveryService {
         }
 
         let normalized = stripSummaryPreamble(from: fallbackSummary, title: title)
+#if SENDMOI_SIRI_PROBE
+        if passesSummaryOutputQualityGate(normalized) { probeTrace?.recordSource("extractive", path: "body") }
+#endif
         return passesSummaryOutputQualityGate(normalized) ? normalized : nil
     }
 
@@ -2079,9 +2124,24 @@ final class GmailDeliveryService {
 
         let maxWords = min(40, max(24, wordCount(in: cleanedExcerpt)))
 
-        // Excerpt fallback must not start a second model deadline after the body attempt.
+        if let aiSummary = await summarizeWithFoundationModels(
+            cleanedExcerpt,
+            title: title,
+            minWords: 20,
+            maxWords: maxWords
+        ) {
+            let normalized = stripSummaryPreamble(from: aiSummary, title: title)
+            #if SENDMOI_SIRI_PROBE
+            if passesSummaryOutputQualityGate(normalized) { probeTrace?.recordSource("model", path: "excerpt") }
+#endif
+            return passesSummaryOutputQualityGate(normalized) ? normalized : nil
+        }
+
         if wordCount(in: cleanedExcerpt) <= maxWords {
             let normalized = stripSummaryPreamble(from: cleanedExcerpt, title: title)
+            #if SENDMOI_SIRI_PROBE
+            if passesSummaryOutputQualityGate(normalized) { probeTrace?.recordSource("extractive", path: "excerpt") }
+#endif
             return passesSummaryOutputQualityGate(normalized) ? normalized : nil
         }
 
@@ -2094,13 +2154,10 @@ final class GmailDeliveryService {
         }
 
         let normalized = stripSummaryPreamble(from: fallbackSummary, title: title)
+        #if SENDMOI_SIRI_PROBE
+        if passesSummaryOutputQualityGate(normalized) { probeTrace?.recordSource("extractive", path: "excerpt") }
+#endif
         return passesSummaryOutputQualityGate(normalized) ? normalized : nil
-    }
-
-    private static func isChallengePage(_ html: String) -> Bool {
-        guard let title = firstMatch(in: html, pattern: #"<title\b[^>]*>(.*?)</title>"#) else { return false }
-        let normalized = collapseWhitespace(in: title).lowercased()
-        return ["client challenge", "just a moment...", "access denied", "verify you are human"].contains(normalized)
     }
 
     private static func extractPreferredSection(from html: String) -> String? {
@@ -2115,22 +2172,17 @@ final class GmailDeliveryService {
         var bestScore = Int.min
 
         for candidate in candidates {
-            bestSection = nil
-            bestScore = Int.min
             let sections = allMatches(in: html, pattern: candidate.pattern)
             for section in sections {
                 let score = scoreSection(section, baseScore: candidate.baseScore)
-                guard let text = plainText(fromHTMLForSummary: stripNonContentTags(from: section)),
-                      wordCount(in: normalizeArticleText(text, title: "")) >= 70 else { continue }
                 if score > bestScore {
                     bestScore = score
                     bestSection = section
                 }
             }
-            if let bestSection { return bestSection }
         }
 
-        return nil
+        return bestSection
     }
 
     private static func firstMatch(in text: String, pattern: String) -> String? {
@@ -2209,14 +2261,7 @@ final class GmailDeliveryService {
             #"<header\b[^>]*>.*?</header>"#,
             #"<footer\b[^>]*>.*?</footer>"#,
             #"<nav\b[^>]*>.*?</nav>"#,
-            #"<form\b[^>]*>.*?</form>"#,
-            #"<aside\b[^>]*>.*?</aside>"#,
-            #"<figure\b[^>]*>.*?</figure>"#,
-            #"<figcaption\b[^>]*>.*?</figcaption>"#,
-            #"<pre\b[^>]*>.*?</pre>"#,
-            #"<iframe\b[^>]*>.*?</iframe>"#,
-            #"<button\b[^>]*>.*?</button>"#,
-            #"<!--.*?-->"#
+            #"<form\b[^>]*>.*?</form>"#
         ]
 
         return patterns.reduce(html) { partial, pattern in
@@ -2237,21 +2282,24 @@ final class GmailDeliveryService {
     }
 
     private static func plainText(fromHTMLForSummary html: String) -> String? {
-        // Text extraction must not ask the HTML importer to lay out a web page or
-        // load image resources. Keep block boundaries; retain inline code as prose.
-        let paragraphs = allMatches(in: html, pattern: #"<p\b[^>]*>(.*?)</p>"#)
-        let prose = paragraphs.joined(separator: "</p><p>")
-        // A substantial paragraph body is preferable to heading/TOC/caption lists.
-        // Preserve the full section for pages whose content is not paragraph-based.
-        let source = wordCount(in: replaceMatches(in: prose, pattern: #"<[^>]*>"#, with: " ")) >= 70
-            ? prose : html
-        let withBreaks = replaceMatches(in: source,
-            pattern: #"</?(?:p|div|section|article|main|h[1-6]|li|ul|ol|br|tr)\b[^>]*>"#,
-            with: "\n")
-        let text = replaceMatches(in: withBreaks, pattern: #"<[^>]*>"#, with: "")
-        return text.components(separatedBy: .newlines)
-            .map { decodeHTMLEntities(in: $0).replacingOccurrences(of: "\u{FFFC}", with: "") }
-            .joined(separator: "\n")
+        let wrapped = """
+        <html><body>\(html)</body></html>
+        """
+
+        guard let data = wrapped.data(using: .utf8) else {
+            return nil
+        }
+
+        let options: [NSAttributedString.DocumentReadingOptionKey: Any] = [
+            .documentType: NSAttributedString.DocumentType.html,
+            .characterEncoding: String.Encoding.utf8.rawValue
+        ]
+
+        if let attributed = try? NSAttributedString(data: data, options: options, documentAttributes: nil) {
+            return attributed.string
+        }
+
+        return nil
     }
 
     private static func normalizeArticleText(_ text: String, title: String, excerpt: String? = nil) -> String {
@@ -2312,11 +2360,6 @@ final class GmailDeliveryService {
 
     private static func looksLikeNonBodyLine(_ line: String) -> Bool {
         let lowered = line.lowercased()
-        if lowered.hasPrefix("note to editors:") || lowered.hasPrefix("media contact:") ||
-           lowered.hasPrefix("press contact:") || lowered.hasPrefix("credits:") ||
-           lowered == "envelope" || lowered == "phone" || lowered == "[email protected]" {
-            return true
-        }
         let markers = [
             "(on loan)",
             "photo:",
@@ -2804,7 +2847,7 @@ final class GmailDeliveryService {
                     continue
                 }
 
-                if wordCount + words.count > maxWords {
+                if wordCount > 0 && wordCount + words.count > maxWords {
                     if wordCount >= minWords {
                         return selectedSentences.joined(separator: " ")
                     }
@@ -2877,8 +2920,11 @@ final class GmailDeliveryService {
     }
 
     private static func truncate(_ text: String, to maxWords: Int) -> String {
-        let words = text.split(whereSeparator: \.isWhitespace).prefix(maxWords)
-        return words.joined(separator: " ")
+        let allWords = text.split(whereSeparator: \.isWhitespace)
+#if SENDMOI_SIRI_PROBE
+        if maxWords <= 100 && allWords.count > maxWords { probeTrace?.recordTruncation() }
+#endif
+        return allWords.prefix(maxWords).joined(separator: " ")
     }
 
     private static func wordCount(in text: String) -> Int {
@@ -2929,7 +2975,6 @@ final class GmailDeliveryService {
     }
 
     private static func decodeHTMLEntities(in text: String) -> String {
-        guard text.contains("&") else { return text }
         let wrapped = "<span>\(text)</span>"
         guard let data = wrapped.data(using: .utf8) else {
             return text
@@ -3007,7 +3052,8 @@ final class GmailDeliveryService {
     // summarizer; the main app's queue flush has no UI waiting on it and can
     // afford more.
 #if SENDMOI_SIRI_PROBE
-    @TaskLocal static var probeSummaryDeadline: UInt64 = 5_000_000_000
+    @TaskLocal static var probeSummaryDeadline: UInt64 = 3_000_000_000
+    @TaskLocal static var probeTrace: ProbeTrace?
     private static var summaryResponseDeadlineNanoseconds: UInt64 { probeSummaryDeadline }
 #else
     private static let summaryResponseDeadlineNanoseconds: UInt64 =
@@ -3074,9 +3120,15 @@ final class GmailDeliveryService {
         \(excerptSource)
         """
 
-        let responseContent = await resultWithinDeadline(
-            nanoseconds: summaryResponseDeadlineNanoseconds
-        ) { () -> String? in
+#if SENDMOI_SIRI_PROBE
+        let allowance = probeTrace?.remainingModelNanoseconds() ?? summaryResponseDeadlineNanoseconds
+        guard allowance > 0 else { return nil }
+        let modelPhase = probeTrace?.begin("model")
+        defer { probeTrace?.end(modelPhase) }
+#else
+        let allowance = summaryResponseDeadlineNanoseconds
+#endif
+        let responseContent = await resultWithinDeadline(nanoseconds: allowance) { () -> String? in
             let session = LanguageModelSession(model: .default) { instructions }
             let response = try? await session.respond(
                 to: prompt,
@@ -3341,6 +3393,77 @@ private extension URLSession {
 #if SENDMOI_SIRI_PROBE
 // This seam runs the production content builder and renderer, never authentication,
 // queue persistence, recipient defaults, analytics, or the Gmail transport.
+struct ProbeMetrics: Codable, Sendable {
+    let summarySource: String
+    let summaryPath: String?
+    let budgetSeconds: Double
+    let modelBudgetSeconds: Double
+    let phaseSeconds: [String: Double]
+    let recoveredBodyWords: Int?
+    let wordClampApplied: Bool
+}
+
+// A per-invocation trace, frozen on success or failure. Late abandoned work cannot
+// mutate a completed run's evidence. No URLs, credentials, or article text are logged.
+final class ProbeTrace: @unchecked Sendable {
+    private let lock = NSLock()
+    private let started = ContinuousClock.now
+    private var active: [UUID: (String, ContinuousClock.Instant)] = [:]
+    private var phases: [String: Double] = ["fetch": 0, "extract": 0, "model": 0, "image": 0]
+    private var source = "none"
+    private var path: String?
+    private var bodyWords: Int?
+    private var clamped = false
+    private var sealed = false
+    let budgetSeconds: Double = 8
+    let modelBudgetSeconds: Double = 3
+    private func seconds(_ start: ContinuousClock.Instant) -> Double {
+        let d = start.duration(to: .now)
+        return Double(d.components.seconds) + Double(d.components.attoseconds) / 1e18
+    }
+    func begin(_ phase: String) -> UUID? {
+        lock.lock(); defer { lock.unlock() }
+        guard !sealed else { return nil }
+        let id = UUID(); active[id] = (phase, .now); return id
+    }
+    func end(_ id: UUID?) {
+        lock.lock(); defer { lock.unlock() }
+        guard !sealed, let id, let (phase, start) = active.removeValue(forKey: id) else { return }
+        phases[phase, default: 0] += seconds(start)
+    }
+    func recordSource(_ value: String, path: String) {
+        lock.lock(); defer { lock.unlock() }; guard !sealed else { return }
+        source = value; self.path = path
+    }
+    func recordBodyWords(_ value: Int) {
+        lock.lock(); defer { lock.unlock() }; if !sealed { bodyWords = value }
+    }
+    func recordTruncation() {
+        lock.lock(); defer { lock.unlock() }; if !sealed { clamped = true }
+    }
+    func remainingSeconds() -> Double {
+        lock.lock(); defer { lock.unlock() }
+        return max(0, budgetSeconds - seconds(started))
+    }
+    func remainingModelNanoseconds() -> UInt64 {
+        lock.lock(); defer { lock.unlock() }
+        // Keep one second for remaining enrichment/rendering, and never grant
+        // a fresh model budget when the first attempt has used its allowance.
+        let remaining = min(modelBudgetSeconds - phases["model", default: 0], budgetSeconds - seconds(started) - 1)
+        return UInt64(max(0, remaining) * 1e9)
+    }
+    func finish() -> ProbeMetrics {
+        lock.lock(); defer { lock.unlock() }
+        if !sealed {
+            for (_, (phase, start)) in active { phases[phase, default: 0] += seconds(start) }
+            active.removeAll(); sealed = true
+        }
+        return ProbeMetrics(summarySource: source, summaryPath: path, budgetSeconds: budgetSeconds,
+            modelBudgetSeconds: modelBudgetSeconds, phaseSeconds: phases,
+            recoveredBodyWords: bodyWords, wordClampApplied: clamped)
+    }
+}
+
 struct ProbePreview: Codable, Sendable {
     let inputURL: String
     let sourceURL: String
@@ -3354,6 +3477,7 @@ struct ProbePreview: Codable, Sendable {
     let elapsedSeconds: Double
     let modelAvailable: Bool
     let contentWarning: String?
+    let metrics: ProbeMetrics
 }
 
 enum ProbeError: LocalizedError {
@@ -3368,16 +3492,23 @@ enum ProbeError: LocalizedError {
 }
 
 extension GmailDeliveryService {
-    static func probeArticleText(html: String, title: String = "") -> String {
-        normalizeArticleText(plainText(fromHTMLForSummary:
-            stripNonContentTags(from: extractPreferredSection(from: html) ?? html)) ?? "", title: title)
-    }
-    static func probeIsChallenge(_ html: String) -> Bool { isChallengePage(html) }
-    static func probeExtractiveSummary(_ text: String, maxWords: Int) -> String? {
-        summarize(text, minWords: 20, maxWords: maxWords)
+    private static func probeData(for request: URLRequest) async throws -> (Data, URLResponse) {
+        let phase = request.value(forHTTPHeaderField: "Accept")?.hasPrefix("image/") == true ? "image" : "fetch"
+        let span = probeTrace?.begin(phase)
+        defer { probeTrace?.end(span) }
+        if phase == "image", let trace = probeTrace {
+            let allowance = min(2, trace.remainingSeconds() - 0.25)
+            guard allowance > 0 else { throw URLError(.timedOut) }
+            let result = await resultWithinDeadline(nanoseconds: UInt64(allowance * 1e9)) {
+                try? await URLSession.sendMoiMetadata.data(for: request)
+            }
+            guard let result else { throw URLError(.timedOut) }
+            return result
+        }
+        return try await URLSession.sendMoiMetadata.data(for: request)
     }
     func renderProbe(url: URL, title: String = "", excerpt: String = "",
-                     imageURL: String? = nil) async throws -> ProbePreview {
+                     imageURL: String? = nil, trace: ProbeTrace = ProbeTrace()) async throws -> ProbePreview {
         guard ["http", "https"].contains(url.scheme?.lowercased() ?? ""),
               url.host != nil, url.user == nil, url.password == nil else {
             throw ProbeError.invalidURL
@@ -3387,10 +3518,11 @@ extension GmailDeliveryService {
         let item = QueuedEmail(toEmail: "", title: title, excerpt: excerpt,
                                urlString: url.absoluteString, previewImageURLString: imageURL)
         let content = await Self.resultWithinDeadline(nanoseconds: 8_000_000_000) {
-            await Self.$probeSummaryDeadline.withValue(5_000_000_000) {
+            await Self.$probeTrace.withValue(trace) {
                 await self.buildEmailContent(from: item)
             }
         }
+        let metrics = trace.finish()
         try Task.checkCancellation()
         guard let content else { throw ProbeError.deadlineExceeded }
         let warning = (content.summary ?? "").isEmpty
@@ -3413,7 +3545,7 @@ extension GmailDeliveryService {
             title: content.title, excerpt: content.excerpt, summary: content.summary ?? "",
             imageURLs: content.imageURLStrings, inlineImageCount: content.inlineImages.count,
             html: html, text: Self.makePlainTextBody(content: content, footer: footer),
-            elapsedSeconds: seconds, modelAvailable: modelAvailable, contentWarning: warning)
+            elapsedSeconds: seconds, modelAvailable: modelAvailable, contentWarning: warning, metrics: metrics)
     }
 }
 #endif

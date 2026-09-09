@@ -8,4 +8,4 @@ xcrun swiftc -parse-as-library -D SENDMOI_SIRI_PROBE -target arm64-apple-macos15
   SendMoi/Services/GmailShared.swift SendMoi/Services/GoogleOAuthConfig.swift \
   SendMoi/Services/SharedContainer.swift scripts/siri-probe/ProbeChecks.swift \
   -o build/siri-probe-tools/probe-checks
-build/siri-probe-tools/probe-checks
+build/siri-probe-tools/probe-checks "$@"

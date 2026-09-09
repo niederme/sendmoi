@@ -18,8 +18,10 @@ struct ArticleResult: Codable {
     var baselineError: String?
     var urlOnly: ProbePreview?
     var urlOnlyError: String?
+    var urlOnlyMetrics: ProbeMetrics?
     var browserContext: ProbePreview?
     var browserContextError: String?
+    var browserContextMetrics: ProbeMetrics?
 }
 
 @MainActor final class BaselineBrowser: NSObject, WKNavigationDelegate {
@@ -91,17 +93,21 @@ struct ArticleResult: Codable {
             fflush(stdout)
             var result = ArticleResult(article: article)
             // URL-only first, before browser context, with production metadata cache bypassed.
-            do { result.urlOnly = try await GmailDeliveryService().renderProbe(url: article.url) }
+            let urlTrace = ProbeTrace()
+            do { result.urlOnly = try await GmailDeliveryService().renderProbe(url: article.url, trace: urlTrace) }
             catch { result.urlOnlyError = error.localizedDescription }
+            result.urlOnlyMetrics = urlTrace.finish()
             let browser = BaselineBrowser()
             do {
                 let baseline = try await browser.capture(url: article.url, preprocessor: preprocessor)
                 result.baseline = baseline
+                let contextTrace = ProbeTrace()
                 do {
                     result.browserContext = try await GmailDeliveryService().renderProbe(
                         url: URL(string: baseline.url) ?? article.url, title: baseline.title,
-                        excerpt: baseline.excerpt, imageURL: baseline.imageURL)
+                        excerpt: baseline.excerpt, imageURL: baseline.imageURL, trace: contextTrace)
                 } catch { result.browserContextError = error.localizedDescription }
+                result.browserContextMetrics = contextTrace.finish()
             } catch { result.baselineError = error.localizedDescription }
             for (label, preview) in [("url", result.urlOnly), ("browser", result.browserContext)] {
                 if let preview {

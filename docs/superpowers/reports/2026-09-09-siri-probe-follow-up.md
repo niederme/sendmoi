@@ -2,6 +2,8 @@
 
 Date: September 9, 2026
 
+Later revision: [branch split, instrumentation, and iOS handoff](2026-09-09-siri-probe-ios-handoff.md). The extraction results below describe the pre-split experiment, not the current probe source.
+
 ## Decision
 
 Continue to hold the sending phase. Shared extraction is improved, but the unchanged ten-URL corpus still fails the agreed gate and macOS Shortcuts completion remains blocked. No physical-iPhone or conversational Siri result is claimed.

@@ -1,5 +1,7 @@
 # Preparing SendMoi for Siri AI and App Intents
 
+Execution update: [September 9 branch split and iOS handoff](../reports/2026-09-09-siri-probe-ios-handoff.md).
+
 Date: September 8, 2026
 
 Status: Non-sending prototype implemented. Initial fidelity gate failed; sending phases have not started. See [probe findings](../reports/2026-09-08-siri-probe-findings.md).
