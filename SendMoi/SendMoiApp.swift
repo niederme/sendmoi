@@ -1,3 +1,13 @@
+#if SENDMOI_SIRI_PROBE
+import SwiftUI
+
+@main
+struct SendMoiProbeApp: App {
+    var body: some Scene {
+        WindowGroup { SiriProbeView() }
+    }
+}
+#else
 import SwiftUI
 
 @main
@@ -27,3 +37,5 @@ struct SendMoiApp: App {
         }
     }
 }
+
+#endif

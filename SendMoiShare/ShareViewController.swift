@@ -1,3 +1,23 @@
+#if SENDMOI_SIRI_PROBE
+#if os(iOS)
+import UIKit
+final class ShareViewController: UIViewController {
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        extensionContext?.completeRequest(returningItems: nil)
+    }
+}
+#else
+import AppKit
+final class ShareViewController: NSViewController {
+    override func loadView() { view = NSView() }
+    override func viewDidAppear() {
+        super.viewDidAppear()
+        extensionContext?.completeRequest(returningItems: nil)
+    }
+}
+#endif
+#else
 import AuthenticationServices
 import CryptoKit
 import SwiftUI
@@ -310,3 +330,5 @@ private final class ShareExtensionGoogleAuthenticator: NSObject, ASWebAuthentica
         return Data(digest).base64URLEncodedString()
     }
 }
+
+#endif

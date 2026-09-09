@@ -50,6 +50,9 @@ final class GmailDeliveryService {
     }
 
     func sendEmail(using session: GmailSession, item: QueuedEmail) async throws {
+#if SENDMOI_SIRI_PROBE
+        throw ProbeError.sendingDisabled
+#else
         try SendRateLimiter.validateSendAllowed(for: session)
         let content = await buildEmailContent(from: item)
         let subject = "\(content.title) (Sent via SendMoi)"
@@ -67,6 +70,7 @@ final class GmailDeliveryService {
         request.httpBody = try JSONEncoder().encode(GmailSendRequest(raw: raw))
         _ = try await send(request)
         SendRateLimiter.recordSuccessfulSend(for: session)
+#endif
     }
 
     func fetchDraftPreview(urlString: String, fallbackTitle: String) async -> DraftPreviewMetadata? {
@@ -414,12 +418,14 @@ final class GmailDeliveryService {
     private func fetchArticleMetadata(for url: URL, fallbackTitle: String) async -> FetchedArticleMetadata? {
         let canonicalURL = Self.canonicalizedTweetURL(url)
         let cacheKey = canonicalURL.absoluteString
+#if !SENDMOI_SIRI_PROBE
         if let cachedMetadata = await Self.previewMetadataCache.metadata(for: cacheKey) {
             if cachedMetadata.summary != nil || Self.shouldSkipSummary(for: canonicalURL) {
                 return cachedMetadata.materialized(fallbackTitle: fallbackTitle, requestURLString: cacheKey)
             }
         }
 
+#endif
         guard let cachedMetadata = await fetchAndCacheArticleMetadata(for: canonicalURL) else {
             return nil
         }
@@ -2987,8 +2993,13 @@ final class GmailDeliveryService {
     // model gets a tight budget there before we fall back to the extractive
     // summarizer; the main app's queue flush has no UI waiting on it and can
     // afford more.
+#if SENDMOI_SIRI_PROBE
+    @TaskLocal static var probeSummaryDeadline: UInt64 = 5_000_000_000
+    private static var summaryResponseDeadlineNanoseconds: UInt64 { probeSummaryDeadline }
+#else
     private static let summaryResponseDeadlineNanoseconds: UInt64 =
         Bundle.main.bundleURL.pathExtension == "appex" ? 5_000_000_000 : 12_000_000_000
+#endif
 
     // Races an operation against a deadline. Unlike a task group, this does not
     // wait for the losing operation to acknowledge cancellation — a model call
@@ -3313,3 +3324,71 @@ private extension URLSession {
         return URLSession(configuration: configuration)
     }()
 }
+
+#if SENDMOI_SIRI_PROBE
+// This seam runs the production content builder and renderer, never authentication,
+// queue persistence, recipient defaults, analytics, or the Gmail transport.
+struct ProbePreview: Codable, Sendable {
+    let inputURL: String
+    let sourceURL: String
+    let title: String
+    let excerpt: String
+    let summary: String
+    let imageURLs: [String]
+    let inlineImageCount: Int
+    let html: String
+    let text: String
+    let elapsedSeconds: Double
+    let modelAvailable: Bool
+}
+
+enum ProbeError: LocalizedError {
+    case invalidURL, deadlineExceeded, sendingDisabled
+    var errorDescription: String? {
+        switch self {
+        case .invalidURL: return "Enter one complete public http or https URL."
+        case .deadlineExceeded: return "Preview exceeded the 8-second budget. Nothing was sent or queued."
+        case .sendingDisabled: return "Email delivery is disabled in the Siri probe build."
+        }
+    }
+}
+
+extension GmailDeliveryService {
+    func renderProbe(url: URL, title: String = "", excerpt: String = "",
+                     imageURL: String? = nil) async throws -> ProbePreview {
+        guard ["http", "https"].contains(url.scheme?.lowercased() ?? ""),
+              url.host != nil, url.user == nil, url.password == nil else {
+            throw ProbeError.invalidURL
+        }
+        try Task.checkCancellation()
+        let start = ContinuousClock.now
+        let item = QueuedEmail(toEmail: "", title: title, excerpt: excerpt,
+                               urlString: url.absoluteString, previewImageURLString: imageURL)
+        let content = await Self.resultWithinDeadline(nanoseconds: 8_000_000_000) {
+            await Self.$probeSummaryDeadline.withValue(5_000_000_000) {
+                await self.buildEmailContent(from: item)
+            }
+        }
+        try Task.checkCancellation()
+        guard let content else { throw ProbeError.deadlineExceeded }
+        var html = Self.makeHTMLBody(content: content, footer: "Preview only. Nothing sent.")
+        for image in content.inlineImages {
+            html = html.replacingOccurrences(of: "cid:" + image.contentID,
+                with: "data:" + image.mimeType + ";base64," + image.data.base64EncodedString())
+        }
+        var modelAvailable = false
+#if canImport(FoundationModels)
+        if #available(iOS 26.0, macOS 26.0, *) {
+            modelAvailable = SystemLanguageModel.default.isAvailable
+        }
+#endif
+        let duration = start.duration(to: .now)
+        let seconds = Double(duration.components.seconds) + Double(duration.components.attoseconds) / 1e18
+        return ProbePreview(inputURL: url.absoluteString, sourceURL: content.urlString ?? "",
+            title: content.title, excerpt: content.excerpt, summary: content.summary ?? "",
+            imageURLs: content.imageURLStrings, inlineImageCount: content.inlineImages.count,
+            html: html, text: Self.makePlainTextBody(content: content, footer: "Preview only. Nothing sent."),
+            elapsedSeconds: seconds, modelAvailable: modelAvailable)
+    }
+}
+#endif

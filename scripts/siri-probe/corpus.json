@@ -1,0 +1,18 @@
+{
+  "frozenOn": "2026-09-08",
+  "purpose": "First feasibility sample: public science, nature, and technology articles. Not representative of all sharing behavior.",
+  "thresholds": {"correctURL": 10, "accurateTitleAndSubstantiveSummary": 8, "imagesInDesignatedSubset": 4},
+  "baselineCaveat": "WKWebView runs the actual SafariPreprocessor.js in an unauthenticated session. Image comes from rendered-page metadata, not a captured Safari share attachment. Full Safari/iPhone image gate remains manual.",
+  "articles": [
+    {"id":"nasa-webb","url":"https://science.nasa.gov/missions/webb/nasas-webb-uncovers-galaxy-population-driving-cosmic-renovation/","imageGate":true},
+    {"id":"nasa-moon","url":"https://science.nasa.gov/moon/formation/","imageGate":true},
+    {"id":"nps-trees","url":"https://home.nps.gov/articles/how-do-trees-change-in-the-fall.htm","imageGate":true},
+    {"id":"nps-leaves","url":"https://home.nps.gov/articles/why-do-leaves-change-in-the-fall.htm","imageGate":true},
+    {"id":"si-light","url":"https://www.si.edu/newsdesk/releases/bioluminescence-first-evolved-animals-least-540-million-years-ago","imageGate":true},
+    {"id":"si-cephalopods","url":"https://ocean.si.edu/ocean-life/invertebrates/octopuses-squids-and-relatives","imageGate":false},
+    {"id":"webkit-grid","url":"https://webkit.org/blog/11588/introducing-css-grid-inspector/","imageGate":false},
+    {"id":"webkit-lanes","url":"https://webkit.org/blog/17660/introducing-css-grid-lanes/","imageGate":false},
+    {"id":"mozilla-cookies","url":"https://support.mozilla.org/en-US/kb/introducing-total-cookie-protection-standard-mode","imageGate":false},
+    {"id":"mozilla-faq","url":"https://support.mozilla.org/en-US/kb/total-cookie-protection-and-website-breakage-faq","imageGate":false}
+  ]
+}
