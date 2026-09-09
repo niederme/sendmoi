@@ -21,22 +21,36 @@ The shared changes affect normal preview/enrichment behavior when merged. They a
 
 Original evidence remains in `build/siri-probe-fidelity/`. Intermediate extraction results are in `build/siri-probe-fidelity-v2/`; the final run is in `build/siri-probe-fidelity-v3/`. Compact metrics are committed alongside this report. Full HTML and source extracts remain ignored local artifacts.
 
-| Case | Final URL-only result | Seconds |
-| --- | --- | --- |
-| NASA Webb | Summary and image; no credits/TOC, but summary ends mid-sentence | 6.79 |
-| NASA Moon | Summary and image; navigation/object character removed | 5.60 |
-| NPS trees | Summary and image | 4.08 |
-| NPS leaves | Summary and image | 4.01 |
-| Smithsonian light | Summary and image; press-contact boilerplate removed | 5.93 |
-| Smithsonian cephalopods | Overall deadline exceeded | 8-second limit |
-| WebKit Grid Inspector | Summary and image | 5.19 |
-| WebKit Grid Lanes | Summary and image; largely extractive opening copy | 6.12 |
-| Mozilla cookies | Limited preview, challenge title rejected, no summary | 0.26 |
-| Mozilla FAQ | Limited preview, challenge title rejected, no summary | 0.06 |
+| Case | Final URL-only result | Summary words | Seconds |
+| --- | --- | --- | --- |
+| NASA Webb | No credits/TOC, but clipped mid-sentence; not a clean pass | 100 | 6.79 |
+| NASA Moon | Navigation/object character removed; source-grounded prose | 82 | 5.60 |
+| NPS trees | Brief summary of winter adaptation; omits other major sections | 30 | 4.08 |
+| NPS leaves | Brief source-grounded explanation of pigment changes; coverage needs review | 25 | 4.01 |
+| Smithsonian light | Press-contact boilerplate removed; source-grounded prose | 88 | 5.93 |
+| Smithsonian cephalopods | Overall deadline exceeded | 0 | 8-second limit |
+| WebKit Grid Inspector | Source-grounded summary and image | 50 | 5.19 |
+| WebKit Grid Lanes | Largely extractive opening copy; not established as a substantive pass | 89 | 6.12 |
+| Mozilla cookies | Limited preview, challenge title rejected | 0 | 0.26 |
+| Mozilla FAQ | Limited preview, challenge title rejected | 0 | 0.06 |
 
-Seven results contain summaries, versus five originally. This is not an 8/10 fidelity pass: one result is clipped, one article times out, and two are blocked. Five of five designated image cases now produce inline images, but actual Safari-attachment parity remains unverified. The timed-out article also prevents the 10/10 completed source-URL gate.
+**The demonstrated improvement is reduced contamination, not a demonstrated increase in substantive passes.** Seven non-empty summaries versus five originally is an output-availability count, not the 8/10 product score. A consistent source-coverage review has not been completed across both runs, so neither a higher substantive score nor an exact unchanged 3/10 score is established. The gate still fails even before resolving the disputed cases.
 
-The intermediate run completed both previously timed-out articles; the final run timed out on cephalopods again. Do not claim that latency is fixed. These were single runs with nondeterministic model output and some concurrent local build activity, not a controlled performance benchmark. Both extraction and model timing need more margin.
+Output length alone does not establish recovered source length or quality. The model path enforces its source-dependent minimum, but extractive fallback can return shorter text; the excerpt path is another possibility. The run did not record which path produced each result. In these saved NPS results, the summaries contain article-specific details absent from the recorded excerpts: cell sugar/dehydration for trees, and carotene for leaves. The leaves excerpt is only the title and cannot meet the excerpt fallback's 20-word minimum. Therefore these cases must not be described as confirmed description-only summaries. Their coverage should be judged against the saved article baselines, not a new 300-word minimum that was never part of the gate.
+
+NASA Webb ends at the 100-word ceiling. Both the extractive summarizer and model-output postprocessing can clamp at that ceiling; sentence-incomplete word clamping is the immediate issue to fix. There is no evidence attributing it to the 180-token generation cap, and the producing path was not logged.
+
+Five of five designated image cases produce inline images, but actual Safari-attachment parity remains unverified. The timed-out article prevents the 10/10 completed source-URL gate.
+
+## Timing interpretation and next-run budget
+
+Removing the second model deadline closes a concrete budget defect: two successive five-second model attempts could consume ten seconds inside an eight-second total budget. This is a plausible contributor to the original NASA Webb timeout, but the original run has no phase timings to establish that it took this path. Likewise, the remaining cephalopods timeout cannot yet be classified as a different root cause. Fetching, extraction, model work, and image loading remain candidates.
+
+The intermediate run completed both previously timed-out articles; the final run timed out on cephalopods again. The seven completed article summaries averaged approximately 5.39 seconds; the slowest took 6.79 seconds, leaving 1.21 seconds (15%) of the total budget. This demonstrates inadequate evidence of reliable latency, not that every individual case is equally close to failure. These were single runs with nondeterministic model output and some concurrent local build activity, not a controlled performance benchmark.
+
+Before another corpus run, adopt an explicit **eight-second total preview target with a maximum three-second model allowance**, further limited by the remaining total budget. This is a deliberate product experiment target for a responsive preview, not a claimed App Intents platform limit. Keep the total target unchanged so a longer wait cannot masquerade as improved fidelity. The app's production 12-second model allowance is a separate policy; it does not justify putting a 12-second model attempt inside this experiment's eight-second wall. The current committed probe still uses five seconds for the model: the three-second policy is the next implementation, not a completed change.
+
+Instrument phase durations (page fetch, extraction, model, image fetch), recovered body-word count, summary origin (model/body extraction/excerpt), and truncation. Preserve partial timing evidence when the outer deadline fires. Share one remaining-time budget across phases, leave time for rendering, and return a clearly identified text-only preview when image work cannot fit. Treat such image omissions as image-gate misses. Implement sentence-complete fallback before rerunning the unchanged corpus; report any shorter-summary tradeoff explicitly. These measurements will distinguish extraction quality, model fallback, and network jitter.
 
 ## Shortcuts investigation
 
