@@ -54,6 +54,7 @@ struct SiriProbeView: View {
                 .disabled(isLoading || input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 if let error { Text(error).foregroundStyle(.red) }
                 if let preview {
+                    if let warning = preview.contentWarning { Text(warning).foregroundStyle(.secondary) }
                     Text("\(preview.elapsedSeconds, specifier: "%.1f") seconds · \(preview.inlineImageCount) images · Model \(preview.modelAvailable ? "available" : "unavailable")")
                         .font(.caption).foregroundStyle(.secondary)
                     ProbeHTMLView(html: preview.html)

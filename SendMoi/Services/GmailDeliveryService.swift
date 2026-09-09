@@ -454,6 +454,7 @@ final class GmailDeliveryService {
                 return nil
             }
 
+            guard !Self.isChallengePage(html) else { return nil }
             let metaTags = Self.extractMetaTags(from: html)
             var instagramMetadata = Self.extractInstagramPostMetadata(fromHTML: html, baseURL: responseURL)
             if instagramMetadata == nil,
@@ -2042,7 +2043,7 @@ final class GmailDeliveryService {
             maxWords: summaryWordRange.maxWords
         ) {
             let normalized = stripSummaryPreamble(from: aiSummary, title: title)
-            return passesSummaryOutputQualityGate(normalized) ? normalized : nil
+            if passesSummaryOutputQualityGate(normalized) { return normalized }
         }
 
         guard let fallbackSummary = summarize(
@@ -2078,16 +2079,7 @@ final class GmailDeliveryService {
 
         let maxWords = min(40, max(24, wordCount(in: cleanedExcerpt)))
 
-        if let aiSummary = await summarizeWithFoundationModels(
-            cleanedExcerpt,
-            title: title,
-            minWords: 20,
-            maxWords: maxWords
-        ) {
-            let normalized = stripSummaryPreamble(from: aiSummary, title: title)
-            return passesSummaryOutputQualityGate(normalized) ? normalized : nil
-        }
-
+        // Excerpt fallback must not start a second model deadline after the body attempt.
         if wordCount(in: cleanedExcerpt) <= maxWords {
             let normalized = stripSummaryPreamble(from: cleanedExcerpt, title: title)
             return passesSummaryOutputQualityGate(normalized) ? normalized : nil
@@ -2105,6 +2097,12 @@ final class GmailDeliveryService {
         return passesSummaryOutputQualityGate(normalized) ? normalized : nil
     }
 
+    private static func isChallengePage(_ html: String) -> Bool {
+        guard let title = firstMatch(in: html, pattern: #"<title\b[^>]*>(.*?)</title>"#) else { return false }
+        let normalized = collapseWhitespace(in: title).lowercased()
+        return ["client challenge", "just a moment...", "access denied", "verify you are human"].contains(normalized)
+    }
+
     private static func extractPreferredSection(from html: String) -> String? {
         let candidates = [
             (pattern: #"<article\b[^>]*>(.*?)</article>"#, baseScore: 500),
@@ -2117,17 +2115,22 @@ final class GmailDeliveryService {
         var bestScore = Int.min
 
         for candidate in candidates {
+            bestSection = nil
+            bestScore = Int.min
             let sections = allMatches(in: html, pattern: candidate.pattern)
             for section in sections {
                 let score = scoreSection(section, baseScore: candidate.baseScore)
+                guard let text = plainText(fromHTMLForSummary: stripNonContentTags(from: section)),
+                      wordCount(in: normalizeArticleText(text, title: "")) >= 70 else { continue }
                 if score > bestScore {
                     bestScore = score
                     bestSection = section
                 }
             }
+            if let bestSection { return bestSection }
         }
 
-        return bestSection
+        return nil
     }
 
     private static func firstMatch(in text: String, pattern: String) -> String? {
@@ -2206,7 +2209,14 @@ final class GmailDeliveryService {
             #"<header\b[^>]*>.*?</header>"#,
             #"<footer\b[^>]*>.*?</footer>"#,
             #"<nav\b[^>]*>.*?</nav>"#,
-            #"<form\b[^>]*>.*?</form>"#
+            #"<form\b[^>]*>.*?</form>"#,
+            #"<aside\b[^>]*>.*?</aside>"#,
+            #"<figure\b[^>]*>.*?</figure>"#,
+            #"<figcaption\b[^>]*>.*?</figcaption>"#,
+            #"<pre\b[^>]*>.*?</pre>"#,
+            #"<iframe\b[^>]*>.*?</iframe>"#,
+            #"<button\b[^>]*>.*?</button>"#,
+            #"<!--.*?-->"#
         ]
 
         return patterns.reduce(html) { partial, pattern in
@@ -2227,24 +2237,21 @@ final class GmailDeliveryService {
     }
 
     private static func plainText(fromHTMLForSummary html: String) -> String? {
-        let wrapped = """
-        <html><body>\(html)</body></html>
-        """
-
-        guard let data = wrapped.data(using: .utf8) else {
-            return nil
-        }
-
-        let options: [NSAttributedString.DocumentReadingOptionKey: Any] = [
-            .documentType: NSAttributedString.DocumentType.html,
-            .characterEncoding: String.Encoding.utf8.rawValue
-        ]
-
-        if let attributed = try? NSAttributedString(data: data, options: options, documentAttributes: nil) {
-            return attributed.string
-        }
-
-        return nil
+        // Text extraction must not ask the HTML importer to lay out a web page or
+        // load image resources. Keep block boundaries; retain inline code as prose.
+        let paragraphs = allMatches(in: html, pattern: #"<p\b[^>]*>(.*?)</p>"#)
+        let prose = paragraphs.joined(separator: "</p><p>")
+        // A substantial paragraph body is preferable to heading/TOC/caption lists.
+        // Preserve the full section for pages whose content is not paragraph-based.
+        let source = wordCount(in: replaceMatches(in: prose, pattern: #"<[^>]*>"#, with: " ")) >= 70
+            ? prose : html
+        let withBreaks = replaceMatches(in: source,
+            pattern: #"</?(?:p|div|section|article|main|h[1-6]|li|ul|ol|br|tr)\b[^>]*>"#,
+            with: "\n")
+        let text = replaceMatches(in: withBreaks, pattern: #"<[^>]*>"#, with: "")
+        return text.components(separatedBy: .newlines)
+            .map { decodeHTMLEntities(in: $0).replacingOccurrences(of: "\u{FFFC}", with: "") }
+            .joined(separator: "\n")
     }
 
     private static func normalizeArticleText(_ text: String, title: String, excerpt: String? = nil) -> String {
@@ -2305,6 +2312,11 @@ final class GmailDeliveryService {
 
     private static func looksLikeNonBodyLine(_ line: String) -> Bool {
         let lowered = line.lowercased()
+        if lowered.hasPrefix("note to editors:") || lowered.hasPrefix("media contact:") ||
+           lowered.hasPrefix("press contact:") || lowered.hasPrefix("credits:") ||
+           lowered == "envelope" || lowered == "phone" || lowered == "[email protected]" {
+            return true
+        }
         let markers = [
             "(on loan)",
             "photo:",
@@ -2792,7 +2804,7 @@ final class GmailDeliveryService {
                     continue
                 }
 
-                if wordCount > 0 && wordCount + words.count > maxWords {
+                if wordCount + words.count > maxWords {
                     if wordCount >= minWords {
                         return selectedSentences.joined(separator: " ")
                     }
@@ -2917,6 +2929,7 @@ final class GmailDeliveryService {
     }
 
     private static func decodeHTMLEntities(in text: String) -> String {
+        guard text.contains("&") else { return text }
         let wrapped = "<span>\(text)</span>"
         guard let data = wrapped.data(using: .utf8) else {
             return text
@@ -3340,6 +3353,7 @@ struct ProbePreview: Codable, Sendable {
     let text: String
     let elapsedSeconds: Double
     let modelAvailable: Bool
+    let contentWarning: String?
 }
 
 enum ProbeError: LocalizedError {
@@ -3354,6 +3368,14 @@ enum ProbeError: LocalizedError {
 }
 
 extension GmailDeliveryService {
+    static func probeArticleText(html: String, title: String = "") -> String {
+        normalizeArticleText(plainText(fromHTMLForSummary:
+            stripNonContentTags(from: extractPreferredSection(from: html) ?? html)) ?? "", title: title)
+    }
+    static func probeIsChallenge(_ html: String) -> Bool { isChallengePage(html) }
+    static func probeExtractiveSummary(_ text: String, maxWords: Int) -> String? {
+        summarize(text, minWords: 20, maxWords: maxWords)
+    }
     func renderProbe(url: URL, title: String = "", excerpt: String = "",
                      imageURL: String? = nil) async throws -> ProbePreview {
         guard ["http", "https"].contains(url.scheme?.lowercased() ?? ""),
@@ -3371,7 +3393,10 @@ extension GmailDeliveryService {
         }
         try Task.checkCancellation()
         guard let content else { throw ProbeError.deadlineExceeded }
-        var html = Self.makeHTMLBody(content: content, footer: "Preview only. Nothing sent.")
+        let warning = (content.summary ?? "").isEmpty
+            ? "Article summary unavailable. This is a limited preview; open the source to read it." : nil
+        let footer = [warning, "Preview only. Nothing sent."].compactMap { $0 }.joined(separator: " ")
+        var html = Self.makeHTMLBody(content: content, footer: footer)
         for image in content.inlineImages {
             html = html.replacingOccurrences(of: "cid:" + image.contentID,
                 with: "data:" + image.mimeType + ";base64," + image.data.base64EncodedString())
@@ -3387,8 +3412,8 @@ extension GmailDeliveryService {
         return ProbePreview(inputURL: url.absoluteString, sourceURL: content.urlString ?? "",
             title: content.title, excerpt: content.excerpt, summary: content.summary ?? "",
             imageURLs: content.imageURLStrings, inlineImageCount: content.inlineImages.count,
-            html: html, text: Self.makePlainTextBody(content: content, footer: "Preview only. Nothing sent."),
-            elapsedSeconds: seconds, modelAvailable: modelAvailable)
+            html: html, text: Self.makePlainTextBody(content: content, footer: footer),
+            elapsedSeconds: seconds, modelAvailable: modelAvailable, contentWarning: warning)
     }
 }
 #endif

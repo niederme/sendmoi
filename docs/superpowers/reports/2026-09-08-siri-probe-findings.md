@@ -2,6 +2,8 @@
 
 Date: September 8, 2026
 
+Follow-up: [September 9 extraction fixes and rerun](2026-09-09-siri-probe-follow-up.md).
+
 ## Recommendation
 
 Keep the custom preview action as an experiment. Do not proceed to the sending-intent or delivery-coordinator phase yet: the first URL-only fidelity run fails the agreed gate, and Apple's full mail-schema contract is substantially broader than SendMoi's current product.

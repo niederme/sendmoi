@@ -1,0 +1,112 @@
+[
+  {
+    "id": "nasa-webb",
+    "url": "https://science.nasa.gov/missions/webb/nasas-webb-uncovers-galaxy-population-driving-cosmic-renovation/",
+    "elapsedSeconds": 6.789258667,
+    "summaryWords": 100,
+    "inlineImages": 1,
+    "sourceURL": "https://science.nasa.gov/missions/webb/nasas-webb-uncovers-galaxy-population-driving-cosmic-renovation/",
+    "warning": null,
+    "error": null,
+    "browserBaselineCaptured": true
+  },
+  {
+    "id": "nasa-moon",
+    "url": "https://science.nasa.gov/moon/formation/",
+    "elapsedSeconds": 5.603580792,
+    "summaryWords": 82,
+    "inlineImages": 1,
+    "sourceURL": "https://science.nasa.gov/moon/formation/",
+    "warning": null,
+    "error": null,
+    "browserBaselineCaptured": true
+  },
+  {
+    "id": "nps-trees",
+    "url": "https://home.nps.gov/articles/how-do-trees-change-in-the-fall.htm",
+    "elapsedSeconds": 4.077824292,
+    "summaryWords": 30,
+    "inlineImages": 1,
+    "sourceURL": "https://www.nps.gov/articles/how-do-trees-change-in-the-fall.htm",
+    "warning": null,
+    "error": null,
+    "browserBaselineCaptured": true
+  },
+  {
+    "id": "nps-leaves",
+    "url": "https://home.nps.gov/articles/why-do-leaves-change-in-the-fall.htm",
+    "elapsedSeconds": 4.005240833,
+    "summaryWords": 25,
+    "inlineImages": 1,
+    "sourceURL": "https://www.nps.gov/articles/why-do-leaves-change-in-the-fall.htm",
+    "warning": null,
+    "error": null,
+    "browserBaselineCaptured": true
+  },
+  {
+    "id": "si-light",
+    "url": "https://www.si.edu/newsdesk/releases/bioluminescence-first-evolved-animals-least-540-million-years-ago",
+    "elapsedSeconds": 5.926909375,
+    "summaryWords": 88,
+    "inlineImages": 1,
+    "sourceURL": "https://www.si.edu/newsdesk/releases/bioluminescence-first-evolved-animals-least-540-million-years-ago",
+    "warning": null,
+    "error": null,
+    "browserBaselineCaptured": true
+  },
+  {
+    "id": "si-cephalopods",
+    "url": "https://ocean.si.edu/ocean-life/invertebrates/octopuses-squids-and-relatives",
+    "elapsedSeconds": null,
+    "summaryWords": 0,
+    "inlineImages": 0,
+    "sourceURL": null,
+    "warning": null,
+    "error": "Preview exceeded the 8-second budget. Nothing was sent or queued.",
+    "browserBaselineCaptured": true
+  },
+  {
+    "id": "webkit-grid",
+    "url": "https://webkit.org/blog/11588/introducing-css-grid-inspector/",
+    "elapsedSeconds": 5.186720375,
+    "summaryWords": 50,
+    "inlineImages": 1,
+    "sourceURL": "https://webkit.org/blog/11588/introducing-css-grid-inspector/",
+    "warning": null,
+    "error": null,
+    "browserBaselineCaptured": true
+  },
+  {
+    "id": "webkit-lanes",
+    "url": "https://webkit.org/blog/17660/introducing-css-grid-lanes/",
+    "elapsedSeconds": 6.117436542,
+    "summaryWords": 89,
+    "inlineImages": 1,
+    "sourceURL": "https://webkit.org/blog/17660/introducing-css-grid-lanes/",
+    "warning": null,
+    "error": null,
+    "browserBaselineCaptured": true
+  },
+  {
+    "id": "mozilla-cookies",
+    "url": "https://support.mozilla.org/en-US/kb/introducing-total-cookie-protection-standard-mode",
+    "elapsedSeconds": 0.258500459,
+    "summaryWords": 0,
+    "inlineImages": 0,
+    "sourceURL": "https://support.mozilla.org/en-US/kb/introducing-total-cookie-protection-standard-mode",
+    "warning": "Article summary unavailable. This is a limited preview; open the source to read it.",
+    "error": null,
+    "browserBaselineCaptured": true
+  },
+  {
+    "id": "mozilla-faq",
+    "url": "https://support.mozilla.org/en-US/kb/total-cookie-protection-and-website-breakage-faq",
+    "elapsedSeconds": 0.055380667,
+    "summaryWords": 0,
+    "inlineImages": 0,
+    "sourceURL": "https://support.mozilla.org/en-US/kb/total-cookie-protection-and-website-breakage-faq",
+    "warning": "Article summary unavailable. This is a limited preview; open the source to read it.",
+    "error": null,
+    "browserBaselineCaptured": true
+  }
+]
