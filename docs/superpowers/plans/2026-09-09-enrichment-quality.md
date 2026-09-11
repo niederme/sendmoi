@@ -1,3 +1,5 @@
+> **Paused September 11, 2026. Historical quality candidate, not the active Siri update plan.** Retained below for separate review; this document is not an instruction to continue implementation or ship these changes. See [Use SendMoi through Siri](https://github.com/niederme/sendmoi/blob/codex/siri-probe/docs/superpowers/plans/2026-09-11-sendmoi-by-voice.md) for the active direction.
+
 # Enrichment quality candidate
 
 This branch splits the shared extraction changes from `codex/siri-probe` onto `main` at 663bd36. It contains no App Intent, probe app, probe warning copy, or delivery/queue changes. No merge or release is authorized by its existence.
