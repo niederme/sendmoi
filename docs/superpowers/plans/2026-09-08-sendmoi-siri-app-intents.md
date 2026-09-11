@@ -1,3 +1,5 @@
+> **Superseded September 11, 2026. Do not execute this plan.** Retained unchanged below as historical context. The active plan is [Use SendMoi through Siri](2026-09-11-sendmoi-by-voice.md), centered on voice access to SendMoi’s existing Gmail-backed workflow. Earlier findings remain evidence, not a shipping decision for the new plan.
+
 # Preparing SendMoi for Siri AI and App Intents
 
 Execution update: [September 9 branch split and iOS handoff](../reports/2026-09-09-siri-probe-ios-handoff.md).

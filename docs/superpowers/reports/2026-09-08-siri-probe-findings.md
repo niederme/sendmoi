@@ -1,3 +1,5 @@
+> **Historical report.** Its findings are retained; its next-step instructions are superseded by [Use SendMoi through Siri](../plans/2026-09-11-sendmoi-by-voice.md), September 11, 2026.
+
 # SendMoi non-sending Siri/Shortcuts probe
 
 Date: September 8, 2026
