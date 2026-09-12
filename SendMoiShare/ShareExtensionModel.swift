@@ -13,11 +13,19 @@ import AppKit
 
 @MainActor
 final class ShareExtensionModel: ObservableObject {
-    private static let autoSendGracePeriodNanoseconds: UInt64 = 1_500_000_000
-    private static let autoSendCommitFlashNanoseconds: UInt64 = 200_000_000
-    private static let autoSendPreviewWaitLimitNanoseconds: UInt64 = 4_000_000_000
-    private static let deliveryTimeoutNanoseconds: UInt64 = 8_000_000_000
+    /// How long the auto-send overlay stays interactive so the user can switch
+    /// recipient or tap Edit before the share is committed.
+    private static let autoSendGracePeriodNanoseconds: UInt64 = 1_000_000_000
+    /// How long delivery waits for a still-loading link preview before sending
+    /// without it. This is spent *after* the sheet closes, on whatever time iOS
+    /// leaves the extension, so it is deliberately smaller than the old
+    /// pre-dismissal budget: a missing summary beats a send that never happens.
+    private static let autoSendPreviewWaitLimitNanoseconds: UInt64 = 2_000_000_000
     private static let manualSendPreviewWaitLimitNanoseconds: UInt64 = 750_000_000
+    /// Lease held on the queued item while this extension delivers it after the
+    /// sheet has closed. Long enough to cover a slow send, short enough that the
+    /// main app picks the item up soon after we are terminated mid-flight.
+    private static let deliveryClaimLeaseSeconds: TimeInterval = 45
     static let missingRecipientMessage = "Enter a recipient in the To field, or set a default recipient in the SendMoi app."
     static let recipientHelperMessage = "Pro tip: add a recipient here, or save a default recipient in the SendMoi app."
     private static let connectGmailStatusMessage = "Connect Gmail to send from the share sheet. You can still queue this share and send it after sign-in."
@@ -60,7 +68,9 @@ final class ShareExtensionModel: ObservableObject {
     private let deliveryService = GmailDeliveryService()
     private var previewTask: Task<Void, Never>?
     private var sendTask: Task<Void, Never>?
-    private var deliveryTimeoutTask: Task<Void, Never>?
+    /// Delivery work that deliberately outlives the sheet. Held so it is not
+    /// torn down the moment `completeRequest` returns.
+    private var deliveryTask: Task<Void, Never>?
     private var pendingAutoSendItem: QueuedEmail?
     private var recipientReloadTask: Task<Void, Never>?
     private var pendingPreviewApplication: PendingPreviewApplication?
@@ -132,97 +142,155 @@ final class ShareExtensionModel: ObservableObject {
         }
 
         showsMissingRecipientValidation = false
-        let shouldQueueWhilePreviewLoads = isRefreshingPreview && previewTask != nil
-        if shouldQueueWhilePreviewLoads && presentationMode == .editing {
-            statusMessage = "Finishing preview before send..."
-        }
-        let item = makeQueuedEmail(from: draft)
 
         isSaving = true
-        pendingAutoSendItem = item
+        pendingAutoSendItem = makeQueuedEmail(from: draft)
 
         if shouldAllowAutoSendEditWindow {
             canChangeAutoSendRecipient = true
             allowsAutoSendEdit = true
         }
 
-        // Watchdog: if delivery hasn't finished by the deadline, queue the item
-        // for the next launch (share extension or main app) and close the sheet.
-        // Cancelling the send task first keeps a late-succeeding send from also
-        // leaving the item queued.
-        let watchdogDelayNanoseconds = shouldAllowAutoSendEditWindow
-            ? Self.autoSendGracePeriodNanoseconds
-                + Self.autoSendCommitFlashNanoseconds
-                + Self.deliveryTimeoutNanoseconds
-            : Self.deliveryTimeoutNanoseconds
-        deliveryTimeoutTask = Task { [weak self] in
-            guard let self else { return }
-            try? await Task.sleep(nanoseconds: watchdogDelayNanoseconds)
-            guard !Task.isCancelled, self.isSaving else { return }
-            self.sendTask?.cancel()
-            if let pending = self.pendingAutoSendItem {
-                try? QueueStore.append(pending)
-            }
-            self.extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
-        }
-
         sendTask = Task { [weak self] in
             guard let self else { return }
-            defer {
-                self.isSaving = false
-                self.sendTask = nil
-                self.queuedPreviewEnrichmentItem = nil
-                self.deliveryTimeoutTask?.cancel()
-                self.deliveryTimeoutTask = nil
-                self.pendingAutoSendItem = nil
-                self.canChangeAutoSendRecipient = false
-            }
 
             do {
                 if shouldAllowAutoSendEditWindow {
+                    // Grace period: the overlay stays interactive so the user can
+                    // still switch recipient or back out into the editor.
                     try await Task.sleep(nanoseconds: Self.autoSendGracePeriodNanoseconds)
                     try Task.checkCancellation()
-                    self.canChangeAutoSendRecipient = false
-                    self.statusMessage = "Sending..."
-                    try await Task.sleep(nanoseconds: Self.autoSendCommitFlashNanoseconds)
-                    try Task.checkCancellation()
-                    self.allowsAutoSendEdit = false
                 }
-                let itemToSend: QueuedEmail
-                if shouldAllowAutoSendEditWindow {
-                    let updatedDraft = self.currentDraft()
-                    if let validationMessage = self.validationMessage(for: updatedDraft) {
-                        self.statusMessage = validationMessage
-                        self.presentationMode = .editing
-                        return
-                    }
-                    itemToSend = self.makeQueuedEmail(from: updatedDraft)
-                    self.pendingAutoSendItem = itemToSend
-                } else {
-                    itemToSend = item
+
+                // Lock the UI, then re-read the draft: the recipient may have
+                // changed during the grace period.
+                self.canChangeAutoSendRecipient = false
+                self.allowsAutoSendEdit = false
+                self.statusMessage = "Sending..."
+
+                let finalDraft = self.currentDraft()
+                if let validationMessage = self.validationMessage(for: finalDraft) {
+                    self.isSaving = false
+                    self.sendTask = nil
+                    self.pendingAutoSendItem = nil
+                    self.statusMessage = validationMessage
+                    self.presentationMode = .editing
+                    return
                 }
-                let completedItem = try await self.queueAndAttemptBackgroundDelivery(
-                    itemToSend,
-                    waitForPreview: shouldQueueWhilePreviewLoads,
-                    previewWaitLimitNanoseconds: shouldAllowAutoSendEditWindow
-                        ? Self.autoSendPreviewWaitLimitNanoseconds
-                        : Self.manualSendPreviewWaitLimitNanoseconds
-                )
-                RecipientStore.record(completedItem.toEmail)
-            } catch is CancellationError {
-                self.allowsAutoSendEdit = false
-                return
-            } catch let error as GmailAPIError where error.requiresReconnect {
-                self.allowsAutoSendEdit = false
-                self.shouldCloseAfterReconnect = true
-                self.statusMessage = "Your share is queued. Reconnect Gmail to send it."
-                self.showsGmailConnectAlert = true
-                self.presentationMode = .editing
+
+                let item = self.makeQueuedEmail(from: finalDraft)
+                self.pendingAutoSendItem = item
+                self.commitAndDismiss(item, waitForPreview: shouldAllowAutoSendEditWindow)
             } catch {
-                self.allowsAutoSendEdit = false
-                self.statusMessage = "Could not send or save this share item: \(error.localizedDescription)"
-                self.presentationMode = .editing
+                // Cancelled by stopAutoSendAndEdit(), which owns the state reset.
             }
+        }
+    }
+
+    /// Persists the share, closes the sheet, and finishes delivery afterwards.
+    ///
+    /// The sheet must never wait on the network. The item is written to the
+    /// shared queue first — claimed, so the main app leaves it alone for now —
+    /// the host app is told we are done, and only then do we attempt preview
+    /// enrichment and delivery. Anything we do not finish before iOS terminates
+    /// the extension stays in the queue for the main app to send.
+    private func commitAndDismiss(_ item: QueuedEmail, waitForPreview: Bool) {
+        let analyticsEnabled = RecipientStore.loadAnalyticsEnabled()
+        let hasSession = hasSharedGmailSession
+
+        do {
+            try QueueStore.appendClaimed(item, leaseSeconds: Self.deliveryClaimLeaseSeconds)
+        } catch {
+            // Could not persist — keep the sheet open rather than drop the share.
+            isSaving = false
+            sendTask = nil
+            pendingAutoSendItem = nil
+            statusMessage = "Could not save this share item: \(error.localizedDescription)"
+            presentationMode = .editing
+            return
+        }
+
+        guard hasSession else {
+            // Nothing can be delivered from here, so release the claim and keep
+            // the sheet open for the user to reconnect Gmail.
+            try? QueueStore.releaseClaim(id: item.id, lastError: nil)
+            isSaving = false
+            sendTask = nil
+            pendingAutoSendItem = nil
+            Task { await AnalyticsClient.shared.send("share_queued", params: ["source": "share_sheet"], enabled: analyticsEnabled) }
+            shouldCloseAfterReconnect = true
+            statusMessage = "Your share is queued. Reconnect Gmail to send it."
+            showsGmailConnectAlert = true
+            presentationMode = .editing
+            return
+        }
+
+        RecipientStore.record(item.toEmail)
+        queuedPreviewEnrichmentItem = item
+
+        // Hand delivery to a task that deliberately outlives the sheet, then
+        // dismiss. `self` is captured strongly because the model has to stay
+        // alive to finish the send; nothing on screen depends on it any more.
+        deliveryTask = Task { [self] in
+            await finishDelivery(of: item, waitForPreview: waitForPreview)
+        }
+
+        // `isSaving` stays true so the sheet remains locked for the frame or two
+        // before the host tears it down.
+        sendTask = nil
+        pendingAutoSendItem = nil
+        extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
+    }
+
+    /// Delivery work that runs after the sheet has closed.
+    ///
+    /// The item is already queued and claimed, so every exit here only has to
+    /// settle that queue entry: remove it once sent, or release the claim so the
+    /// main app retries it. If iOS terminates us partway through, the claim
+    /// expires on its own and the main app takes over.
+    private func finishDelivery(of item: QueuedEmail, waitForPreview: Bool) async {
+        let analyticsEnabled = RecipientStore.loadAnalyticsEnabled()
+
+        guard await Self.isNetworkAvailable() else {
+            try? QueueStore.releaseClaim(id: item.id, lastError: nil)
+            await AnalyticsClient.shared.send("share_queued", params: ["source": "share_sheet"], enabled: analyticsEnabled)
+            return
+        }
+
+        // Preview enrichment no longer blocks the sheet, so it is safe to wait
+        // for it here before committing the final body to Gmail.
+        var itemToSend = item
+        let previewWaitLimit = waitForPreview
+            ? Self.autoSendPreviewWaitLimitNanoseconds
+            : Self.manualSendPreviewWaitLimitNanoseconds
+        if let enriched = try? await waitForPreviewAndEnrichItem(item, timeoutNanoseconds: previewWaitLimit),
+           enriched != item {
+            itemToSend = enriched
+            try? QueueStore.updateContentPreservingClaim(enriched)
+        }
+
+        do {
+            guard let session = try SharedSessionStore.load() else {
+                try? QueueStore.releaseClaim(id: item.id, lastError: nil)
+                await AnalyticsClient.shared.send("share_queued", params: ["source": "share_sheet"], enabled: analyticsEnabled)
+                return
+            }
+
+            let validSession = try await deliveryService.ensureValidSession(session)
+            try await deliveryService.sendEmail(using: validSession, item: itemToSend)
+            try? QueueStore.remove(id: itemToSend.id)
+            removeManagedMedia(for: itemToSend)
+            Self.clearDebugError()
+            await AnalyticsClient.shared.send("email_sent", params: ["source": "share_sheet"], enabled: analyticsEnabled)
+
+            try? SharedSessionStore.save(validSession)
+            // Best-effort backlog flush, once our own item is settled.
+            await flushQueuedEmails(using: validSession)
+        } catch {
+            let description = error.localizedDescription
+            Self.persistDebugError("delivery: \(description)")
+            try? QueueStore.releaseClaim(id: item.id, lastError: description)
+            await AnalyticsClient.shared.send("share_queued", params: ["source": "share_sheet"], enabled: analyticsEnabled)
         }
     }
 
@@ -523,84 +591,6 @@ final class ShareExtensionModel: ObservableObject {
         }
     }
 
-    private func queueAndAttemptBackgroundDelivery(
-        _ item: QueuedEmail,
-        waitForPreview: Bool,
-        previewWaitLimitNanoseconds: UInt64
-    ) async throws -> QueuedEmail {
-        try Task.checkCancellation()
-        queuedPreviewEnrichmentItem = item
-
-        let analyticsEnabled = RecipientStore.loadAnalyticsEnabled()
-
-        // Check connectivity before waiting on preview or attempting delivery.
-        // Doing this first prevents the preview-fetch task from blocking the sheet
-        // close when there is no network.
-        guard await Self.isNetworkAvailable() else {
-            try QueueStore.append(item)
-            Task { await AnalyticsClient.shared.send("share_queued", params: ["source": "share_sheet"], enabled: analyticsEnabled) }
-            extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
-            return item
-        }
-
-        // Enrich with preview data if the preview is still loading.
-        // We do this before touching the queue so the main app can't race us.
-        let refreshedItem: QueuedEmail
-        do {
-            refreshedItem = waitForPreview
-                ? try await waitForPreviewAndEnrichItem(item, timeoutNanoseconds: previewWaitLimitNanoseconds)
-                : item
-            if pendingAutoSendItem?.id == refreshedItem.id {
-                pendingAutoSendItem = refreshedItem
-            }
-        } catch {
-            // Cancellation during preview wait — close the sheet without queuing.
-            extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
-            throw error
-        }
-
-        do {
-            guard let session = try SharedSessionStore.load() else {
-                // No session — queue for main app delivery and show reconnect prompt.
-                try QueueStore.append(refreshedItem)
-                Task { await AnalyticsClient.shared.send("share_queued", params: ["source": "share_sheet"], enabled: analyticsEnabled) }
-                throw GmailAPIError.credentialsInvalid("No Gmail session found. Please connect your account.")
-            }
-            try Task.checkCancellation()
-
-            let validSession = try await deliveryService.ensureValidSession(session)
-            try Task.checkCancellation()
-
-            // Send directly — do NOT queue first so the main app can't steal the item.
-            try await deliveryService.sendEmail(using: validSession, item: refreshedItem)
-            Self.clearDebugError()
-            pendingAutoSendItem = nil  // item sent — don't queue it if the timeout fires during flush
-            Task { await AnalyticsClient.shared.send("email_sent", params: ["source": "share_sheet"], enabled: analyticsEnabled) }
-
-            // Flush any backlog the main app left behind (best-effort).
-            try? await flushQueuedEmails(using: validSession)
-            try SharedSessionStore.save(validSession)
-            extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
-            return refreshedItem
-        } catch is CancellationError {
-            extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
-            throw CancellationError()
-        } catch let error as GmailAPIError where error.requiresReconnect {
-            // Auth error — queue for retry, keep the sheet open for reconnect.
-            try? QueueStore.append(refreshedItem)
-            Task { await AnalyticsClient.shared.send("share_queued", params: ["source": "share_sheet"], enabled: analyticsEnabled) }
-            Self.persistDebugError("auth: \(error.localizedDescription)")
-            throw error
-        } catch {
-            // Other delivery error — queue for retry, close the sheet.
-            try? QueueStore.append(refreshedItem)
-            Task { await AnalyticsClient.shared.send("share_queued", params: ["source": "share_sheet"], enabled: analyticsEnabled) }
-            Self.persistDebugError("delivery: \(error.localizedDescription)")
-            extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
-            return refreshedItem
-        }
-    }
-
     // Preview-enriches an item without requiring it to be in the queue first.
     private func waitForPreviewAndEnrichItem(_ item: QueuedEmail, timeoutNanoseconds: UInt64) async throws -> QueuedEmail {
         let didFinishPreviewInTime = try await waitForPreviewToFinish(
@@ -651,7 +641,7 @@ final class ShareExtensionModel: ObservableObject {
                   let validSession = try? await self.deliveryService.ensureValidSession(session) else { return }
 
             guard !self.isSaving else { return }
-            try? await self.flushQueuedEmails(using: validSession)
+            await self.flushQueuedEmails(using: validSession)
             try? SharedSessionStore.save(validSession)
         }
     }
@@ -796,59 +786,30 @@ final class ShareExtensionModel: ObservableObject {
         }
 
         do {
-            let didReplace = try QueueStore.replace(refreshedItem)
-            if didReplace {
-                removeManagedMediaRemoved(from: queuedPreviewEnrichmentItem, comparedTo: refreshedItem)
-                self.queuedPreviewEnrichmentItem = refreshedItem
-            }
+            try QueueStore.updateContentPreservingClaim(refreshedItem)
+            removeManagedMediaRemoved(from: queuedPreviewEnrichmentItem, comparedTo: refreshedItem)
+            self.queuedPreviewEnrichmentItem = refreshedItem
         } catch {
             return
         }
     }
 
-    @discardableResult
-    private func sendQueuedEmailIfPresent(_ item: QueuedEmail, using session: GmailSession) async throws -> Bool {
-        var queue = try QueueStore.load()
-        guard let index = queue.firstIndex(where: { $0.id == item.id }) else {
-            return false
-        }
+    /// Best-effort delivery of the backlog the main app left behind.
+    ///
+    /// Items claimed by another in-flight sender are skipped, and each send is
+    /// settled with a targeted, lock-protected write so a concurrent main-app
+    /// save cannot resurrect an item we already delivered.
+    private func flushQueuedEmails(using session: GmailSession) async {
+        var pending = ((try? QueueStore.load()) ?? []).filter { !$0.isClaimed }
 
-        let queuedItem = queue[index]
-
-        do {
-            try await deliveryService.sendEmail(using: session, item: queuedItem)
-            removeManagedMedia(for: queuedItem)
-            queue.remove(at: index)
-            try QueueStore.save(queue)
-            return true
-        } catch is CancellationError {
-            throw CancellationError()
-        } catch {
-            queue[index].lastError = error.localizedDescription
-            try QueueStore.save(queue)
-            throw error
-        }
-    }
-
-    private func flushQueuedEmails(using session: GmailSession) async throws {
-        var queue = try QueueStore.load()
-
-        while let next = queue.last {
-            try Task.checkCancellation()
-
+        while let next = pending.popLast() {
             do {
                 try await deliveryService.sendEmail(using: session, item: next)
                 removeManagedMedia(for: next)
-                queue.removeLast()
-                try QueueStore.save(queue)
-            } catch is CancellationError {
-                throw CancellationError()
+                try? QueueStore.remove(id: next.id)
             } catch {
-                if let index = queue.indices.last {
-                    queue[index].lastError = error.localizedDescription
-                    try QueueStore.save(queue)
-                }
-                throw error
+                try? QueueStore.setLastError(id: next.id, message: error.localizedDescription)
+                return
             }
         }
     }

@@ -21,6 +21,8 @@ final class AppModel: ObservableObject {
     private let monitor = NetworkMonitor()
     private let queueChangeObserver = QueueChangeObserver()
     private var shouldReprocessQueue = false
+    private var claimExpiryTask: Task<Void, Never>?
+    private var claimExpiryDeadline: Date?
     #if os(macOS)
     private var queuePollTimer: Timer?
     private var lastQueueFileModificationDate: Date?
@@ -165,6 +167,12 @@ final class AppModel: ObservableObject {
         reloadSessionFromDisk()
         reloadQueueFromDisk()
         guard !queuedEmails.isEmpty else { return }
+
+        // Items the share extension is still delivering are claimed. Leave them
+        // alone until the lease expires so a share in flight is never sent twice.
+        scheduleClaimExpiryRecheck()
+        guard queuedEmails.contains(where: { !$0.isClaimed }) else { return }
+
         guard let existingSession = session else {
             statusMessage = "You have queued items. Sign in to Gmail to send them."
             return
@@ -190,7 +198,7 @@ final class AppModel: ObservableObject {
                 try SharedSessionStore.save(validSession)
             }
 
-            while let next = queuedEmails.last {
+            while let next = queuedEmails.last(where: { !$0.isClaimed }) {
                 do {
                     try await client.sendEmail(using: validSession, item: next)
                     removeManagedMedia(for: next)
@@ -221,6 +229,30 @@ final class AppModel: ObservableObject {
             } else {
                 statusMessage = "Queue processing paused: \(error.localizedDescription)"
             }
+        }
+    }
+
+    /// Re-runs the queue once the earliest outstanding share-extension claim
+    /// expires, so an item its sender never finished is not stranded until the
+    /// next launch or network change.
+    private func scheduleClaimExpiryRecheck() {
+        let expiries = queuedEmails.compactMap { $0.isClaimed ? $0.leaseExpiresAt : nil }
+        guard let earliest = expiries.min() else {
+            claimExpiryTask?.cancel()
+            claimExpiryTask = nil
+            return
+        }
+
+        guard claimExpiryDeadline != earliest else { return }
+
+        claimExpiryTask?.cancel()
+        claimExpiryDeadline = earliest
+        let delay = max(0, earliest.timeIntervalSinceNow) + 1
+        claimExpiryTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            guard !Task.isCancelled, let self else { return }
+            self.claimExpiryDeadline = nil
+            await self.processQueue()
         }
     }
 
@@ -339,14 +371,25 @@ final class AppModel: ObservableObject {
         }
         queuedEmails.removeAll { ids.contains($0.id) }
         updateReconnectRequirement()
-        persistQueue()
+        // Targeted, lock-protected writes: the share extension may be writing to
+        // the same file while it finishes delivering a share in the background,
+        // and a whole-array save here would discard its changes.
+        do {
+            try QueueStore.remove(ids: ids)
+        } catch {
+            statusMessage = "Could not save the offline queue: \(error.localizedDescription)"
+        }
     }
 
     private func markFailure(for id: UUID, message: String) {
         if let index = queuedEmails.firstIndex(where: { $0.id == id }) {
             queuedEmails[index].lastError = message
             updateReconnectRequirement()
-            persistQueue()
+            do {
+                try QueueStore.setLastError(id: id, message: message)
+            } catch {
+                statusMessage = "Could not save the offline queue: \(error.localizedDescription)"
+            }
         }
     }
 
@@ -357,14 +400,6 @@ final class AppModel: ObservableObject {
             }
 
             return GmailAPIError.indicatesInsufficientAuthenticationScopes(lastError)
-        }
-    }
-
-    private func persistQueue() {
-        do {
-            try QueueStore.save(queuedEmails)
-        } catch {
-            statusMessage = "Could not save the offline queue: \(error.localizedDescription)"
         }
     }
 

@@ -25,6 +25,11 @@ Last updated: April 16, 2026
 
 ## What Changed Recently
 
+- **Share sheet now dismisses before delivery, not after.** The send path previously awaited the entire network round-trip — network check, preview fetch, token refresh, Gmail send, backlog flush — *before* calling `completeRequest`, so the sheet visibly hung for seconds on every send. It now waits one second for the user to switch recipient or tap Edit, then locks the UI, writes the item to the shared queue, dismisses the sheet, and finishes delivery in a task that outlives the sheet (`ShareExtensionModel.commitAndDismiss` / `finishDelivery`).
+- Because the item is queued *before* it is sent, `QueuedEmail` gained a `leaseExpiresAt` claim (45s, `QueueStore.appendClaimed`). The main app skips claimed items in `processQueue` so an in-flight share is never sent twice, and re-checks once the lease expires. If iOS terminates the extension mid-delivery the claim simply expires and the main app sends the item.
+- `QueueStore` mutations are now targeted and lock-protected (`remove`, `releaseClaim`, `setLastError`, `updateContentPreservingClaim`); whole-array `save`/`append` are private. The main app's `persistQueue()` full-array write is gone — it could discard the extension's concurrent background writes.
+- Auth failures that used to surface as an in-sheet reconnect prompt now only do so when Gmail is disconnected *before* dismissal. A token failure discovered after dismissal releases the claim with the error recorded, and the main app raises the reconnect prompt on next launch.
+
 - Simplified onboarding from 3 steps to 2: removed the dedicated "Pin in Share Sheet" step and the dedicated analytics step. Onboarding now shows a welcome step (live demo video) and a finish step (Gmail connect, default recipient, auto-send, analytics toggle inline).
 - Added "How to Pin SendMoi" as a tappable row in Settings → Setup. Opens a three-slide modal carousel (`PinTipSheet`) with the same dark-blue gradient background as onboarding.
 - Analytics opt-in toggle moved inline into the onboarding finish step (after auto-send toggle) so it's visible during setup without being a dedicated full-screen prompt. Avoids App Store guideline 5.1.2(i) which flags custom tracking-permission screens.
@@ -105,27 +110,33 @@ Last updated: April 16, 2026
 
 ## Things To Verify On The Next Machine
 
-1. Open the project in Xcode and confirm there are no asset catalog warnings and the app icon resolves correctly from `AppIcon.icon`.
-2. Confirm the new `Recipient` section placement feels right on iPhone, that `Account` now only handles Gmail sign-in state, that the recipient save action dismisses the keyboard cleanly, and that the macOS desktop compose card appears without trying to edit main-app draft state.
-3. Do a true cold launch on iPhone after reinstalling the app to verify the splash screen appears (Apple caches launch screens aggressively).
-4. Confirm App Store Connect metadata versions match the code version:
+1. **Share-sheet dismissal timing (the reason this changed).** Share a link with auto-send on: the overlay should stay interactive for ~1 second, then lock and the sheet should disappear immediately — not after the email has been sent. Time it against a slow network; the sheet must not linger while the send is in flight.
+2. Immediately after that dismissal, confirm the email still arrives, and that opening SendMoi shows an empty queue (the extension removes its own item once delivered).
+3. Kill the share sheet's work deliberately (airplane mode on right after dismissal): the item should be left in the queue, unclaimed, and the main app should send it on next launch — exactly once, with no duplicate.
+4. With SendMoi open in the foreground on the same device, share something: the main app must not send the claimed item out from under the extension. Watch for a duplicate in the Gmail sent folder.
+5. Tap `Edit` during the one-second grace period and confirm auto-send is cancelled and nothing is queued.
+6. Switch recipient during the grace period and confirm the email goes to the newly chosen recipient, not the default.
+7. Open the project in Xcode and confirm there are no asset catalog warnings and the app icon resolves correctly from `AppIcon.icon`.
+8. Confirm the new `Recipient` section placement feels right on iPhone, that `Account` now only handles Gmail sign-in state, that the recipient save action dismisses the keyboard cleanly, and that the macOS desktop compose card appears without trying to edit main-app draft state.
+9. Do a true cold launch on iPhone after reinstalling the app to verify the splash screen appears (Apple caches launch screens aggressively).
+10. Confirm App Store Connect metadata versions match the code version:
    - project is now `0.3`
    - App Store Connect screenshot previously showed macOS app version `1.0`
-5. Preview the imported site from this repo with `make dev` or `make dev-thread`, then confirm `/`, `/privacy/`, `/terms/`, and `/accessibility/` all render correctly from `docs/`.
-6. Run `DRY_RUN=1 ./scripts/deploy-site.sh` and confirm the staged deploy still points at the correct canonical `https://send.moi` URLs.
-7. Publish stable public URLs for both the privacy policy and terms page on `send.moi`, then attach those URLs to the Google OAuth consent screen so the blue missing-policy banner disappears.
-8. Share a photo directly from Photos (without a URL) and confirm it can be queued, sent, and removed without leaving orphaned files in the App Group container.
-9. Share an X/Twitter post (including `t.co` and `/video/`/`/photo/` variants) and an Overcast episode and confirm title, source URL, summary, and preview image behavior all look intentional rather than noisy.
-10. Run the macOS target and confirm the desktop card layout feels right at common window sizes, especially queue deletion and account disclosure behavior.
-11. Run `./scripts/prepare_release.sh --version <next-version>` before the next archive, then verify App Store Connect accepts the `AppIcon` set for both iOS and macOS and shows the expected branded thumbnail.
-12. Confirm the next Xcode Cloud upload succeeds with build number `3`; the previous failure was `The bundle version must be higher than the previously uploaded version.`
-13. Launch the share sheet while signed out of Gmail and confirm the new connect alert appears, starts Google sign-in from the share sheet itself, and resumes sending without implying that auto-send already happened.
-14. Open the share sheet with no default recipient and confirm the initial helper text feels neutral, then tap `Send` and verify the red validation state appears and the `To` field becomes focused.
-15. Share a concise profile/homepage URL that includes a newsletter mention in body copy and confirm SendMoi still generates a short summary when the page has meaningful text.
-16. Confirm App Store Connect processing reports iOS compatibility as `iOS 18.0 or later` after uploading the next archive.
-17. Share a Zillow or Ticketmaster listing URL and confirm SendMoi omits low-quality structured summaries instead of sending scraped listing blobs, markdown artifacts, or generic "Here is a summary..." prefixes.
-18. On iPhone and iPad, verify the `Offline Queue` section now starts collapsed when the queue is empty, auto-expands when queued items exist, and still allows manual retry + deletion from the expanded state.
-19. Reproduce a stale or under-scoped Gmail session, confirm queued sends show `Reconnect Gmail`, complete reauth, and verify the queued items then send successfully.
+11. Preview the imported site from this repo with `make dev` or `make dev-thread`, then confirm `/`, `/privacy/`, `/terms/`, and `/accessibility/` all render correctly from `docs/`.
+12. Run `DRY_RUN=1 ./scripts/deploy-site.sh` and confirm the staged deploy still points at the correct canonical `https://send.moi` URLs.
+13. Publish stable public URLs for both the privacy policy and terms page on `send.moi`, then attach those URLs to the Google OAuth consent screen so the blue missing-policy banner disappears.
+14. Share a photo directly from Photos (without a URL) and confirm it can be queued, sent, and removed without leaving orphaned files in the App Group container.
+15. Share an X/Twitter post (including `t.co` and `/video/`/`/photo/` variants) and an Overcast episode and confirm title, source URL, summary, and preview image behavior all look intentional rather than noisy.
+16. Run the macOS target and confirm the desktop card layout feels right at common window sizes, especially queue deletion and account disclosure behavior.
+17. Run `./scripts/prepare_release.sh --version <next-version>` before the next archive, then verify App Store Connect accepts the `AppIcon` set for both iOS and macOS and shows the expected branded thumbnail.
+18. Confirm the next Xcode Cloud upload succeeds with build number `3`; the previous failure was `The bundle version must be higher than the previously uploaded version.`
+19. Launch the share sheet while signed out of Gmail and confirm the new connect alert appears, starts Google sign-in from the share sheet itself, and resumes sending without implying that auto-send already happened.
+20. Open the share sheet with no default recipient and confirm the initial helper text feels neutral, then tap `Send` and verify the red validation state appears and the `To` field becomes focused.
+21. Share a concise profile/homepage URL that includes a newsletter mention in body copy and confirm SendMoi still generates a short summary when the page has meaningful text.
+22. Confirm App Store Connect processing reports iOS compatibility as `iOS 18.0 or later` after uploading the next archive.
+23. Share a Zillow or Ticketmaster listing URL and confirm SendMoi omits low-quality structured summaries instead of sending scraped listing blobs, markdown artifacts, or generic "Here is a summary..." prefixes.
+24. On iPhone and iPad, verify the `Offline Queue` section now starts collapsed when the queue is empty, auto-expands when queued items exist, and still allows manual retry + deletion from the expanded state.
+25. Reproduce a stale or under-scoped Gmail session, confirm queued sends show `Reconnect Gmail`, complete reauth, and verify the queued items then send successfully.
 
 ## Local Setup
 

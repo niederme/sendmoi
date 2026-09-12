@@ -427,6 +427,15 @@ struct QueuedEmail: Codable, Identifiable, Equatable {
     let additionalImageURLStrings: [String]?
     let createdAt: Date
     var lastError: String?
+    /// Set while another process (normally the share extension) is actively
+    /// delivering this item. The main app skips claimed items until the lease
+    /// expires so a share that is still in flight is never sent twice.
+    var leaseExpiresAt: Date?
+
+    var isClaimed: Bool {
+        guard let leaseExpiresAt else { return false }
+        return leaseExpiresAt > Date()
+    }
 
     var allImageURLStrings: [String] {
         combinedImageURLStrings(primary: previewImageURLString, additional: additionalImageURLStrings ?? [])
@@ -442,7 +451,8 @@ struct QueuedEmail: Codable, Identifiable, Equatable {
         previewImageURLString: String? = nil,
         additionalImageURLStrings: [String]? = nil,
         createdAt: Date = .now,
-        lastError: String? = nil
+        lastError: String? = nil,
+        leaseExpiresAt: Date? = nil
     ) {
         self.id = id
         self.toEmail = toEmail
@@ -454,6 +464,7 @@ struct QueuedEmail: Codable, Identifiable, Equatable {
         self.additionalImageURLStrings = additionalImageURLStrings
         self.createdAt = createdAt
         self.lastError = lastError
+        self.leaseExpiresAt = leaseExpiresAt
     }
 }
 
