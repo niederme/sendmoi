@@ -14,14 +14,14 @@ enum QueueStore {
         return try JSONDecoder().decode([QueuedEmail].self, from: data)
     }
 
-    static func save(_ queue: [QueuedEmail]) throws {
+    private static func save(_ queue: [QueuedEmail]) throws {
         let url = try queueFileURL()
         let data = try JSONEncoder().encode(queue)
         try data.write(to: url, options: .atomic)
         notifyQueueDidChange()
     }
 
-    static func append(_ item: QueuedEmail) throws {
+    private static func append(_ item: QueuedEmail) throws {
         // Use an exclusive file lock so concurrent extension processes don't
         // overwrite each other's items during a simultaneous read-modify-write.
         try withExclusiveLock {
@@ -31,16 +31,88 @@ enum QueueStore {
         }
     }
 
-    @discardableResult
-    static func replace(_ item: QueuedEmail) throws -> Bool {
-        var queue = try load()
-        guard let index = queue.firstIndex(where: { $0.id == item.id }) else {
-            return false
-        }
+    /// Appends an item and claims it for the calling process for `leaseSeconds`.
+    ///
+    /// The share extension uses this to persist a share *before* it dismisses the
+    /// sheet, so nothing is lost if the extension is terminated mid-delivery,
+    /// while the lease keeps the main app from sending the same item in parallel.
+    static func appendClaimed(_ item: QueuedEmail, leaseSeconds: TimeInterval) throws {
+        var claimed = item
+        claimed.leaseExpiresAt = Date().addingTimeInterval(leaseSeconds)
+        try append(claimed)
+    }
 
-        queue[index] = item
-        try save(queue)
-        return true
+    /// Updates a claimed item's content (e.g. after preview enrichment) without
+    /// disturbing its lease. No-op if the item is no longer queued.
+    static func updateContentPreservingClaim(_ item: QueuedEmail) throws {
+        try withExclusiveLock {
+            var queue = try load()
+            guard let index = queue.firstIndex(where: { $0.id == item.id }) else {
+                return
+            }
+
+            var updated = item
+            updated.leaseExpiresAt = queue[index].leaseExpiresAt
+            queue[index] = updated
+            try save(queue)
+        }
+    }
+
+    static func remove(id: UUID) throws {
+        try withExclusiveLock {
+            var queue = try load()
+            let remaining = queue.filter { $0.id != id }
+            guard remaining.count != queue.count else {
+                return
+            }
+
+            queue = remaining
+            try save(queue)
+        }
+    }
+
+    static func remove(ids: [UUID]) throws {
+        guard !ids.isEmpty else { return }
+        let removed = Set(ids)
+        try withExclusiveLock {
+            var queue = try load()
+            let remaining = queue.filter { !removed.contains($0.id) }
+            guard remaining.count != queue.count else {
+                return
+            }
+
+            queue = remaining
+            try save(queue)
+        }
+    }
+
+    /// Releases the caller's claim on an item so the main app can retry it,
+    /// recording why the in-flight attempt failed.
+    static func releaseClaim(id: UUID, lastError: String?) throws {
+        try withExclusiveLock {
+            var queue = try load()
+            guard let index = queue.firstIndex(where: { $0.id == id }) else {
+                return
+            }
+
+            queue[index].leaseExpiresAt = nil
+            if let lastError {
+                queue[index].lastError = lastError
+            }
+            try save(queue)
+        }
+    }
+
+    static func setLastError(id: UUID, message: String?) throws {
+        try withExclusiveLock {
+            var queue = try load()
+            guard let index = queue.firstIndex(where: { $0.id == id }) else {
+                return
+            }
+
+            queue[index].lastError = message
+            try save(queue)
+        }
     }
 
     private static func queueFileURL() throws -> URL {
