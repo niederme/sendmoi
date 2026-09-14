@@ -49,9 +49,10 @@ final class GmailDeliveryService {
         return try decoder.decode(GoogleUserInfo.self, from: data)
     }
 
-    func sendEmail(using session: GmailSession, item: QueuedEmail) async throws {
+    func sendEmail(using session: GmailSession, item: QueuedEmail, enrichContent: Bool = true) async throws {
         try SendRateLimiter.validateSendAllowed(for: session)
-        let content = await buildEmailContent(from: item)
+        let content = await buildEmailContent(from: item, enrichContent: enrichContent)
+        try Task.checkCancellation()
         let subject = "\(content.title) (Sent via SendMoi)"
         let raw = try Self.makeRawMimeMessage(
             from: session.emailAddress ?? "me",
@@ -158,7 +159,18 @@ final class GmailDeliveryService {
         }
     }
 
-    private func buildEmailContent(from item: QueuedEmail) async -> EmailContent {
+    private func buildEmailContent(from item: QueuedEmail, enrichContent: Bool) async -> EmailContent {
+        if !enrichContent {
+            // The extension already gave preview enrichment a bounded opportunity.
+            // Delivery must not restart article/model work after that deadline.
+            let localImages = item.allImageURLStrings.filter { SharedContainer.isManagedMediaURLString($0) }
+            let inlineImages = await fetchInlineImages(from: localImages)
+            return EmailContent(
+                title: item.title, excerpt: item.excerpt, summary: item.summary,
+                urlString: item.urlString, imageURLStrings: item.allImageURLStrings,
+                inlineImages: inlineImages
+            )
+        }
         let parsedLinkedSocialShare = SharedPostTextParser.parseLinkedSocialPostShare(
             title: item.title,
             excerpt: item.excerpt,
@@ -2994,7 +3006,7 @@ final class GmailDeliveryService {
     // wait for the losing operation to acknowledge cancellation — a model call
     // that stalls without honoring cancellation is abandoned so the deadline
     // holds. The abandoned task is left to finish (or die with the process).
-    private static func resultWithinDeadline<T: Sendable>(
+    static func resultWithinDeadline<T: Sendable>(
         nanoseconds: UInt64,
         of operation: @escaping @Sendable () async -> T?
     ) async -> T? {

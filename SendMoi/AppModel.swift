@@ -171,8 +171,18 @@ final class AppModel: ObservableObject {
         }
         guard isOnline else { return }
 
+        let deliveryLock: Int32
+        do {
+            guard let lock = try QueueStore.acquireDeliveryLock() else { return }
+            deliveryLock = lock
+        } catch {
+            statusMessage = "Could not access the queue: \(error.localizedDescription)"
+            return
+        }
+        reloadQueueFromDisk()
         isBusy = true
         defer {
+            QueueStore.releaseDeliveryLock(deliveryLock)
             isBusy = false
             if shouldReprocessQueue {
                 shouldReprocessQueue = false
@@ -193,10 +203,11 @@ final class AppModel: ObservableObject {
             while let next = queuedEmails.last {
                 do {
                     try await client.sendEmail(using: validSession, item: next)
+                    try QueueStore.remove(ids: [next.id])
                     removeManagedMedia(for: next)
-                    removeQueuedEmail(id: next.id)
+                    reloadQueueFromDisk()
                     RecipientStore.record(next.toEmail)
-                    await AnalyticsClient.shared.send("email_sent", enabled: analyticsEnabled)
+                    Task { await AnalyticsClient.shared.send("email_sent", enabled: analyticsEnabled) }
                     statusMessage = "Sent \"\(next.title)\" to \(next.toEmail)."
                 } catch {
                     if let gmailError = error as? GmailAPIError, gmailError.requiresReconnect {
@@ -334,19 +345,21 @@ final class AppModel: ObservableObject {
         }
 
         let removedItems = queuedEmails.filter { ids.contains($0.id) }
-        removedItems.forEach { item in
-            removeManagedMedia(for: item)
+        do {
+            try QueueStore.remove(ids: ids)
+            removedItems.forEach { removeManagedMedia(for: $0) }
+            reloadQueueFromDisk()
+        } catch {
+            statusMessage = "Could not save the offline queue: \(error.localizedDescription)"
         }
-        queuedEmails.removeAll { ids.contains($0.id) }
-        updateReconnectRequirement()
-        persistQueue()
     }
 
     private func markFailure(for id: UUID, message: String) {
-        if let index = queuedEmails.firstIndex(where: { $0.id == id }) {
-            queuedEmails[index].lastError = message
-            updateReconnectRequirement()
-            persistQueue()
+        do {
+            try QueueStore.markFailure(id: id, message: message)
+            reloadQueueFromDisk()
+        } catch {
+            statusMessage = "Could not save the offline queue: \(error.localizedDescription)"
         }
     }
 
@@ -357,14 +370,6 @@ final class AppModel: ObservableObject {
             }
 
             return GmailAPIError.indicatesInsufficientAuthenticationScopes(lastError)
-        }
-    }
-
-    private func persistQueue() {
-        do {
-            try QueueStore.save(queuedEmails)
-        } catch {
-            statusMessage = "Could not save the offline queue: \(error.localizedDescription)"
         }
     }
 

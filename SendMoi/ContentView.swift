@@ -1590,7 +1590,7 @@ struct ContentView: View {
             return "Reconnect Gmail to restore send permission, then retry the queue."
         }
 
-        return model.isOnline ? "Network looks available. The app retries automatically." : "Offline or unreachable. Items remain queued."
+        return model.isOnline ? "Network looks available. Keep SendMoi open while queued emails send." : "Offline or unreachable. Items remain queued."
     }
 
     private var queueSummaryTitle: String {

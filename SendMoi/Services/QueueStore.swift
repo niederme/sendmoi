@@ -26,6 +26,7 @@ enum QueueStore {
         // overwrite each other's items during a simultaneous read-modify-write.
         try withExclusiveLock {
             var queue = try load()
+            guard !queue.contains(where: { $0.id == item.id }) else { return }
             queue.insert(item, at: 0)
             try save(queue)
         }
@@ -33,14 +34,52 @@ enum QueueStore {
 
     @discardableResult
     static func replace(_ item: QueuedEmail) throws -> Bool {
-        var queue = try load()
-        guard let index = queue.firstIndex(where: { $0.id == item.id }) else {
-            return false
+        try withExclusiveLock {
+            var queue = try load()
+            guard let index = queue.firstIndex(where: { $0.id == item.id }) else { return false }
+            queue[index] = item
+            try save(queue)
+            return true
         }
+    }
 
-        queue[index] = item
-        try save(queue)
-        return true
+    static func remove(ids: [UUID]) throws {
+        try withExclusiveLock {
+            var queue = try load()
+            queue.removeAll { ids.contains($0.id) }
+            try save(queue)
+        }
+    }
+
+    static func markFailure(id: UUID, message: String) throws {
+        try withExclusiveLock {
+            var queue = try load()
+            guard let index = queue.firstIndex(where: { $0.id == id }) else { return }
+            // Do not notify observers on an unchanged error and create a retry loop.
+            guard queue[index].lastError != message else { return }
+            queue[index].lastError = message
+            try save(queue)
+        }
+    }
+
+    // Separate from the short mutation lock: held over delivery awaits, but acquired
+    // non-blocking so a second process never blocks its main actor on a network send.
+    static func acquireDeliveryLock() throws -> Int32? {
+        let url = try SharedContainer.appDirectoryURL().appendingPathComponent("queue-delivery.lock")
+        let fd = open(url.path, O_CREAT | O_RDWR, 0o600)
+        guard fd != -1 else { throw POSIXError(.EIO) }
+        guard flock(fd, LOCK_EX | LOCK_NB) == 0 else {
+            let code = errno
+            close(fd)
+            if code == EWOULDBLOCK { return nil }
+            throw POSIXError(POSIXErrorCode(rawValue: code) ?? .EIO)
+        }
+        return fd
+    }
+
+    static func releaseDeliveryLock(_ fd: Int32) {
+        flock(fd, LOCK_UN)
+        close(fd)
     }
 
     private static func queueFileURL() throws -> URL {
@@ -54,18 +93,16 @@ enum QueueStore {
     /// Acquires an exclusive POSIX flock on a companion lock file, runs `work`,
     /// then releases the lock. Safe across processes sharing the same group
     /// container (the share extension and the main app).
-    private static func withExclusiveLock(_ work: () throws -> Void) throws {
+    private static func withExclusiveLock<T>(_ work: () throws -> T) throws -> T {
         let url = try lockFileURL()
         let fd = open(url.path, O_CREAT | O_RDWR, 0o666)
         guard fd != -1 else {
-            // Can't obtain lock file — run unprotected rather than losing the item.
-            try work()
-            return
+            throw POSIXError(.EIO)
         }
         defer { close(fd) }
-        flock(fd, LOCK_EX)          // blocks until the lock is available
+        guard flock(fd, LOCK_EX) == 0 else { throw POSIXError(.EIO) }
         defer { flock(fd, LOCK_UN) }
-        try work()
+        return try work()
     }
 
     private static func notifyQueueDidChange() {
