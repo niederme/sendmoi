@@ -237,6 +237,8 @@ archive_cmd=(
   -configuration "$CONFIGURATION"
   -destination "$archive_destination"
   -archivePath "$ARCHIVE_PATH"
+  "CURRENT_PROJECT_VERSION=$build"
+  "SENDMOI_ARCHIVE_BUILD_NUMBER=$build"
   "${auth_args[@]}"
   archive
 )
@@ -281,4 +283,6 @@ else
   [[ -d "$ARCHIVE_PATH" ]] || { echo "Archive does not exist: $ARCHIVE_PATH" >&2; exit 1; }
 fi
 
-"${export_cmd[@]}"
+# Xcode invokes Apple rsync directly, which finds its peer via PATH. A Homebrew
+# peer rejects Apple-specific flags and causes IPA packaging to fail.
+PATH="/usr/bin:/bin:/usr/sbin:/sbin:$PATH" "${export_cmd[@]}"

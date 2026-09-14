@@ -40,6 +40,17 @@ if [[ ! -f "$PROJECT_FILE" ]]; then
   exit 1
 fi
 
+# Scripted releases pass the prepared number as an Xcode build setting.
+# Keep the scheme's interactive Archive bump from changing that release.
+if [[ -n "${SENDMOI_ARCHIVE_BUILD_NUMBER:-}" ]]; then
+  [[ "$SENDMOI_ARCHIVE_BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]] || {
+    echo "SENDMOI_ARCHIVE_BUILD_NUMBER must be a positive integer." >&2
+    exit 1
+  }
+  echo "Using prepared archive build: $SENDMOI_ARCHIVE_BUILD_NUMBER"
+  exit 0
+fi
+
 current_build="$(perl -ne 'if (/CURRENT_PROJECT_VERSION = ([0-9]+);/) { print "$1\n"; exit }' "$PROJECT_FILE")"
 
 if [[ -z "$current_build" ]]; then
