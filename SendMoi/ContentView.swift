@@ -100,6 +100,8 @@ struct ContentView: View {
 
             ScrollView {
                 compactMobileContent
+                    .frame(maxWidth: 680)
+                    .frame(maxWidth: .infinity, alignment: .top)
                     .padding(.top, topBarHeight + 12)
             }
             .scrollIndicators(.hidden)
