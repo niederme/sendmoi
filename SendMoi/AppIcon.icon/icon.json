@@ -1,59 +1,53 @@
 {
-  "fill-specializations" : [
+  "fill-specializations": [
     {
-      "value" : {
-        "solid" : "extended-gray:1.00000,1.00000"
+      "value": {
+        "solid": "extended-gray:1.00000,1.00000"
       }
     },
     {
-      "appearance" : "dark",
-      "value" : {
-        "automatic-gradient" : "extended-gray:0.00000,1.00000"
+      "appearance": "dark",
+      "value": {
+        "automatic-gradient": "extended-gray:0.00000,1.00000"
       }
     }
   ],
-  "groups" : [
+  "groups": [
     {
-      "layers" : [
+      "name": "Modeled goggles",
+      "layers": [
         {
-          "blend-mode-specializations" : [
+          "name": "Goggles",
+          "image-name-specializations": [
             {
-              "appearance" : "tinted",
-              "value" : "normal"
+              "value": "Goggles-Light.png"
+            },
+            {
+              "appearance": "dark",
+              "value": "Goggles-Dark.png"
             }
           ],
-          "fill-specializations" : [
+          "glass": false,
+          "fill-specializations": [
             {
-              "appearance" : "tinted",
-              "value" : "automatic"
+              "appearance": "tinted",
+              "value": "automatic"
             }
-          ],
-          "glass" : true,
-          "hidden" : false,
-          "image-name" : "4 – goggles.svg",
-          "name" : "4 – goggles"
-        },
-        {
-          "glass" : false,
-          "image-name" : "3 – goggles shadow.svg",
-          "name" : "3 – goggles shadow"
+          ]
         }
       ],
-      "lighting" : "combined",
-      "shadow" : {
-        "kind" : "neutral",
-        "opacity" : 0.5
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.12
       },
-      "translucency" : {
-        "enabled" : true,
-        "value" : 0.5
+      "translucency": {
+        "enabled": false,
+        "value": 0
       }
     }
   ],
-  "supported-platforms" : {
-    "circles" : [
-      "watchOS"
-    ],
-    "squares" : "shared"
+  "supported-platforms": {
+    "circles": ["watchOS"],
+    "squares": "shared"
   }
 }
