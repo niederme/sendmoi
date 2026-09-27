@@ -33,7 +33,14 @@
               "appearance": "tinted",
               "value": "automatic"
             }
-          ]
+          ],
+          "position": {
+            "scale": 0.7,
+            "translation-in-points": [
+              0,
+              0
+            ]
+          }
         }
       ],
       "shadow": {
@@ -47,7 +54,9 @@
     }
   ],
   "supported-platforms": {
-    "circles": ["watchOS"],
+    "circles": [
+      "watchOS"
+    ],
     "squares": "shared"
   }
 }
