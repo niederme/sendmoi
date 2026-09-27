@@ -14,17 +14,17 @@
   ],
   "groups": [
     {
-      "name": "Modeled goggles",
+      "name": "WraparoundShade",
       "layers": [
         {
-          "name": "Goggles",
+          "name": "WraparoundShade",
           "image-name-specializations": [
             {
-              "value": "Goggles-Light.png"
+              "value": "SportShade-Light.png"
             },
             {
               "appearance": "dark",
-              "value": "Goggles-Dark.png"
+              "value": "SportShade-Dark.png"
             }
           ],
           "glass": false,
@@ -35,7 +35,7 @@
             }
           ],
           "position": {
-            "scale": 0.7,
+            "scale": 0.64,
             "translation-in-points": [
               0,
               0
