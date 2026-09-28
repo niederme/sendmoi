@@ -3013,12 +3013,8 @@ final class GmailDeliveryService {
         return refusalMarkers.contains { lowered.contains($0) }
     }
 
-    // The share extension sends under a delivery watchdog, so the on-device
-    // model gets a tight budget there before we fall back to the extractive
-    // summarizer; the main app's queue flush has no UI waiting on it and can
-    // afford more.
-    private static let summaryResponseDeadlineNanoseconds: UInt64 =
-        Bundle.main.bundleURL.pathExtension == "appex" ? 5_000_000_000 : 12_000_000_000
+    // The main app's queue flush has no share sheet waiting on it.
+    private static let summaryResponseDeadlineNanoseconds: UInt64 = 12_000_000_000
 
     // Races an operation against a deadline. Unlike a task group, this does not
     // wait for the losing operation to acknowledge cancellation — a model call
@@ -3048,6 +3044,12 @@ final class GmailDeliveryService {
 
     private static func summarizeWithFoundationModels(_ text: String, title: String, minWords: Int, maxWords: Int) async -> String? {
 #if canImport(FoundationModels)
+        // A model response can exceed the share sheet's preview window. The
+        // caller falls back to an extractive summary so link metadata arrives in time.
+        guard Bundle.main.bundleURL.pathExtension != "appex" else {
+            return nil
+        }
+
         guard #available(iOS 26.0, macOS 26.0, visionOS 26.0, *) else {
             return nil
         }
