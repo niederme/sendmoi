@@ -1,4 +1,6 @@
 import Foundation
+import ImageIO
+import UniformTypeIdentifiers
 #if canImport(FoundationModels)
 import FoundationModels
 #endif
@@ -444,7 +446,11 @@ final class GmailDeliveryService {
         request.httpMethod = "GET"
         request.setValue("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", forHTTPHeaderField: "Accept")
         request.setValue(Locale.preferredLanguages.prefix(2).joined(separator: ", "), forHTTPHeaderField: "Accept-Language")
-        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
+        // Apple redirects mobile browser requests to itms-appss://, which URLSession cannot fetch.
+        let userAgent = canonicalURL.host?.lowercased() == "apps.apple.com"
+            ? "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+            : "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+        request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
         request.timeoutInterval = 6
 
         do {
@@ -626,12 +632,12 @@ final class GmailDeliveryService {
 
         if url.isFileURL {
             guard let data = try? Data(contentsOf: url),
-                  !data.isEmpty,
-                  let mimeType = Self.supportedImageMimeType(responseMimeType: nil, urlString: urlString) else {
+                  let mimeType = Self.validatedImageMimeType(for: data) else {
                 return nil
             }
 
             return InlineImage(
+                sourceURLString: urlString,
                 contentID: "sendmoi-inline-image-\(UUID().uuidString)",
                 mimeType: mimeType,
                 filename: "sendmoi-image-\(index + 1).\(Self.fileExtension(forMimeType: mimeType))",
@@ -663,6 +669,7 @@ final class GmailDeliveryService {
             }
 
             return InlineImage(
+                sourceURLString: urlString,
                 contentID: "sendmoi-inline-image-\(UUID().uuidString)",
                 mimeType: mimeType,
                 filename: "sendmoi-image-\(index + 1).\(Self.fileExtension(forMimeType: mimeType))",
@@ -683,11 +690,8 @@ final class GmailDeliveryService {
 
         if !content.inlineImages.isEmpty {
             let alternativeBoundary = "SendMoiAlt-\(UUID().uuidString)"
-            let relatedParts = content.inlineImages.enumerated().map { index, inlineImage in
+            let relatedParts = content.inlineImages.map { inlineImage in
                 let imageData = wrappedBase64(inlineImage.data.base64EncodedString())
-                let sourceURLString = content.imageURLStrings.indices.contains(index)
-                    ? content.imageURLStrings[index]
-                    : inlineImage.filename
 
                 return """
                 --\(boundary)
@@ -695,7 +699,7 @@ final class GmailDeliveryService {
                 Content-Transfer-Encoding: base64
                 Content-ID: <\(inlineImage.contentID)>
                 X-Attachment-Id: \(inlineImage.contentID)
-                Content-Location: \(sourceURLString)
+                Content-Location: \(inlineImage.sourceURLString)
                 Content-Disposition: inline; filename="\(inlineImage.filename)"
 
                 \(imageData)
@@ -895,13 +899,15 @@ final class GmailDeliveryService {
             return content.inlineImages.map { "cid:\($0.contentID)" }
         }
 
-        return content.imageURLStrings.enumerated().compactMap { index, imageURLString in
-            if content.inlineImages.indices.contains(index) {
-                return "cid:\(content.inlineImages[index].contentID)"
+        return content.imageURLStrings.compactMap { imageURLString in
+            if let inlineImage = content.inlineImages.first(where: { $0.sourceURLString == imageURLString }) {
+                return "cid:\(inlineImage.contentID)"
             }
 
             let trimmed = imageURLString.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty, isSupportedDisplayImageURLString(trimmed) else {
+            guard !trimmed.isEmpty,
+                  URL(string: trimmed)?.isFileURL != true,
+                  isSupportedDisplayImageURLString(trimmed) else {
                 return nil
             }
 
@@ -1052,6 +1058,17 @@ final class GmailDeliveryService {
         }
     }
 
+    private static func validatedImageMimeType(for data: Data) -> String? {
+        guard !data.isEmpty,
+              let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let imageType = CGImageSourceGetType(source),
+              let mimeType = UTType(imageType as String)?.preferredMIMEType else {
+            return nil
+        }
+
+        return supportedImageMimeType(responseMimeType: mimeType, urlString: "")
+    }
+
     private static func fileExtension(forMimeType mimeType: String) -> String {
         switch mimeType {
         case "image/png":
@@ -1104,7 +1121,8 @@ final class GmailDeliveryService {
             return false
         }
 
-        return host == "x.com" ||
+        return host == "apps.apple.com" ||
+            host == "x.com" ||
             host == "www.x.com" ||
             host == "twitter.com" ||
             host == "www.twitter.com" ||
@@ -2995,12 +3013,8 @@ final class GmailDeliveryService {
         return refusalMarkers.contains { lowered.contains($0) }
     }
 
-    // The share extension sends under a delivery watchdog, so the on-device
-    // model gets a tight budget there before we fall back to the extractive
-    // summarizer; the main app's queue flush has no UI waiting on it and can
-    // afford more.
-    private static let summaryResponseDeadlineNanoseconds: UInt64 =
-        Bundle.main.bundleURL.pathExtension == "appex" ? 5_000_000_000 : 12_000_000_000
+    // The main app's queue flush has no share sheet waiting on it.
+    private static let summaryResponseDeadlineNanoseconds: UInt64 = 12_000_000_000
 
     // Races an operation against a deadline. Unlike a task group, this does not
     // wait for the losing operation to acknowledge cancellation — a model call
@@ -3030,6 +3044,12 @@ final class GmailDeliveryService {
 
     private static func summarizeWithFoundationModels(_ text: String, title: String, minWords: Int, maxWords: Int) async -> String? {
 #if canImport(FoundationModels)
+        // A model response can exceed the share sheet's preview window. The
+        // caller falls back to an extractive summary so link metadata arrives in time.
+        guard Bundle.main.bundleURL.pathExtension != "appex" else {
+            return nil
+        }
+
         guard #available(iOS 26.0, macOS 26.0, visionOS 26.0, *) else {
             return nil
         }
@@ -3251,6 +3271,7 @@ private struct ImageCandidate {
 }
 
 private struct InlineImage {
+    let sourceURLString: String
     let contentID: String
     let mimeType: String
     let filename: String
