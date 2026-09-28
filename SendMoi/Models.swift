@@ -393,6 +393,15 @@ enum SharedContentFormatter {
             return collapsed
         }
 
+        if host == "apps.apple.com" {
+            for suffix in [" App - App Store", " - App Store"] where collapsed.hasSuffix(suffix) {
+                let trimmed = String(collapsed.dropLast(suffix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty {
+                    return trimmed
+                }
+            }
+        }
+
         if host == "overcast.fm" || host == "www.overcast.fm" {
             let suffixes = [" — Overcast", " - Overcast", " | Overcast"]
             for suffix in suffixes {

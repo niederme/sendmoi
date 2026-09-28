@@ -1,4 +1,5 @@
 import Foundation
+import ImageIO
 import LinkPresentation
 import NaturalLanguage
 import Network
@@ -497,13 +498,12 @@ final class ShareExtensionModel: ObservableObject {
                 fallbackTitle: titleSnapshot
             )
             if metadata?.imageURLString == nil,
-               Self.shouldAttemptSocialImageFallback(for: normalizedURLString),
-               let fallbackImageURLString = await Self.fetchLinkPreviewImageURLString(for: normalizedURLString) {
+               let linkPreview = await Self.fetchLinkPreviewMetadata(for: normalizedURLString) {
                 metadata = DraftPreviewMetadata(
-                    title: metadata?.title,
+                    title: metadata?.title ?? linkPreview.title,
                     description: metadata?.description,
                     summary: metadata?.summary,
-                    imageURLString: fallbackImageURLString
+                    imageURLString: linkPreview.imageURLString
                 )
             }
 
@@ -872,6 +872,11 @@ final class ShareExtensionModel: ObservableObject {
             return true
         }
 
+        if let appTitle = AppStoreLink.fallbackTitle(from: urlString),
+           trimmedTitle.caseInsensitiveCompare(appTitle) == .orderedSame {
+            return true
+        }
+
         guard let host = URL(string: urlString)?.host?.lowercased() else {
             return false
         }
@@ -905,22 +910,7 @@ final class ShareExtensionModel: ObservableObject {
         summarySnapshot.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    private static func shouldAttemptSocialImageFallback(for urlString: String) -> Bool {
-        guard let host = URL(string: urlString)?.host?.lowercased() else {
-            return false
-        }
-
-        return host == "x.com" ||
-            host == "www.x.com" ||
-            host == "twitter.com" ||
-            host == "www.twitter.com" ||
-            host == "t.co" ||
-            host == "www.t.co" ||
-            host == "pic.twitter.com" ||
-            host == "www.pic.twitter.com"
-    }
-
-    private static func fetchLinkPreviewImageURLString(for urlString: String) async -> String? {
+    private static func fetchLinkPreviewMetadata(for urlString: String) async -> (title: String?, imageURLString: String?)? {
         guard let url = URL(string: urlString) else {
             return nil
         }
@@ -930,29 +920,30 @@ final class ShareExtensionModel: ObservableObject {
 
         do {
             let metadata = try await provider.startFetchingMetadata(for: url)
-            guard let imageProvider = metadata.imageProvider,
-                  let (imageData, fileExtension) = await loadImageData(from: imageProvider),
-                  let fileURL = try? SharedContainer.storeSharedMedia(data: imageData, fileExtension: fileExtension) else {
-                return nil
+            var imageURLString: String?
+            if let imageProvider = metadata.imageProvider,
+               let (imageData, fileExtension) = await loadImageData(from: imageProvider),
+               let fileURL = try? SharedContainer.storeSharedMedia(data: imageData, fileExtension: fileExtension) {
+                imageURLString = fileURL.absoluteString
             }
-
-            return fileURL.absoluteString
+            return (metadata.title, imageURLString)
         } catch {
             return nil
         }
     }
 
     private static func loadImageData(from provider: NSItemProvider) async -> (Data, String)? {
-        let candidates: [(String, String)] = [
-            (UTType.jpeg.identifier, "jpg"),
-            (UTType.png.identifier, "png"),
-            (UTType.heic.identifier, "heic"),
-            (UTType.gif.identifier, "gif")
+        let candidates = [
+            UTType.jpeg.identifier,
+            UTType.png.identifier,
+            UTType.heic.identifier,
+            UTType.gif.identifier
         ]
 
-        for (typeIdentifier, fileExtension) in candidates where provider.hasItemConformingToTypeIdentifier(typeIdentifier) {
-            if let data = await loadDataRepresentation(from: provider, typeIdentifier: typeIdentifier) {
-                return (data, fileExtension)
+        for typeIdentifier in candidates where provider.hasItemConformingToTypeIdentifier(typeIdentifier) {
+            if let data = await loadDataRepresentation(from: provider, typeIdentifier: typeIdentifier),
+               let validImage = SharedImageData.validated(data) {
+                return validImage
             }
         }
 
@@ -1030,6 +1021,38 @@ private struct SharedItemContent {
     var additionalImageURLStrings: [String] = []
 }
 
+private enum AppStoreLink {
+    static func fallbackTitle(from urlString: String) -> String? {
+        guard let url = URL(string: urlString),
+              url.host?.lowercased() == "apps.apple.com" else {
+            return nil
+        }
+
+        let parts = url.pathComponents
+        guard let appIndex = parts.firstIndex(of: "app"),
+              parts.indices.contains(appIndex + 1),
+              parts.indices.contains(appIndex + 2),
+              parts[appIndex + 2].hasPrefix("id") else {
+            return nil
+        }
+
+        return parts[appIndex + 1].replacingOccurrences(of: "-", with: " ").capitalized
+    }
+}
+
+private enum SharedImageData {
+    static func validated(_ data: Data) -> (data: Data, fileExtension: String)? {
+        guard !data.isEmpty,
+              let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let imageType = CGImageSourceGetType(source),
+              let fileExtension = UTType(imageType as String)?.preferredFilenameExtension else {
+            return nil
+        }
+
+        return (data, fileExtension)
+    }
+}
+
 private enum SharedItemExtractor {
     static func extract(from rawItems: [Any]) async -> SharedItemContent {
         var content = SharedItemContent()
@@ -1099,6 +1122,12 @@ private enum SharedItemExtractor {
 
         content = normalize(content, using: textCandidates)
 
+        if let appTitle = AppStoreLink.fallbackTitle(from: content.urlString),
+           (content.title.isEmpty || content.title.caseInsensitiveCompare("Shared Photo") == .orderedSame ||
+            content.title.caseInsensitiveCompare("Shared Photos") == .orderedSame) {
+            content.title = appTitle
+        }
+
         let imageCount = ([content.previewImageURLString].compactMap { $0 } + content.additionalImageURLStrings).count
         if content.title.isEmpty, imageCount > 0 {
             content.title = imageCount > 1 ? "Shared Photos" : "Shared Photo"
@@ -1148,11 +1177,48 @@ private enum SharedItemExtractor {
             return nil
         }
 
-        if let data = await loadImageData(from: provider, typeIdentifier: typeIdentifier) {
-            let fileExtension = preferredImageFileExtension(for: typeIdentifier)
-            let fileURL = try? SharedContainer.storeSharedMedia(data: data, fileExtension: fileExtension)
+        let loadedData = await loadImageData(from: provider, typeIdentifier: typeIdentifier)
+        if let data = loadedData,
+           let validImage = SharedImageData.validated(data) {
+            let fileURL = try? SharedContainer.storeSharedMedia(data: validImage.data, fileExtension: validImage.fileExtension)
             return fileURL?.absoluteString
         }
+
+#if canImport(UIKit)
+        // Some share sheets supply an archived UIImage when asked for JPEG or PNG data.
+        if let loadedData,
+           let image = try? NSKeyedUnarchiver.unarchivedObject(ofClass: UIImage.self, from: loadedData),
+           let data = image.jpegData(compressionQuality: 0.92),
+           let fileURL = try? SharedContainer.storeSharedMedia(data: data, fileExtension: "jpg") {
+            return fileURL.absoluteString
+        }
+
+        if provider.canLoadObject(ofClass: UIImage.self) {
+            let image: UIImage? = await withCheckedContinuation { continuation in
+                provider.loadObject(ofClass: UIImage.self) { object, _ in
+                    continuation.resume(returning: object as? UIImage)
+                }
+            }
+            if let data = image?.jpegData(compressionQuality: 0.92),
+               let fileURL = try? SharedContainer.storeSharedMedia(data: data, fileExtension: "jpg") {
+                return fileURL.absoluteString
+            }
+        }
+#elseif canImport(AppKit)
+        if provider.canLoadObject(ofClass: NSImage.self) {
+            let image: NSImage? = await withCheckedContinuation { continuation in
+                provider.loadObject(ofClass: NSImage.self) { object, _ in
+                    continuation.resume(returning: object as? NSImage)
+                }
+            }
+            if let tiffData = image?.tiffRepresentation,
+               let bitmap = NSBitmapImageRep(data: tiffData),
+               let data = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.92]),
+               let fileURL = try? SharedContainer.storeSharedMedia(data: data, fileExtension: "jpg") {
+                return fileURL.absoluteString
+            }
+        }
+#endif
 
         return nil
     }
@@ -1171,29 +1237,15 @@ private enum SharedItemExtractor {
         return candidates.first(where: { provider.hasItemConformingToTypeIdentifier($0) }) ?? ""
     }
 
-    private static func preferredImageFileExtension(for typeIdentifier: String) -> String {
-        switch typeIdentifier {
-        case UTType.heic.identifier:
-            return "heic"
-        case UTType.png.identifier:
-            return "png"
-        case UTType.gif.identifier:
-            return "gif"
-        case UTType.tiff.identifier:
-            return "tiff"
-        case UTType.bmp.identifier:
-            return "bmp"
-        default:
-            return "jpg"
-        }
-    }
-
     private static func loadImageData(from provider: NSItemProvider, typeIdentifier: String) async -> Data? {
-        if let data = await loadImageDataRepresentation(from: provider, typeIdentifier: typeIdentifier) {
-            return data
+        let dataRepresentation = await loadImageDataRepresentation(from: provider, typeIdentifier: typeIdentifier)
+        if let dataRepresentation,
+           SharedImageData.validated(dataRepresentation) != nil {
+            return dataRepresentation
         }
 
         return await loadImageFileRepresentationData(from: provider, typeIdentifier: typeIdentifier)
+            ?? dataRepresentation
     }
 
     private static func loadImageDataRepresentation(from provider: NSItemProvider, typeIdentifier: String) async -> Data? {
