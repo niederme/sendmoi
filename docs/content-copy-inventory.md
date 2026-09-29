@@ -2,7 +2,7 @@
 
 Last updated: April 16, 2026
 
-This is the working copy document for product messaging, in-app copy, and App Store Connect metadata.
+This is an April 2026 working copy snapshot for product messaging, in-app copy, and App Store Connect metadata. The tracker below is historical and does not record the submitted 1.4 metadata. Check App Store Connect for the current iOS and macOS values.
 
 ## Current Source Of Truth
 

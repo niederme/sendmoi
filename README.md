@@ -96,13 +96,13 @@ To update the artwork, open `SendMoi/AppIcon.icon` in Icon Composer, make change
 
 That means a merge into `main` should automatically enqueue a new build in App Store Connect.
 
-Before each archive, you can run:
+Before each archive, check the latest uploaded build number for each platform in App Store Connect. Preview the next local number with:
 
 ```sh
-./scripts/prepare_release.sh --version 1.3 --build 156
+./scripts/prepare_release.sh --dry-run
 ```
 
-That command updates `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` across both targets. Choose a build number higher than the latest uploaded build in App Store Connect; 156 is the 1.3 release candidate. The scripted upload pins that prepared build number for both platform archives, so the scheme’s automatic Archive increment does not change it. Interactive Product > Archive still increments the build number. If you only need the next local build number, run `./scripts/prepare_release.sh` with no arguments.
+Then run `./scripts/prepare_release.sh --version <version> --build <number>` with a build number higher than the latest uploaded build. The command updates `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` across both targets. The scripted upload pins that prepared build number for both platform archives, so the scheme’s automatic Archive increment does not change it. Interactive Product > Archive still increments the build number. The repository currently records version 1.4, build 168; confirm the selected build separately in App Store Connect before calling it submitted or released.
 
 For local command-line App Store Connect uploads, sign in to the Apple account in Xcode first:
 

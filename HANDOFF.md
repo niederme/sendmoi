@@ -1,5 +1,7 @@
 # SendMoi Handoff
 
+This is an April 16, 2026 handoff snapshot. Its branch names, version numbers, and verification checklist below are historical. For current behavior and release commands, use [README.md](README.md). The repository currently records version 1.4, build 168; App Store Connect status must be checked separately for iOS and macOS.
+
 Last updated: April 16, 2026
 
 ## Current State
