@@ -11,7 +11,10 @@ SendMoiSafariPreprocessor.prototype = {
             title: document.title || "",
             url: url,
             excerpt: excerpt,
-            selectedText: selectedText
+            selectedText: selectedText,
+            imageURLString: this.metaContent("og:image:secure_url")
+                || this.metaContent("og:image")
+                || this.metaContent("twitter:image")
         });
     },
 

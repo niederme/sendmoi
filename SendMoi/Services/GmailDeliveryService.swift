@@ -61,7 +61,7 @@ final class GmailDeliveryService {
            ["http", "https"].contains(url.scheme?.lowercased() ?? ""),
            !Self.shouldSkipSummary(for: url),
            content.summary?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false,
-           (Self.isLikelyArticleURL(url) || content.imageURLStrings.isEmpty),
+           content.imageURLStrings.isEmpty,
            Self.wordCount(in: content.excerpt) < 40 {
             throw GmailAPIError.previewIncomplete
         }
@@ -488,6 +488,9 @@ final class GmailDeliveryService {
             }
             let rawExcerpt = instagramMetadata?.excerpt ?? Self.extractExcerpt(fromMetaTags: metaTags)
             let excerpt = Self.isMeaninglessTweetExcerpt(rawExcerpt, for: responseURL) ? nil : rawExcerpt
+            let instagramImageURLStrings = instagramMetadata?.imageURLStrings ?? []
+            let imageURLString = instagramImageURLStrings.first ?? Self.extractPreferredImageURLString(fromHTML: html, metaTags: metaTags, baseURL: responseURL)
+            let additionalImageURLStrings = instagramImageURLStrings.count > 1 ? Array(instagramImageURLStrings.dropFirst()) : nil
             let summary: String?
             if Self.shouldSkipSummary(for: responseURL) {
                 summary = nil
@@ -496,19 +499,22 @@ final class GmailDeliveryService {
                     responseURL.host ?? "Shared Item",
                     urlString: responseURL.absoluteString
                 )
-                if let generatedSummary = await Self.generateSummary(
-                    fromHTML: html,
-                    title: summaryTitle,
-                    excerpt: excerpt
-                ) {
+                let generatedSummary: String?
+                if Bundle.main.bundleURL.pathExtension == "appex" {
+                    generatedSummary = await Self.resultWithinDeadline(
+                        nanoseconds: Self.shareExtensionSummaryDeadlineNanoseconds
+                    ) {
+                        await Self.generateSummary(fromHTML: html, title: summaryTitle, excerpt: excerpt)
+                    }
+                } else {
+                    generatedSummary = await Self.generateSummary(fromHTML: html, title: summaryTitle, excerpt: excerpt)
+                }
+                if let generatedSummary {
                     summary = generatedSummary
                 } else {
                     summary = await Self.generateSummaryFromExcerpt(excerpt, title: summaryTitle)
                 }
             }
-            let instagramImageURLStrings = instagramMetadata?.imageURLStrings ?? []
-            let imageURLString = instagramImageURLStrings.first ?? Self.extractPreferredImageURLString(fromHTML: html, metaTags: metaTags, baseURL: responseURL)
-            let additionalImageURLStrings = instagramImageURLStrings.count > 1 ? Array(instagramImageURLStrings.dropFirst()) : nil
             let oEmbedMetadata: CachedArticleMetadata?
             if Self.isTweetHost(responseURL), (excerpt == nil || imageURLString == nil) {
                 oEmbedMetadata = await fetchXOEmbedMetadata(for: responseURL)
@@ -1140,11 +1146,6 @@ final class GmailDeliveryService {
             host == "www.instagram.com" ||
             host == "overcast.fm" ||
             host == "www.overcast.fm"
-    }
-
-    private static func isLikelyArticleURL(_ url: URL) -> Bool {
-        let articlePathComponents: Set<String> = ["article", "articles", "story", "stories", "post", "posts"]
-        return url.pathComponents.contains { articlePathComponents.contains($0.lowercased()) }
     }
 
     private static func isTweetHost(_ url: URL) -> Bool {
@@ -3030,6 +3031,7 @@ final class GmailDeliveryService {
 
     // The main app's queue flush has no share sheet waiting on it.
     private static let summaryResponseDeadlineNanoseconds: UInt64 = 12_000_000_000
+    private static let shareExtensionSummaryDeadlineNanoseconds: UInt64 = 2_000_000_000
 
     // Races an operation against a deadline. Unlike a task group, this does not
     // wait for the losing operation to acknowledge cancellation — a model call
