@@ -553,12 +553,29 @@ final class ShareExtensionModel: ObservableObject {
         }
 
         // Enrich with preview data if the preview is still loading.
-        // We do this before touching the queue so the main app can't race us.
+        // Save unfinished work before dismissing so the main app can retry it.
         let refreshedItem: QueuedEmail
         do {
-            refreshedItem = waitForPreview
-                ? try await waitForPreviewAndEnrichItem(item, timeoutNanoseconds: previewWaitLimitNanoseconds)
-                : item
+            if waitForPreview {
+                if let enrichedItem = try await waitForPreviewAndEnrichItem(
+                    item,
+                    timeoutNanoseconds: previewWaitLimitNanoseconds
+                ) {
+                    refreshedItem = enrichedItem
+                } else if Self.hasUsableMetadataFallback(item) {
+                    // Safari already supplied a title, description, and page image.
+                    // These make a complete link card when summarization runs long.
+                    refreshedItem = item
+                } else {
+                    try QueueStore.append(item)
+                    Task { await AnalyticsClient.shared.send("share_queued", params: ["source": "share_sheet"], enabled: analyticsEnabled) }
+                    statusMessage = "Preview still loading. Saved to queue."
+                    extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
+                    return item
+                }
+            } else {
+                refreshedItem = item
+            }
             if pendingAutoSendItem?.id == refreshedItem.id {
                 pendingAutoSendItem = refreshedItem
             }
@@ -609,17 +626,29 @@ final class ShareExtensionModel: ObservableObject {
     }
 
     // Preview-enriches an item without requiring it to be in the queue first.
-    private func waitForPreviewAndEnrichItem(_ item: QueuedEmail, timeoutNanoseconds: UInt64) async throws -> QueuedEmail {
+    private func waitForPreviewAndEnrichItem(_ item: QueuedEmail, timeoutNanoseconds: UInt64) async throws -> QueuedEmail? {
         let didFinishPreviewInTime = try await waitForPreviewToFinish(
             upTo: timeoutNanoseconds
         )
-        guard didFinishPreviewInTime else { return item }
+        guard didFinishPreviewInTime else { return nil }
 
         let draft = draftApplyingPendingPreview(to: currentDraft())
         guard draft.isValidForQueue else { return item }
 
         let enriched = makeQueuedEmail(from: draft, id: item.id, createdAt: item.createdAt, lastError: item.lastError)
         return enriched != item ? enriched : item
+    }
+
+    private static func hasUsableMetadataFallback(_ item: QueuedEmail) -> Bool {
+        guard let url = URL(string: item.urlString),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "http" || scheme == "https" else {
+            return false
+        }
+
+        return !item.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            !item.excerpt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            !item.allImageURLStrings.isEmpty
     }
 
     private static func isNetworkAvailable() async -> Bool {
@@ -816,7 +845,7 @@ final class ShareExtensionModel: ObservableObject {
         while let next = try QueueStore.load().last {
             try Task.checkCancellation()
             do {
-                try await deliveryService.sendEmail(using: session, item: next, enrichContent: false)
+                try await deliveryService.sendEmail(using: session, item: next)
                 try QueueStore.remove(ids: [next.id])
                 removeManagedMedia(for: next)
             } catch {
@@ -1057,6 +1086,7 @@ private enum SharedItemExtractor {
     static func extract(from rawItems: [Any]) async -> SharedItemContent {
         var content = SharedItemContent()
         var textCandidates: [String] = []
+        var pageImageURLString: String?
 
         for case let item as NSExtensionItem in rawItems {
             if let attributedTitle = normalized(item.attributedTitle?.string) {
@@ -1095,6 +1125,10 @@ private enum SharedItemExtractor {
                         content.urlString = preprocessingContent.urlString
                     }
 
+                    if pageImageURLString == nil {
+                        pageImageURLString = preprocessingContent.previewImageURLString
+                    }
+
                     if !preprocessingContent.title.isEmpty {
                         textCandidates.append(preprocessingContent.title)
                     }
@@ -1121,6 +1155,12 @@ private enum SharedItemExtractor {
         }
 
         content = normalize(content, using: textCandidates)
+
+        // Prefer a directly shared image when present. Otherwise the page's
+        // Open Graph image is already available without another metadata fetch.
+        if content.previewImageURLString == nil, let pageImageURLString {
+            content = appendImageURLString(pageImageURLString, to: content)
+        }
 
         if let appTitle = AppStoreLink.fallbackTitle(from: content.urlString),
            (content.title.isEmpty || content.title.caseInsensitiveCompare("Shared Photo") == .orderedSame ||
@@ -1598,6 +1638,12 @@ private enum SharedItemExtractor {
             ?? normalized(preprocessingResults["selectedText"] as? String)
             ?? ""
         let urlString = normalized(preprocessingResults["url"] as? String) ?? ""
+        let imageURLString = normalized(preprocessingResults["imageURLString"] as? String)
+            .flatMap { URL(string: $0, relativeTo: URL(string: urlString))?.absoluteURL }
+            .flatMap { url -> String? in
+                guard isShareableWebURL(url) else { return nil }
+                return url.absoluteString
+            }
 
         guard !title.isEmpty || !excerpt.isEmpty || !urlString.isEmpty else {
             return nil
@@ -1607,7 +1653,7 @@ private enum SharedItemExtractor {
             title: title,
             excerpt: excerpt,
             urlString: urlString,
-            previewImageURLString: nil,
+            previewImageURLString: imageURLString,
             additionalImageURLStrings: []
         )
     }
