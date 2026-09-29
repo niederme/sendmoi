@@ -553,12 +553,26 @@ final class ShareExtensionModel: ObservableObject {
         }
 
         // Enrich with preview data if the preview is still loading.
-        // We do this before touching the queue so the main app can't race us.
+        // Save unfinished work before dismissing so the main app can retry it.
         let refreshedItem: QueuedEmail
         do {
-            refreshedItem = waitForPreview
-                ? try await waitForPreviewAndEnrichItem(item, timeoutNanoseconds: previewWaitLimitNanoseconds)
-                : item
+            if waitForPreview {
+                guard let enrichedItem = try await waitForPreviewAndEnrichItem(
+                    item,
+                    timeoutNanoseconds: previewWaitLimitNanoseconds
+                ) else {
+                    // The extension has a short delivery window. Keep the share for
+                    // a later enrichment pass instead of sending its initial fields.
+                    try QueueStore.append(item)
+                    Task { await AnalyticsClient.shared.send("share_queued", params: ["source": "share_sheet"], enabled: analyticsEnabled) }
+                    statusMessage = "Preview still loading. Saved to queue."
+                    extensionContextRef?.completeRequest(returningItems: nil, completionHandler: nil)
+                    return item
+                }
+                refreshedItem = enrichedItem
+            } else {
+                refreshedItem = item
+            }
             if pendingAutoSendItem?.id == refreshedItem.id {
                 pendingAutoSendItem = refreshedItem
             }
@@ -609,11 +623,11 @@ final class ShareExtensionModel: ObservableObject {
     }
 
     // Preview-enriches an item without requiring it to be in the queue first.
-    private func waitForPreviewAndEnrichItem(_ item: QueuedEmail, timeoutNanoseconds: UInt64) async throws -> QueuedEmail {
+    private func waitForPreviewAndEnrichItem(_ item: QueuedEmail, timeoutNanoseconds: UInt64) async throws -> QueuedEmail? {
         let didFinishPreviewInTime = try await waitForPreviewToFinish(
             upTo: timeoutNanoseconds
         )
-        guard didFinishPreviewInTime else { return item }
+        guard didFinishPreviewInTime else { return nil }
 
         let draft = draftApplyingPendingPreview(to: currentDraft())
         guard draft.isValidForQueue else { return item }
@@ -816,7 +830,7 @@ final class ShareExtensionModel: ObservableObject {
         while let next = try QueueStore.load().last {
             try Task.checkCancellation()
             do {
-                try await deliveryService.sendEmail(using: session, item: next, enrichContent: false)
+                try await deliveryService.sendEmail(using: session, item: next)
                 try QueueStore.remove(ids: [next.id])
                 removeManagedMedia(for: next)
             } catch {

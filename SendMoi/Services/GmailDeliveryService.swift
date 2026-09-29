@@ -55,6 +55,16 @@ final class GmailDeliveryService {
         try SendRateLimiter.validateSendAllowed(for: session)
         let content = await buildEmailContent(from: item, enrichContent: enrichContent)
         try Task.checkCancellation()
+        // A short share-sheet deadline or failed fetch must not turn an article
+        // into a title-and-link email. Keep it queued until enrichment succeeds.
+        if let url = URL(string: content.urlString ?? ""),
+           ["http", "https"].contains(url.scheme?.lowercased() ?? ""),
+           !Self.shouldSkipSummary(for: url),
+           content.summary?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false,
+           (Self.isLikelyArticleURL(url) || content.imageURLStrings.isEmpty),
+           Self.wordCount(in: content.excerpt) < 40 {
+            throw GmailAPIError.previewIncomplete
+        }
         let subject = "\(content.title) (Sent via SendMoi)"
         let raw = try Self.makeRawMimeMessage(
             from: session.emailAddress ?? "me",
@@ -1130,6 +1140,11 @@ final class GmailDeliveryService {
             host == "www.instagram.com" ||
             host == "overcast.fm" ||
             host == "www.overcast.fm"
+    }
+
+    private static func isLikelyArticleURL(_ url: URL) -> Bool {
+        let articlePathComponents: Set<String> = ["article", "articles", "story", "stories", "post", "posts"]
+        return url.pathComponents.contains { articlePathComponents.contains($0.lowercased()) }
     }
 
     private static func isTweetHost(_ url: URL) -> Bool {

@@ -11,6 +11,7 @@ enum GmailAPIError: LocalizedError {
     case credentialsInvalid(String)
     case authorizationFailed(String)
     case rateLimitExceeded(String)
+    case previewIncomplete
     case transport(Error)
     case api(String)
 
@@ -36,6 +37,8 @@ enum GmailAPIError: LocalizedError {
             return message
         case .rateLimitExceeded(let message):
             return message
+        case .previewIncomplete:
+            return "The link preview is incomplete. This item remains queued for retry in SendMoi."
         case .transport(let error):
             return error.localizedDescription
         case .api(let message):
