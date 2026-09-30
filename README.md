@@ -94,7 +94,9 @@ The current build is set up to ship through App Store Connect.
 
 To update the artwork, open `SendMoi/AppIcon.icon` in Icon Composer, make changes, and commit. No PNG export or extra build steps are needed.
 
-That means a merge into `main` should automatically enqueue a new build in App Store Connect.
+Xcode Cloud start conditions are stored in App Store Connect, separately from the GitHub website deploy workflow. In the Default workflow, set the `main` Branch Changes condition's Files and Folders setting to Custom Conditions and ignore changes when **all** changed files match `docs/**`, `.github/workflows/deploy-site.yml`, `scripts/deploy-site.sh`, or `scripts/set-site-url.sh`. A merge that also changes app source must still enqueue a build.
+
+Xcode Cloud uses its own build counter for uploaded archives, independently of `CURRENT_PROJECT_VERSION`. In the app's Xcode Cloud settings, set Next Build Number higher than the latest uploaded build on either platform (at least 169 after build 168). Raising the project build number alone does not raise the cloud counter. After an App Store version is approved, prepare a higher marketing version before uploading another build; the approved 1.4 train is closed.
 
 Before each archive, check the latest uploaded build number for each platform in App Store Connect. Preview the next local number with:
 
@@ -102,7 +104,7 @@ Before each archive, check the latest uploaded build number for each platform in
 ./scripts/prepare_release.sh --dry-run
 ```
 
-Then run `./scripts/prepare_release.sh --version <version> --build <number>` with a build number higher than the latest uploaded build. The command updates `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` across both targets. The scripted upload pins that prepared build number for both platform archives, so the scheme’s automatic Archive increment does not change it. Interactive Product > Archive still increments the build number. The repository currently records version 1.4, build 168; confirm the selected build separately in App Store Connect before calling it submitted or released.
+Then run `./scripts/prepare_release.sh --version <version> --build <number>` with a build number higher than the latest uploaded build. The command updates `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` across both targets. The scripted upload pins that prepared build number for both platform archives, so the scheme’s automatic Archive increment does not change it. Interactive Product > Archive still increments the build number. The repository currently records version 1.4.1, build 169; confirm the selected build separately in App Store Connect before calling it submitted or released.
 
 For local command-line App Store Connect uploads, sign in to the Apple account in Xcode first:
 
